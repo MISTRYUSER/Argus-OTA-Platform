@@ -486,3 +486,458 @@ kafkacat -C -b localhost:9092 -t batch-events -f '%T: %s\n'
 - [ ] 实现 Redis Barrier（分布式计数器）
 - [ ] 实现 C++ Worker（消费 FileScattered 事件）
 - [ ] 实现端到端集成测试（Ingestor → Kafka → Orchestrator → Workers）
+
+---
+
+## 2025-01-18 (Day 5)
+
+### 完成事项
+
+#### 1. ✅ 实现 MinIO Client (`internal/infrastructure/minio/client.go`)
+- ✅ **NewMinIOClient** - MinIO 客户端初始化
+  - 自动创建 Bucket（如果不存在）
+  - 完善的错误处理（BucketExists, MakeBucket）
+- ✅ **PutObject** - 流式上传方法
+  - 使用 `io.Reader` 接口（避免 OOM）
+  - PartSize 设为 5MB（大文件自动分片）
+  - 返回上传信息（Size, ETag）
+- ✅ **零拷贝优化讨论**：
+  - 为什么不用 Presigned URL（流程复杂、URL 泄露风险）
+  - 为什么使用 io.Copy（自动使用 splice 系统调用）
+
+#### 2. ✅ 实现 HTTP BatchHandler (`internal/interfaces/http/handlers/batch_handler.go`)
+- ✅ **CreateBatch** - 创建 Batch API
+  - POST /api/v1/batches
+  - 参数校验（vehicle_id, vin, expected_workers）
+  - 调用 BatchService.CreateBatch
+  - 返回 batch_id 和 status
+
+- ✅ **UploadFile** - 文件上传 API（核心）
+  - POST /api/v1/batches/:id/files
+  - 流式上传（使用 `fileHeader.Open()` 而非 `io.ReadAll`）
+  - UUID 生成 fileID（防止文件名冲突）
+  - MinIO objectKey 格式：`{batchID}/{fileID}`
+  - 调用 BatchService.AddFile 记录文件
+  - 返回 file_id 和 size
+
+- ✅ **CompleteUpload** - 完成上传 API
+  - POST /api/v1/batches/:id/complete
+  - 状态转换：pending → uploaded
+  - 触发 BatchCreated 事件（通过 Kafka）
+
+- ✅ **RegisterRoutes** - Gin 路由注册
+  - 3 个 API 端点注册
+  - 使用 Gin 路由组
+
+#### 3. ✅ 实现 Ingestor 入口 (`cmd/ingestor/main.go`)
+- ✅ **Config 结构体** - 配置管理
+  - ServerConfig, DatabaseConfig, MinIOConfig, KafkaConfig
+  - 从环境变量读取（12-Factor App）
+
+- ✅ **loadConfig** - 配置加载
+  - 使用 `getEnv` 辅助函数（提供默认值）
+  - 使用 `mustAtoi` 辅助函数（类型转换 + 错误处理）
+  - 使用 `parseBool` 辅助函数
+
+- ✅ **initDB** - PostgreSQL 初始化
+  - 构建 DSN（Data Source Name）
+  - 连接池配置：
+    - `SetMaxOpenConns(25)` - 最大打开连接数
+    - `SetMaxIdleConns(5)` - 最大空闲连接数
+    - `SetConnMaxIdleTime(5 * time.Minute)` - 空闲连接超时
+    - `SetConnMaxLifetime(5 * time.Minute)` - 连接最大生命周期
+  - Ping 验证连接
+
+- ✅ **initMinIO** - MinIO Client 初始化
+  - 调用 `minio.NewMinIOClient`
+  - 日志输出
+
+- ✅ **initKafkaProducer** - Kafka Producer 初始化
+  - 调用 `kafka.NewKafkaEventProducer`
+  - 返回 `messaging.KafkaEventPublisher` 接口
+
+- ✅ **initRouter** - Gin Router 初始化
+  - 创建 Gin 实例
+  - 初始化 BatchHandler
+  - 注册路由
+
+- ✅ **startServer** - HTTP Server 启动
+  - 创建 `http.Server` 实例
+  - 超时配置：
+    - `ReadTimeout: 10s` - 读取请求超时
+    - `WriteTimeout: 300s` - 写入响应超时（上传大文件需要长超时）
+    - `IdleTimeout: 120s` - 空闲连接超时
+  - 在 goroutine 中启动（非阻塞）
+  - 返回 server 实例（用于优雅关闭）
+
+- ✅ **gracefulShutdown** - 优雅关闭
+  - 监听系统信号（SIGINT, SIGTERM）
+  - 30 秒超时 context
+  - HTTP Server Shutdown
+  - 数据库 Close
+  - Kafka Producer Close
+  - 日志输出
+
+- ✅ **main** - 主函数
+  - 依赖注入链：Config → Infrastructure → Repository → Service → Handler → Router → Server
+
+#### 4. ✅ Bug 修复（8 个）
+
+**MinIO Client Bug（2 个）**
+1. ✅ **BucketExists 错误处理** - 添加 `err != nil` 检查
+2. ✅ **MakeBucket 错误处理** - 添加 `err != nil` 检查
+
+**BatchHandler Bug（6 个）**
+1. ✅ **line 40** - 缺少逗号：`req.VIN, req.ExpectedWorkers`
+2. ✅ **line 54** - `c.Params("id")` → `c.Param("id")`（单数）
+3. ✅ **line 71** - `&batchID` → `batchID`（不需要取地址）
+4. ✅ **line 85** - `batchID` 类型错误（string → uuid.UUID）
+5. ✅ **line 96** - receiver 指针缺失：`(h batchHandler)` → `(h *batchHandler)`
+6. ✅ **line 102** - 状态名称错误：`BatchStatusCompleted` → `BatchStatusUploaded`
+
+**Ingestor main.go Bug（5 个）**
+1. ✅ **line 81** - `mustAtoi("DB_PORT","5432")` → `mustAtoi(getEnv("DB_PORT","5432"), "DB_PORT")`
+2. ✅ **line 112** - 缺少 `db.SetMaxOpenConns(25)`
+3. ✅ **line 113** - `db.SetMaxIdleConns(25)` → `db.SetMaxIdleConns(5)`
+4. ✅ **line 114-115** - `db.SetConnMaxIdleTime(5)` → `db.SetConnMaxIdleTime(5 * time.Minute)`
+   - `db.SetConnMaxLifetime(5 & time.Minute)` → `db.SetConnMaxLifetime(5 * time.Minute)`
+5. ✅ **line 226** - `startServer(router, cfg.Database.Host)` → `startServer(router, strconv.Itoa(cfg.Server.Port))`
+
+**编译验证**
+- ✅ `go build ./cmd/ingestor` 成功
+- ✅ 生成二进制文件：`ingestor` (34MB)
+
+#### 5. ✅ AI Agent Worker 架构设计 (`docs/ai-agent-architecture.md`)
+- ✅ **DDD 分层设计** - 完整的目录结构和职责划分
+  - Domain 层：Diagnosis, Prompt, TokenUsage
+  - Application 层：DiagnoseService, PromptBuilder, SummaryPruner, TokenTracker
+  - Infrastructure 层：EinoClient, VectorRetriever, DiagnosisRepository
+  - Interfaces 层：HTTP Handler（可选）
+
+- ✅ **核心流程定义** - 诊断流程的 9 个步骤
+  1. Token 检查（每日限额）
+  2. 读取聚合数据
+  3. Summary 剪枝（减少 Token）
+  4. RAG 检索（历史相似案例）
+  5. 构造 Prompt
+  6. 调用 LLM（Eino）
+  7. Token 追踪
+  8. 保存结果
+  9. 发布事件
+
+- ✅ **接口定义**
+  - `LLMClient` - LLM 客户端接口（Diagnose, GetEmbedding, Close）
+  - `VectorRetriever` - RAG 检索接口（Retrieve, Index）
+  - `DiagnosisRepository` - 诊断结果仓储接口（Save, FindByID, FindByBatchID, FindAggregatedData）
+
+- ✅ **数据模型**
+  - `Diagnosis` - 诊断结果聚合根
+  - `Summary` - 剪枝后的数据摘要（Top-K 异常码）
+  - `TokenUsage` - Token 使用记录（PromptTokens, CompletionTokens, TotalTokens, EstimatedCost）
+  - `SimilarCase` - 相似案例（ID, Diagnosis, Distance）
+
+- ✅ **Token 成本控制策略**
+  - Summary 剪枝（Top-K 异常码，默认 K=10）
+  - Prompt 优化（简洁 + Few-shot 精简）
+  - 每日限额（10 万 Token）
+  - Token 追踪（记录每日成本）
+  - 降级策略（Token 超限返回 Top-K 异常码）
+
+- ✅ **RAG 检索设计**
+  - pgvector 向量数据库（与 PostgreSQL 集成）
+  - OpenAI Embedding API（Ada Embedding V2，1536 维度）
+  - 相似度搜索（<=> 操作符）
+  - 增量索引（新诊断自动索引）
+
+- ✅ **开发策略** - 6 个阶段，6-9 天工作量
+  - 阶段 1: 基础框架（1-2 天）
+  - 阶段 2: 数据层（1 天）
+  - 阶段 3: LLM 集成（1-2 天）
+  - 阶段 4: Token 控制（0.5 天）
+  - 阶段 5: RAG 检索（1-2 天）
+  - 阶段 6: 测试与优化（1-2 天）
+
+- ✅ **技术栈选择**
+  - LLM 框架：Eino（Go 原生、轻量级、高性能）
+  - LLM Provider：OpenAI GPT-4o（性能强、成本可控）
+  - 向量数据库：pgvector（与 PostgreSQL 集成、无需额外部署）
+  - Embedding：OpenAI Ada Embedding V2（1536 维度、性能好）
+
+#### 6. ✅ 文档更新
+- ✅ `LEARNING_LOG.md` - 今日学习日志（300 行）
+  - 完成功能与技术选型
+  - 5 个面试高频考点（零拷贝、优雅关闭、连接池、DDD）
+  - 8 个踩坑案例
+  - 下一步计划
+
+- ✅ `PROGRESS.md` - 系统进度清单（已更新）
+  - Ingestor: 0% → 100% ✅
+  - Workers: 0% → 5%（AI Agent 架构设计完成）
+  - 文档: 30% → 40%
+  - Bug 已修复：8 个
+  - 总体进度: 20%
+
+### 核心理解：接入层（Ingestor）设计原则
+
+**1. 依赖注入链**
+```
+Config → Infrastructure → Repository → Service → Handler → Router → Server
+```
+- 每一层只依赖下一层的接口（依赖倒置）
+- cmd 层只负责启动，不包含业务逻辑
+- 可以轻松替换实现（PostgreSQL → MySQL）
+
+**2. 流式上传**
+```go
+// ✅ 正确：流式上传
+file, _ := fileHeader.Open()
+defer file.Close()
+minioClient.PutObject(ctx, objectKey, file, size, contentType)
+
+// ❌ 错误：缓存整个文件（OOM）
+data, _ := io.ReadAll(file)
+minioClient.PutObject(ctx, objectKey, bytes.NewReader(data), size, contentType)
+```
+
+**3. 优雅关闭**
+```go
+// 1. 监听系统信号
+sigCh := make(chan os.Signal, 1)
+signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+<-sigCh
+
+// 2. 设置超时（避免永久阻塞）
+ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+defer cancel()
+
+// 3. 关闭服务（按顺序）
+server.Shutdown(ctx)  // 等待请求完成
+db.Close()            // 关闭数据库
+kafkaProducer.Close() // 关闭 Kafka
+```
+
+### 技术决策与面试重点
+
+**1. 为什么用 Gin 而不是标准库？**
+   - **路由简洁**：`r.POST("/batches/:id/files", h.UploadFile)`
+   - **中间件丰富**：Logger, Recovery, CORS
+   - **性能优秀**：比标准库快 10 倍
+   - **社区活跃**：GitHub 70k+ stars
+
+**2. 为什么流式上传？**
+   - **避免 OOM**：大文件（GB 级）不会占用大量内存
+   - **减少 GC 压力**：不需要分配大块内存
+   - **性能更好**：边读边传，延迟更低
+
+**3. 零拷贝 vs 流式传输？**
+   - **零拷贝**：磁盘 → 内核态 → 网卡（2 次拷贝）
+   - **流式传输**：用户态内存拷贝 + io.Copy 优化（splice）
+   - **MinIO SDK**：已经使用 io.Copy（自动优化）
+   - **完全零拷贝**：使用 Presigned URL（客户端直传 MinIO）
+
+**4. 为什么数据库连接池需要 MaxIdleConns？**
+   - **避免资源浪费**：空闲连接占用数据库资源
+   - **提高性能**：保持少量空闲连接，避免频繁建立连接
+   - **最佳实践**：MaxIdleConns < MaxOpenConns（如 5 < 25）
+
+**5. 为什么 WriteTimeout 是 300s？**
+   - **上传大文件**：GB 级文件需要长时间上传
+   - **避免超时**：网络慢时不会中断上传
+   - **ReadTimeout 短**：10s（防止慢速攻击）
+
+**6. Eino vs LangChain？**
+   - **Eino**：Go 原生、轻量级、高性能、适合高并发
+   - **LangChain**：Python 生态、功能丰富、但性能差
+   - **技术栈统一**：Eino 与 Orchestrator/Workers 技术栈一致
+
+### 代码修复经验
+
+**Bug 1：c.Params vs c.Param**
+```go
+// ❌ 错误：c.Params 返回 Params 类型
+batchID := c.Params("id")
+
+// ✅ 正确：c.Param 返回 string
+batchID := c.Param("id")
+```
+
+**Bug 2：类型不匹配**
+```go
+// ❌ 错误：batchID 是 string，但 AddFile 期望 uuid.UUID
+batchID := c.Param("id")
+batchService.AddFile(ctx, batchID, fileID)
+
+// ✅ 正确：解析 UUID
+batchIDStr := c.Param("id")
+batchID, err := uuid.Parse(batchIDStr)
+if err != nil {
+    return c.JSON(400, gin.H{"error": "invalid batch id"})
+}
+batchService.AddFile(ctx, batchID, fileID)
+```
+
+**Bug 3：receiver 指针缺失**
+```go
+// ❌ 错误：Method receiver 应该是指针
+func (h batchHandler) CompleteUpload(c *gin.Context) { ... }
+
+// ✅ 正确：
+func (h *batchHandler) CompleteUpload(c *gin.Context) { ... }
+```
+
+**Bug 4：环境变量读取错误**
+```go
+// ❌ 错误：直接传字符串，没有读取环境变量
+Port: mustAtoi("DB_PORT", "5432")
+
+// ✅ 正确：先读取环境变量，再转换
+Port: mustAtoi(getEnv("DB_PORT", "5432"), "DB_PORT")
+```
+
+**Bug 5：连接池配置错误**
+```go
+// ❌ 错误：类型不匹配（int ≠ time.Duration）
+db.SetConnMaxIdleTime(5)
+
+// ✅ 正确：
+db.SetConnMaxIdleTime(5 * time.Minute)
+```
+
+**Bug 6：运算符错误**
+```go
+// ❌ 错误：& 是取地址运算符，不是乘法
+db.SetConnMaxLifetime(5 & time.Minute)
+
+// ✅ 正确：
+db.SetConnMaxLifetime(5 * time.Minute)
+```
+
+### 已创建/修改的文件
+
+**新增文件（7 个）**
+- `internal/infrastructure/minio/client.go` (41 行)
+- `internal/interfaces/http/handlers/batch_handler.go` (120 行)
+- `cmd/ingestor/main.go` (230 行)
+- `LEARNING_LOG.md` (300 行)
+- `PROGRESS.md` (已更新)
+- `docs/ai-agent-architecture.md` (500 行)
+- `docs/development-log.md` (已追加)
+
+**修改文件（1 个）**
+- `go.mod` - 添加 Gin 和 MinIO SDK 依赖
+  - `github.com/gin-gonic/gin v1.11.0`
+  - `github.com/minio/minio-go/v7 v7.0.98`
+
+### 代码统计
+
+| 模块 | 文件数 | 代码行数 | 完成度 |
+|------|--------|----------|--------|
+| Domain | 7 | ~500 | 70% |
+| Infrastructure | 3 | ~300 | 40% |
+| Application | 5 | ~200 | 50% |
+| Interfaces | 1 | ~120 | 40% |
+| cmd/ingestor | 1 | ~230 | 100% ✅ |
+| docs/ | 4 | ~1200 | 40% |
+| **总计** | **21** | **~2550** | **20%** |
+
+### 下一步计划
+
+#### 🔥 高优先级（本周完成）
+1. **PostgreSQL Migration**（30 分钟）
+   - 创建 `batches` 表
+   - 创建 `files` 表
+   - 创建索引
+
+2. **Docker Compose**（1 小时）
+   - 搭建本地开发环境
+   - 验证所有服务启动
+
+3. **端到端测试**（1 小时）
+   - 启动所有服务
+   - 测试上传文件流程
+   - 验证 Kafka 事件
+
+#### 📅 中优先级（下周完成）
+4. **Orchestrator Service**（2-3 天）
+   - Kafka Consumer
+   - 状态机驱动
+   - Redis Barrier 协调
+
+5. **C++ Worker**（2-3 天）
+   - rec 文件解析
+   - Kafka 集成
+
+6. **Python Aggregator**（2-3 天）
+   - 数据聚合
+   - Top-K 计算
+   - Kafka 集成
+
+#### 🔮 低优先级（后续迭代）
+7. **AI Agent Worker**（6-9 天）- 架构设计完成 ✨
+   - 阶段 1: 基础框架（1-2 天）
+   - 阶段 2: 数据层（1 天）
+   - 阶段 3: LLM 集成（1-2 天）
+   - 阶段 4: Token 控制（0.5 天）
+   - 阶段 5: RAG 检索（1-2 天）
+   - 阶段 6: 测试与优化（1-2 天）
+
+8. **Query Service + Singleflight**（1 天）
+9. **SSE 实时推送**（1 天）
+
+### 面试重点（AI 模块）
+
+**Q: 如何控制 LLM Token 成本？**
+A:
+1. **Summary 剪枝** - 只保留 Top-K 异常码（K=10）
+2. **每日限额** - 设置 10 万 Token 上限
+3. **降级策略** - Token 超限返回 Top-K 异常码
+4. **缓存机制** - 相似诊断结果复用
+
+**Q: RAG 如何实现？**
+A:
+1. **Embedding API** - 文本 → 向量（OpenAI Ada Embedding V2）
+2. **pgvector 存储** - 向量 + 诊断结果
+3. **相似度搜索** - `<=>` 操作符（余弦距离）
+4. **Top-K 检索** - 返回最相似的 5 个案例
+
+**Q: 为什么用 Eino 而不是 LangChain？**
+A:
+1. **Go 原生** - 与 Orchestrator/Workers 技术栈一致
+2. **轻量级** - 比 LangChain 简单
+3. **高性能** - 适合高并发场景
+4. **内置 Token 追踪** - 自动记录 Token 使用
+
+**Q: 如何保证 LLM 调用的可靠性？**
+A:
+1. **重试机制** - 指数退避（3 次）
+2. **超时控制** - 30 秒超时
+3. **降级策略** - Token 超限返回 Top-K 异常码
+4. **错误日志** - 记录所有失败调用
+
+### 今日总结
+
+**完成量**：
+- 新增代码：~391 行（不含文档）
+- 新增文档：~1200 行
+- 修复 Bug：13 个（MinIO 2 + BatchHandler 6 + Ingestor 5）
+- 编译验证：✅ 通过
+
+**核心成果**：
+- ✅ **Ingestor（接入层）** - 完整实现并编译通过
+- ✅ **AI Agent Worker 架构** - 完整设计文档，开发策略清晰
+- ✅ **Bug 修复** - 13 个 Bug 全部修复
+
+**技术收获**：
+- Gin 框架使用（路由、中间件、文件上传）
+- MinIO 流式上传（io.Reader、PartSize）
+- 依赖注入模式（Config → Infrastructure → Service → Handler）
+- 优雅关闭（系统信号、context 超时、资源释放）
+- 零拷贝优化（splice、sendfile、io.Copy）
+- AI 架构设计（Eino、RAG、pgvector、Token 控制）
+
+**明天目标**：
+- PostgreSQL Migration（创建 batches、files 表）
+- Docker Compose（搭建本地开发环境）
+- 端到端测试（验证上传流程）
+
+---
