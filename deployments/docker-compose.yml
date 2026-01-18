@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - 核心数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: argus-postgres
+    environment:
+      POSTGRES_DB: argus_ota
+      POSTGRES_USER: argus
+      POSTGRES_PASSWORD: argus_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - argus-network
+
+  # Redis - 缓存与分布式锁
+  redis:
+    image: redis:7-alpine
+    container_name: argus-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - argus-network
+
+  # Zookeeper - Kafka 必须组件
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: argus-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - argus-network
+
+  # Kafka - 异步消息队列
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: argus-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - argus-network
+
+  # MinIO - 对象存储服务
+  minio:
+    image: minio/minio:latest
+    container_name: argus-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"  # API 端口
+      - "9001:9001"  # Console 管理界面端口
+    volumes:
+      - minio_data:/data
+    networks:
+      - argus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # MinIO Client (MC) - 用于初始化 Bucket
+  minio-init:
+    image: minio/mc:latest
+    container_name: argus-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/argus-logs --ignore-existing;
+      /usr/bin/mc policy set download myminio/argus-logs;
+      echo 'MinIO initialization completed';
+      "
+    networks:
+      - argus-network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  argus-network:
+    driver: bridge
