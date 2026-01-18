@@ -88,9 +88,14 @@ tmp/
 temp/
 *.tmp
 
-# Data files (uncomment if you don't want to commit large data files)
-# data/*.rec
-# data/*.log
+# Data files (large test data and logs should not be committed)
+data/*.rec
+data/*.log
+
+# Compiled tools (should be built from source, not committed)
+tools/autonomy_manager_status_parsing_tool
+tools/hardware_health_monitor_tool
+tools/io_packet_to_txt_tool
 
 # macOS
 .DS_Store
