@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/xuewentao/argus-ota-platform/internal/domain"
@@ -11,12 +12,18 @@ import (
 
 type BatchService struct {
 	batchRepo domain.BatchRepository
-	kafka 	  messaging.KafkaEventPublisher
+	fileRepo  domain.FileRepository
+	kafka     messaging.KafkaEventPublisher
 }
 
-func NewBatchService(batchRepo domain.BatchRepository,kafka messaging.KafkaEventPublisher) *BatchService {
+func NewBatchService(
+	batchRepo domain.BatchRepository,
+	fileRepo domain.FileRepository,
+	kafka messaging.KafkaEventPublisher,
+) *BatchService {
 	return &BatchService{
 		batchRepo: batchRepo,
+		fileRepo:  fileRepo,
 		kafka:     kafka,
 	}
 }
@@ -75,20 +82,53 @@ func (s *BatchService)TransitionBatchStatus(
 
 }
 
-func (s *BatchService) AddFile (
+func (s *BatchService) AddFile(
 	ctx context.Context,
 	batchID uuid.UUID,
 	fileID uuid.UUID,
+	originalFilename string,
+	fileSize int64,
+	minioPath string,
 ) error {
-	batch, err := s.batchRepo.FindByID(ctx,batchID)
+	// 1. 验证 Batch 存在
+	batch, err := s.batchRepo.FindByID(ctx, batchID)
 	if err != nil {
 		return err
 	}
 	if batch == nil {
-		return fmt.Errorf("batch not found %s",batchID)
+		return fmt.Errorf("batch not found %s", batchID)
 	}
+
+	// 2. 创建 File 记录
+	now := time.Now()
+	file := &domain.File{
+		ID:               fileID,
+		BatchID:          batchID,
+		Filename:         fileID.String(), // 使用 fileID 作为 filename
+		OriginalFilename: originalFilename,
+		FileSize:         fileSize,
+		FileType:         "", // 可选：从文件扩展名推断
+		UploadTime:       now,
+		MinIOPath:        minioPath,
+		MinIOETag:        "", // MinIO SDK 返回的 ETag
+		ProcessingStatus: domain.FileStatusPending,
+		ParseDurationMs:  0,
+		RecordCount:      0,
+		ErrorMessage:     "",
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+
+	// 3. 保存 File 到数据库
+	if err := s.fileRepo.Save(ctx, file); err != nil {
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	// 4. 增加 Batch 的 TotalFiles 计数
 	if err := batch.AddFile(fileID); err != nil {
 		return err
 	}
-	return s.batchRepo.Save(ctx,batch)
+
+	// 5. 保存 Batch
+	return s.batchRepo.Save(ctx, batch)
 }

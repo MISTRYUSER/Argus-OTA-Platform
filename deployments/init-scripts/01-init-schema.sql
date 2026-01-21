@@ -4,7 +4,7 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Enable pgvector for RAG (optional, requires pgvector extension)
+-- Enable pgvector for RAG (暂时注释，使用 postgres:15-alpine 镜像)
 -- CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- ============================================================================
@@ -23,10 +23,10 @@ CREATE TABLE IF NOT EXISTS batches (
         -- Possible values: 'pending', 'uploaded', 'scattering', 'scattered',
         --                 'gathering', 'gathered', 'diagnosing', 'completed', 'failed'
     total_files INTEGER NOT NULL DEFAULT 0,
-    processed_files INTEGER NOT NULL DEFAULT 0,
+    processed_files INTEGER NOT NULL DEFAULT 0 CHECK (processed_files >= 0 AND processed_files <= total_files),
     -- Barrier coordination
     expected_worker_count INTEGER NOT NULL,
-    completed_worker_count INTEGER NOT NULL DEFAULT 0,
+    completed_worker_count INTEGER NOT NULL DEFAULT 0 CHECK (completed_worker_count >= 0 AND completed_worker_count <= expected_worker_count),
     -- MinIO storage
     minio_bucket VARCHAR(255),
     minio_prefix VARCHAR(255),
@@ -97,8 +97,8 @@ CREATE INDEX IF NOT EXISTS idx_files_upload_time ON files(upload_time DESC);
 
 CREATE TABLE IF NOT EXISTS ai_diagnoses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    -- Foreign key to batch
-    batch_id UUID NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
+    -- Foreign key to batch (UNIQUE: one batch has one diagnosis)
+    batch_id UUID NOT NULL UNIQUE REFERENCES batches(id) ON DELETE CASCADE,
     -- AI model info
     model_name VARCHAR(255) NOT NULL,
     model_version VARCHAR(100),
@@ -106,6 +106,12 @@ CREATE TABLE IF NOT EXISTS ai_diagnoses (
     diagnosis_summary TEXT NOT NULL,
     severity VARCHAR(50),
         -- Possible values: 'info', 'warning', 'error', 'critical'
+    -- Error analysis (JSONB for flexibility)
+    top_error_codes JSONB,
+        -- Example: [{"code": "0x8004", "count": 10, "description": "Sensor failure"}]
+    -- RAG vector embedding (暂时注释，需要 pgvector 扩展)
+    -- embedding vector(1536),
+    --     -- OpenAI text-embedding-ada-002 dimension: 1536
     -- Token usage (for cost tracking)
     input_tokens INTEGER,
     output_tokens INTEGER,
@@ -125,6 +131,10 @@ CREATE TABLE IF NOT EXISTS ai_diagnoses (
 CREATE INDEX IF NOT EXISTS idx_diagnoses_batch_id ON ai_diagnoses(batch_id);
 CREATE INDEX IF NOT EXISTS idx_diagnoses_severity ON ai_diagnoses(severity);
 CREATE INDEX IF NOT EXISTS idx_diagnoses_created_at ON ai_diagnoses(created_at DESC);
+-- Vector index for RAG similarity search (暂时注释，需要 pgvector 扩展)
+-- CREATE INDEX IF NOT EXISTS idx_diagnoses_embedding ON ai_diagnoses
+--     USING ivfflat (embedding vector_cosine_ops)
+--     WITH (lists = 100);
 
 -- ============================================================================
 -- Reports Table (Optional - for pre-aggregated reports)

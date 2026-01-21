@@ -215,9 +215,10 @@ func main() {
 
 	// 3. 初始化 Repository
 	batchRepo := postgres.NewPostgresBatchRepository(db)
+	fileRepo := postgres.NewPostgresFileRepository(db)
 
 	// 4. 初始化 Service
-	batchService := application.NewBatchService(batchRepo, kafkaProducer)
+	batchService := application.NewBatchService(batchRepo, fileRepo, kafkaProducer)
 
 	// 5. 初始化 Router
 	router := initRouter(batchService, minioClient)
