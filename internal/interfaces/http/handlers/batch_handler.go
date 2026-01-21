@@ -86,7 +86,15 @@ func (h *batchHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
-	err = h.batchService.AddFile(c.Request.Context(), batchID, fileID)
+	// 调用 BatchService.AddFile，传入完整的文件信息
+	err = h.batchService.AddFile(
+		c.Request.Context(),
+		batchID,
+		fileID,
+		fileHeader.Filename,    // 原始文件名
+		fileHeader.Size,         // 文件大小
+		objectKey,               // MinIO 路径
+	)
 	if err != nil {
 		c.JSON(500,gin.H{"error":err.Error()})
 		return
