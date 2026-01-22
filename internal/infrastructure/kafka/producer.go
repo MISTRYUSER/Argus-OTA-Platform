@@ -55,6 +55,10 @@ func (k *kafkaEventProducer) PublishEvents(ctx context.Context, events []domain.
 			if err := k.publishStatusChanged(ctx, e); err != nil {
 				return fmt.Errorf("failed to publish event %d: %w", i, err)
 			}
+		case domain.FileParsed:
+			if err := k.publishFileParsed(ctx, e); err != nil {
+				return fmt.Errorf("failed to publish event %d: %w", i, err)
+			}
 		default:
 			log.Printf("[Kafka] Unknown event type: %T", event)
 		}
@@ -109,6 +113,29 @@ func (k *kafkaEventProducer) publishStatusChanged(ctx context.Context, event dom
 	}
 
 	log.Printf("[Kafka] StatusChanged sent successfully. Partition: %d, Offset: %d", partition, offset)
+	return nil
+}
+
+// publishFileParsed - 发布 FileParsed 事件（小写，私有方法）
+func (k *kafkaEventProducer) publishFileParsed(ctx context.Context, event domain.FileParsed) error {
+	message := fmt.Sprintf(`{"event_type":"FileParsed","batch_id":"%s","file_id":"%s","timestamp":"%s"}`,
+		event.BatchID,
+		event.FileID,
+		event.OccurredAt.Format("2006-01-02T15:04:05Z07:00"),
+	)
+
+	kafkaMsg := &sarama.ProducerMessage{
+		Topic: k.topic,
+		Key:   sarama.StringEncoder(event.BatchID.String()),
+		Value: sarama.StringEncoder(message),
+	}
+
+	partition, offset, err := k.producer.SendMessage(kafkaMsg)
+	if err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+
+	log.Printf("[Kafka] FileParsed sent successfully. Partition: %d, Offset: %d", partition, offset)
 	return nil
 }
 

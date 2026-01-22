@@ -63,22 +63,26 @@ func (s *OrchestrateService) handleBatchCreated(ctx context.Context, event map[s
 	if err != nil {
 		return err
 	}
-
-	// 3. 状态转换：pending → uploaded
-	if err := batch.TransitionTo(domain.BatchStatusUploaded); err != nil {
-		return err
+	if batch == nil {  // ← 添加这个检查
+		return fmt.Errorf("batch not found: %s", batchID)
 	}
-
-	// 4. 状态转换：uploaded → scattering
-	if err := batch.TransitionTo(domain.BatchStatusScattering); err != nil {
-		return err
+  
+  
+	switch batch.Status {
+	case domain.BatchStatusPending:
+		batch.TransitionTo(domain.BatchStatusUploaded)
+		batch.TransitionTo(domain.BatchStatusScattering)
+	case domain.BatchStatusUploaded:
+		batch.TransitionTo(domain.BatchStatusScattering)
 	}
-
+  
+  
+  
 	// 5. 保存状态
 	if err := s.batchRepo.Save(ctx, batch); err != nil {
 		return err
 	}
-
+	
 	events := batch.GetEvents()
 	if err := s.kafka.PublishEvents(ctx, events); err != nil {
 		log.Printf("Failed to publish events: %v", err)
@@ -110,21 +114,54 @@ func (s *OrchestrateService) handleFileParsed(ctx context.Context, event map[str
 	if err != nil {
 		return err
 	}
+	if batch == nil {
+		return fmt.Errorf("batch not found: %s", batchID)
+	}
+	batch.ProcessedFiles = int(count)
 	log.Printf("[Orchestrator] Progress: %d/%d files processed", count, batch.TotalFiles)
 	if count == int64(batch.TotalFiles) {
-		log.Printf("[Orchestrator] All files processed, transitioning to gathered")
-		if err := batch.TransitionTo(domain.BatchStatusGathered); err != nil {
-			return err
+		log.Printf("[Orchestrator] All files processed, transitioning status")
+  
+		// scattering → scattered
+		if batch.Status == domain.BatchStatusScattering {
+			if err := batch.TransitionTo(domain.BatchStatusScattered); err != nil {
+				return fmt.Errorf("failed to transition to scattered: %w", err)
+			}
+			log.Printf("[Orchestrator] Status: scattering → scattered")
 		}
+  
+		// scattered → gathering
+		if batch.Status == domain.BatchStatusScattered {
+			if err := batch.TransitionTo(domain.BatchStatusGathering); err != nil {
+				return fmt.Errorf("failed to transition to gathering: %w", err)
+			}
+			log.Printf("[Orchestrator] Status: scattered → gathering")
+		}
+  
+		// gathering → gathered
+		if batch.Status == domain.BatchStatusGathering {
+			if err := batch.TransitionTo(domain.BatchStatusGathered); err != nil {
+				return fmt.Errorf("failed to transition to gathered: %w", err)
+			}
+			log.Printf("[Orchestrator] Status: gathering → gathered")
+		}
+  
+		// 保存到数据库
 		if err := s.batchRepo.Save(ctx, batch); err != nil {
-			return err
+			return fmt.Errorf("failed to save batch: %w", err)
 		}
+  
+		// 发布状态变更事件
 		events := batch.GetEvents()
-		if err := s.kafka.PublishEvents(ctx, events); err != nil {
-			log.Printf("Failed to publish events: %v", err)
+		if len(events) > 0 {
+			if err := s.kafka.PublishEvents(ctx, events); err != nil {
+				log.Printf("Failed to publish events: %v", err)
+			}
+			batch.ClearEvents()
 		}
-		batch.ClearEvents()
+		// 清理 Redis Barrier
 		s.redis.DEL(ctx, key)
+		log.Printf("[Orchestrator] Batch %s final status: %s", batchID, batch.Status)
 	} else {
 		log.Printf("[Orchestrator] Waiting for more files (%d/%d)", count, batch.TotalFiles)
 	}

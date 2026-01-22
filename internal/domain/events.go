@@ -25,6 +25,26 @@ type BatchStatusChanged struct {
 	OccurredAt  time.Time
 }
 
+// FileParsed - 文件解析完成事件（C++ Worker 发布）
+type FileParsed struct {
+	BatchID     uuid.UUID
+	FileID      uuid.UUID
+	OccurredAt  time.Time
+}
+
+// FileParsed implements DomainEvent interface
+func (e FileParsed) OccurredOn() time.Time {
+	return e.OccurredAt
+}
+
+func (e FileParsed) AggregateID() uuid.UUID {
+	return e.BatchID
+}
+
+func (e FileParsed) EventType() string {
+	return "FileParsed"
+}
+
 // ============================================================================
 // DomainEvent Interface Implementation
 // ============================================================================

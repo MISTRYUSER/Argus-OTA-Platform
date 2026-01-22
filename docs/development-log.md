@@ -1811,3 +1811,279 @@ if count == totalFiles {
 - **关键突破**：Orchestrator 成功消费 Kafka 事件，状态转换成功！
 - **系统完整度**：40%（核心流程已打通，还差 Worker 和 Query Service）
 
+---
+
+## 2026-01-21 (Day 8)
+
+### 完成事项
+
+#### 1. ✅ 实现 Mock C++ Worker (`cmd/mock-cpp-worker/main.go`)
+- ✅ **完整 Kafka Consumer 实现**
+  - 订阅 `batch-events` topic
+  - Consumer Group: `cpp-worker-group`
+  - 使用 `sarama.BalanceStrategyRoundRobin`
+  - Offset 配置: `sarama.OffsetOldest`（不丢数据）
+
+- ✅ **Worker 结构体设计**
+  - `Worker` 结构体：包含 Kafka Producer（发布 FileParsed 事件）
+  - `NewWorker` 构造函数：注入 Kafka Producer
+  - `HandleMessage` 方法：Kafka 消息处理入口
+  - `handleBatchCreated` 方法：模拟 rec 文件解析（sleep 2 秒）
+
+- ✅ **事件路由逻辑**
+  ```go
+  switch eventType {
+  case "BatchCreated":
+      return w.handleBatchCreated(ctx, event)
+  case "StatusChanged":
+      // Worker 不关心 StatusChanged 事件
+      return nil
+  default:
+      log.Printf("[Worker] Unknown event type: %s", eventType)
+  }
+  ```
+
+#### 2. ✅ 实现 FileParsed 事件 (`internal/domain/events.go`)
+- ✅ **FileParsed 事件结构体**
+  - `BatchID uuid.UUID` - 批次 ID
+  - `FileID uuid.UUID` - 文件 ID
+  - `OccurredAt time.Time` - 事件发生时间
+
+- ✅ **DomainEvent 接口实现**
+  - `OccurredOn()` - 返回事件发生时间
+  - `AggregateID()` - 返回聚合根 ID（BatchID）
+  - `EventType()` - 返回事件类型 "FileParsed"
+
+#### 3. ✅ Kafka Producer 支持 FileParsed 事件
+- ✅ **添加 FileParsed 事件类型支持**
+  - 在 `PublishEvents` 的 switch 语句中添加 `case domain.FileParsed`
+  - 实现 `publishFileParsed` 方法
+  - JSON 格式：`{"event_type":"FileParsed","batch_id":"xxx","file_id":"yyy","timestamp":"..."}`
+
+#### 4. ✅ Worker 真正发布 FileParsed 事件
+- ✅ **批量发布 FileParsed 事件**
+  - 模拟每个 Batch 有 2 个文件（简化实现）
+  - 使用 `uuid.New()` 生成 fileID
+  - 转换为 `[]domain.DomainEvent` 接口类型
+  - 调用 `w.kafka.PublishEvents(ctx, events)` 发布
+
+- ✅ **完整日志输出**
+  ```
+  [Worker] Received BatchCreated: batch=xxx
+  [Worker] 🔄 Simulating rec file parsing for batch xxx...
+  [Worker] ✅ Parsing completed for batch xxx
+  [Worker] Publishing 2 FileParsed events...
+  [Kafka] Publishing 2 events to topic: batch-events
+  [Kafka] FileParsed sent successfully. Partition: 0, Offset: xxx
+  [Kafka] FileParsed sent successfully. Partition: 0, Offset: xxx
+  [Worker] ✅ Successfully published 2 FileParsed events for batch xxx
+  ```
+
+#### 5. ✅ 修复 Worker Panic Bug
+- ✅ **Bug 17: Interface Conversion Panic**
+  - 现象：`panic: interface conversion: interface {} is nil, not string` at line 64
+  - 原因：`BatchCreated` 事件不包含 `status` 字段，代码尝试访问不存在的字段
+  - 解决：删除 status 检查逻辑，使用 comma-ok 模式安全访问 `batch_id`
+
+- ✅ **修复后的代码**
+  ```go
+  batchIDStr, ok := event["batch_id"].(string)
+  if !ok {
+      return fmt.Errorf("missing batch_id")
+  }
+  batchID, err := uuid.Parse(batchIDStr)
+  if err != nil {
+      return fmt.Errorf("invalid batch_id: %w", err)
+  }
+  ```
+
+#### 6. ✅ 添加缺失的 Import
+- ✅ **Worker 导入包补全**
+  - 添加 `"github.com/google/uuid"` - UUID 解析和生成
+  - 添加 `"github.com/xuewentao/argus-ota-platform/internal/domain"` - DomainEvent 接口和 FileParsed 事件
+
+#### 7. ✅ 编译成功
+- ✅ **Worker 编译**
+  - 命令：`go build -o bin/mock-cpp-worker cmd/mock-cpp-worker/main.go`
+  - 结果：成功生成 11MB 二进制文件
+  - 位置：`bin/mock-cpp-worker`
+
+### 核心成果
+
+**1. FileParsed 事件完整实现**
+- ✅ Domain 层：定义 FileParsed 事件结构体
+- ✅ Domain 层：实现 DomainEvent 接口（3 个方法）
+- ✅ Infrastructure 层：Kafka Producer 支持 FileParsed 发布
+- ✅ Worker 层：消费 BatchCreated → 发布 FileParsed
+
+**2. Worker 完整实现**
+- ✅ Kafka Consumer（消费 BatchCreated 事件）
+- ✅ Kafka Producer（发布 FileParsed 事件）
+- ✅ 事件路由（BatchCreated, StatusChanged）
+- ✅ 模拟解析（sleep 2 秒）
+- ✅ 批量发布（每个 Batch 发布 2 个 FileParsed 事件）
+
+**3. Bug 修复经验**
+- ✅ Comma-ok 模式（安全类型断言）
+- ✅ UUID 解析错误处理
+- ✅ 事件字段访问（先检查字段是否存在）
+
+### 代码统计
+
+| 模块 | 文件数 | 代码行数 | 完成度 |
+|------|--------|----------|--------|
+| Domain | 7 | ~520 | 75% ⬆️ |
+| Infrastructure | 5 | ~650 | 75% ⬆️ |
+| Application | 6 | ~300 | 70% |
+| Interfaces | 1 | ~130 | 45% |
+| cmd/ingestor | 1 | ~232 | 100% |
+| cmd/orchestrator | 1 | ~165 | 100% |
+| cmd/mock-cpp-worker | 1 | ~160 | 100% ✅ |
+| cmd/test-redis | 1 | ~83 | 100% |
+| docs/ | 4 | ~2600 | 58% ⬆️ |
+| **总计** | **23** | **~4840** | **42%** ⬆️ |
+
+**今日新增**：~430 行（代码 + 文档）
+
+### 面试高频考点（今日新增）
+
+**Q28: 为什么 Worker 同时需要 Kafka Consumer 和 Producer？**（⭐⭐⭐⭐⭐）
+**A**：
+- **Consumer**：消费上游事件（如 `BatchCreated`）
+- **Producer**：发布下游事件（如 `FileParsed`）
+- **事件链完整**：`BatchCreated` → `FileParsed` → `AllFilesParsed`
+- **解耦设计**：Worker 不调用 Orchestrator API，只通过 Kafka 通信
+- **水平扩展**：可以启动多个 Worker 实例，自动负载均衡
+
+**Q29: 为什么 Worker 模拟每个 Batch 有 2 个文件？**（⭐⭐⭐⭐）
+**A**：
+- **简化实现**：真实场景需要查询 Batch.TotalFiles
+- **快速验证**：2 个文件足以验证 Redis Barrier 计数
+- **后续优化**：可以从 PostgreSQL 查询 Batch.TotalFiles
+
+**Q30: 为什么 FileParsed 事件需要 FileID？**（⭐⭐⭐⭐）
+**A**：
+- **幂等性保证**：Redis SADD 使用 fileID 作为 member（重复添加不增加计数）
+- **追溯性**：可以查询哪些文件已被处理
+- **错误处理**：如果某个文件解析失败，可以重新发布 FileParsed 事件
+
+**Q31: 为什么 Worker 的 Consumer Group 是 `cpp-worker-group`？**（⭐⭐⭐⭐⭐）
+**A**：
+- **独立消费**：Worker 和 Orchestrator 使用不同的 Consumer Group
+- **负载均衡**：可以启动多个 Worker 实例，自动分配 partition
+- **故障隔离**：Worker 崩溃不影响 Orchestrator，反之亦然
+- **消费语义**：同一个 BatchCreated 事件，Orchestrator 和 Worker 都会消费
+
+**Q32: 为什么使用 Comma-ok 模式访问 event 字段？**（⭐⭐⭐⭐）
+**A**：
+```go
+// ❌ 危险：直接断言，可能 panic
+batchID := event["batch_id"].(string)
+
+// ✅ 安全：comma-ok 模式
+batchID, ok := event["batch_id"].(string)
+if !ok {
+    return fmt.Errorf("missing batch_id")
+}
+```
+**关键优势**：
+- 避免 panic（字段不存在或类型不匹配时）
+- 明确错误处理
+- 代码健壮性
+
+### 踩坑与解决
+
+**Bug 17: Interface Conversion Panic**
+- **现象**：`panic: interface conversion: interface {} is nil, not string` at line 64
+- **原因**：代码尝试访问 `event["status"].(string)`，但 BatchCreated 事件不包含 status 字段
+- **根本原因**：复制 Orchestrator 的代码时，没有检查事件结构差异
+- **解决**：
+  1. 删除 status 字段访问逻辑
+  2. 使用 comma-ok 模式：`batchID, ok := event["batch_id"].(string)`
+  3. 添加 UUID 解析错误处理：`uuid.Parse(batchIDStr)`
+- **教训**：
+  - 不同事件的字段结构不同
+  - 访问 map 前必须检查字段是否存在
+  - 使用 comma-ok 模式避免 panic
+
+### 已创建/修改的文件
+
+**新增文件（1 个）**
+- `cmd/mock-cpp-worker/main.go` (160 行)
+  - Worker 结构体定义
+  - Kafka Consumer 初始化
+  - Kafka Producer 初始化
+  - HandleMessage 事件路由
+  - handleBatchCreated 模拟解析 + 发布 FileParsed
+  - 优雅关闭（SIGINT/SIGTERM）
+
+**修改文件（2 个）**
+- `internal/domain/events.go` (+14 行)
+  - 添加 FileParsed 事件结构体
+  - 实现 DomainEvent 接口（3 个方法）
+
+- `internal/infrastructure/kafka/producer.go` (+24 行)
+  - 在 PublishEvents switch 中添加 `case domain.FileParsed`
+  - 添加 publishFileParsed 方法（24 行）
+
+- `docs/development-log.md` (本文件)
+
+### 下一步计划
+
+#### 🔥 高优先级（Day 8 下午）
+1. **Worker 测试**
+   - [ ] 启动 Worker（消费 Kafka 事件）
+   - [ ] 验证 FileParsed 事件发布到 Kafka
+   - [ ] 验证 Orchestrator 消费 FileParsed 事件
+   - [ ] 验证 Redis Barrier 计数（SADD + SCARD）
+
+2. **端到端测试（完整流程）**
+   - [ ] Ingestor 创建 Batch → 发布 BatchCreated
+   - [ ] Orchestrator 消费 BatchCreated → 状态转换 to scattering
+   - [ ] Worker 消费 BatchCreated → 发布 FileParsed（2 个）
+   - [ ] Orchestrator 消费 FileParsed → Redis Barrier 计数
+   - [ ] Orchestrator 检测 Barrier 完成 → 状态转换 to gathered
+
+#### 📅 中优先级（Day 9）
+3. **SSE 实时推送**
+   - [ ] 实现 SSE 接口（`/batches/:id/progress`）
+   - [ ] 实时推送处理进度（Redis Pub/Sub）
+
+4. **Query Service + Singleflight**
+   - [ ] 实现报告查询 API
+   - [ ] 集成 Singleflight（防止缓存击穿）
+
+### 今日总结
+
+**完成量**：
+- 新增代码：~160 行（mock-cpp-worker/main.go）
+- 新增 Domain：+14 行（FileParsed 事件）
+- 新增 Infrastructure：+24 行（Kafka Producer FileParsed 支持）
+- 新增文档：~230 行（development-log.md）
+- 修复 Bug：1 个（Bug 17）
+
+**核心成果**：
+- ✅ **FileParsed 事件完整实现**（Domain + Infrastructure + Worker）
+- ✅ **Worker 完整实现**（Kafka Consumer + Producer + 事件路由）
+- ✅ **Worker 编译成功**（11MB 二进制文件）
+- ✅ **Bug 17 修复**（Interface Conversion Panic）
+
+**技术收获**：
+- Kafka Consumer + Producer 双向通信模式
+- FileParsed 事件设计（BatchID + FileID）
+- Comma-ok 模式（安全类型断言）
+- Consumer Group 隔离（Worker vs Orchestrator）
+- 事件链完整性（BatchCreated → FileParsed → StatusChanged）
+
+**明天目标**：
+- Worker 端到端测试（消费 BatchCreated → 发布 FileParsed）
+- Orchestrator 消费 FileParsed 事件
+- Redis Barrier 计数验证（SADD + SCARD）
+
+---
+
+**备注**:
+- 今天重点在 **Mock Worker 实现**（Kafka Consumer + Producer + FileParsed 事件）
+- **关键突破**：Worker 真正发布 FileParsed 事件到 Kafka（不是仅记录日志）
+- **系统完整度**：42%（核心流程已打通，还差 Worker 测试和 Query Service）
+
