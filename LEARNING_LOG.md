@@ -1054,3 +1054,137 @@ session.MarkMessage(msg, "")  // 手动标记消息
 - **关键突破**：Orchestrator 成功消费 Kafka 事件，状态转换成功！
 - **系统完整度**：40%（核心流程已打通，还差 Worker 和 Query Service）
 
+---
+
+## 📅 日期: 2026-01-21
+
+### 1. 完成功能与技术选型
+
+#### **功能 1: Mock C++ Worker 实现**
+- **实现**:
+  - `cmd/mock-cpp-worker/main.go` - 完整 Worker 实现
+  - Kafka Consumer 消费 BatchCreated 事件
+  - Kafka Producer 发布 FileParsed 事件
+  - 模拟 rec 文件解析（sleep 2 秒）
+- **为何这样设计**:
+  - **Consumer + Producer 双向通信**: Worker 消费上游事件，发布下游事件
+  - **事件链完整**: BatchCreated → FileParsed → AllFilesParsed
+  - **解耦设计**: Worker 不调用 Orchestrator API，只通过 Kafka 通信
+  - **水平扩展**: 可以启动多个 Worker 实例，自动负载均衡（Consumer Group）
+
+#### **功能 2: FileParsed 事件实现**
+- **实现**:
+  - `internal/domain/events.go` - FileParsed 事件结构体
+  - 实现 DomainEvent 接口（OccurredOn, AggregateID, EventType）
+  - Kafka Producer 支持 FileParsed 发布
+- **为何这样设计**:
+  - **BatchID + FileID**: 事件关联批次和具体文件
+  - **幂等性保证**: Redis SADD 使用 fileID 作为 member（重复添加不增加计数）
+  - **追溯性**: 可以查询哪些文件已被处理
+
+#### **功能 3: Comma-ok 模式安全类型断言**
+- **实现**:
+  ```go
+  batchIDStr, ok := event["batch_id"].(string)
+  if !ok {
+      return fmt.Errorf("missing batch_id")
+  }
+  ```
+- **为何这样设计**:
+  - **避免 panic**: 字段不存在或类型不匹配时不会崩溃
+  - **明确错误处理**: 可以返回自定义错误信息
+  - **代码健壮性**: 比直接断言更安全
+
+---
+
+### 2. 面试高频考点
+
+#### **Q28: 为什么 Worker 同时需要 Kafka Consumer 和 Producer？**
+**A**:
+- **Consumer**: 消费上游事件（如 `BatchCreated`）
+- **Producer**: 发布下游事件（如 `FileParsed`）
+- **事件链完整**: `BatchCreated` → `FileParsed` → `AllFilesParsed`
+- **解耦设计**: Worker 不调用 Orchestrator API，只通过 Kafka 通信
+- **水平扩展**: 可以启动多个 Worker 实例，自动负载均衡
+
+#### **Q29: 为什么 FileParsed 事件需要 FileID？**
+**A**:
+- **幂等性保证**: Redis SADD 使用 fileID 作为 member（重复添加不增加计数）
+- **追溯性**: 可以查询哪些文件已被处理
+- **错误处理**: 如果某个文件解析失败，可以重新发布 FileParsed 事件
+- **分布式协调**: 多个 Worker 实例同时处理不同文件，Redis Set 自动去重
+
+#### **Q30: 为什么 Worker 的 Consumer Group 是 `cpp-worker-group`？**
+**A**:
+- **独立消费**: Worker 和 Orchestrator 使用不同的 Consumer Group
+- **负载均衡**: 可以启动多个 Worker 实例，自动分配 partition
+- **故障隔离**: Worker 崩溃不影响 Orchestrator，反之亦然
+- **消费语义**: 同一个 BatchCreated 事件，Orchestrator 和 Worker 都会消费（广播模式）
+
+#### **Q31: 为什么使用 Comma-ok 模式访问 event 字段？**
+**A**:
+```go
+// ❌ 危险：直接断言，可能 panic
+batchID := event["batch_id"].(string)
+
+// ✅ 安全：comma-ok 模式
+batchID, ok := event["batch_id"].(string)
+if !ok {
+    return fmt.Errorf("missing batch_id")
+}
+```
+**关键优势**:
+- **避免 panic**: 字段不存在或类型不匹配时不会崩溃
+- **明确错误处理**: 可以返回自定义错误信息
+- **代码健壮性**: 比直接断言更安全
+- **防御性编程**: 在处理外部数据（如 Kafka 消息）时尤为重要
+
+---
+
+### 3. 踩坑与解决 (Troubleshooting)
+
+#### **Bug 17: Interface Conversion Panic**
+- **现象**:
+  ```
+  panic: interface conversion: interface {} is nil, not string
+  github.com/xuewentao/argus-ota-platform/cmd/mock-cpp-worker/main.go:64
+  ```
+- **原因**:
+  - 代码尝试访问 `event["status"].(string)`
+  - 但 `BatchCreated` 事件不包含 `status` 字段
+  - 直接类型断言导致 panic
+- **根本原因**:
+  - 复制 Orchestrator 的代码时，没有检查事件结构差异
+  - 不同事件的字段结构不同（BatchCreated vs StatusChanged）
+- **解决**:
+  1. 删除 status 字段访问逻辑
+  2. 使用 comma-ok 模式：`batchID, ok := event["batch_id"].(string)`
+  3. 添加 UUID 解析错误处理：`uuid.Parse(batchIDStr)`
+- **经验**:
+  - **访问 map 前必须检查字段是否存在**
+  - **使用 comma-ok 模式避免 panic**
+  - **复制代码时要检查事件结构差异**
+
+---
+
+### 4. 下一步计划
+
+**Day 8 下午任务**：
+- [ ] Worker 测试（启动 Worker，验证 FileParsed 事件发布）
+- [ ] 验证 Orchestrator 消费 FileParsed 事件
+- [ ] 验证 Redis Barrier 计数（SADD + SCARD）
+- [ ] 端到端测试：Ingestor → Orchestrator → Worker → Orchestrator
+
+**Day 9 任务**：
+- [ ] SSE 实时推送（`/batches/:id/progress`）
+- [ ] Query Service + Singleflight（防止缓存击穿）
+
+---
+
+**备注**：
+- 今天完成 **Mock Worker 完整实现**（Kafka Consumer + Producer + FileParsed 事件）
+- **关键突破**：Worker 真正发布 FileParsed 事件到 Kafka（不是仅记录日志）
+- **系统完整度**：42%（核心流程已打通，还差 Worker 测试和 Query Service）
+- **面试重点**：Kafka 双向通信、Consumer Group 隔离、Comma-ok 模式、幂等性设计
+
+
