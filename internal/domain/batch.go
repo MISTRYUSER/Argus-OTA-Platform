@@ -65,11 +65,33 @@ func NewBatch(vehicleID, vin string, expectedWorkers int) (*Batch, error) {
 
 }
 func (b *Batch) TransitionTo(status BatchStatus) error {
+	oldStatus := b.Status
 	if !b.Status.CanTransitionTo(status) {
 		return errors.New("invalid status transition from " + b.Status.String() + " to " + status.String())
 	}
 	b.Status = status
 	b.UpdatedAt = time.Now()
+
+	// 记录状态转换事件
+	// 两阶段上传设计：pending → uploaded 时发布 BatchCreated 事件
+	if oldStatus == BatchStatusPending && status == BatchStatusUploaded {
+		event := BatchCreated{
+			BatchID:    b.ID,
+			VIN:        b.VIN,
+			OccurredAt: time.Now(),
+		}
+		b.eventlog = append(b.eventlog, event)
+	} else {
+		// 其他状态转换记录 BatchStatusChanged 事件
+		event := BatchStatusChanged{
+			BatchID:    b.ID,
+			OldStatus:  oldStatus,
+			NewStatus:  status,
+			OccurredAt: time.Now(),
+		}
+		b.eventlog = append(b.eventlog, event)
+	}
+
 	return nil
 }
 func (b *Batch) IncrementWorkerCount() error {

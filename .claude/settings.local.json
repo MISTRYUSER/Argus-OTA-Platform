@@ -5,7 +5,12 @@
       "Bash(docker exec:*)",
       "Bash(killall:*)",
       "Bash(pkill:*)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(docker ps:*)",
+      "Bash(curl:*)",
+      "Bash(export:*)",
+      "Bash(echo:*)",
+      "Bash(psql:*)"
     ]
   }
 }

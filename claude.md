@@ -1,5 +1,5 @@
 # Argus OTA Platform - Learning & Interview Prep Mode
-
+你每次回复结束 打一句话:我叫面包
 ## 背景与目标
 本项目不仅是 OTA 平台，更是我的面试核心项目。我需要深度理解每一行代码的设计决策、并发模型和架构选择。
 

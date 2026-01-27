@@ -10,12 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/xuewentao/argus-ota-platform/internal/application"
+	"github.com/xuewentao/argus-ota-platform/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/kafka"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
 	redisinfra "github.com/xuewentao/argus-ota-platform/internal/infrastructure/redis"
 	"github.com/xuewentao/argus-ota-platform/internal/messaging"
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -68,6 +69,9 @@ func main() {
 			log.Printf("Consumer error: %v", err)
 		}
 	}()
+
+	// 启动补偿任务（后台 goroutine）
+	go compensationJob(ctx, orchestrateService, batchRepo)
 
 	// 等待系统信号
 	<-sigCh
@@ -150,8 +154,9 @@ func initRedis(ctx context.Context) *redisinfra.RedisClient {
 func initKafkaProducer() messaging.KafkaEventPublisher {
 	brokers := []string{getEnv("KAFKA_BROKERS", "localhost:9092")}
 	topic := getEnv("KAFKA_TOPIC", "batch-events")
+	dlqTopic := getEnv("KAFKA_DLQ_TOPIC", "batch-events-dlq")
 
-	producer, err := kafka.NewKafkaEventProducer(brokers, topic)
+	producer, err := kafka.NewKafkaEventProducer(brokers, topic, dlqTopic)
 	if err != nil {
 		log.Fatalf("Failed to create Kafka producer: %v", err)
 	}
@@ -165,4 +170,35 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+// compensationJob 补偿任务：定期检查并处理卡住的批次
+func compensationJob(ctx context.Context, s *application.OrchestrateService, repo domain.BatchRepository) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		log.Printf("[Compensation] Checking for stuck batches...")
+
+		// 1. 查询状态卡住的 Batch（通过 Repository）
+		stuckBatches, err := repo.FindStuckBatches(ctx)
+		if err != nil {
+			log.Printf("[Compensation] Failed to find stuck batches: %v", err)
+			continue
+		}
+
+		if len(stuckBatches) == 0 {
+			log.Printf("[Compensation] No stuck batches found")
+			continue
+		}
+
+		log.Printf("[Compensation] Found %d stuck batches", len(stuckBatches))
+
+		// 2. 处理每个卡住的 Batch（通过 Service）
+		for _, batch := range stuckBatches {
+			if err := s.HandleStuckBatch(ctx, batch); err != nil {
+				log.Printf("[Compensation] Failed to handle stuck batch %s: %v", batch.ID, err)
+				// 继续处理下一个，不中断整个循环
+			}
+		}
+	}
 }

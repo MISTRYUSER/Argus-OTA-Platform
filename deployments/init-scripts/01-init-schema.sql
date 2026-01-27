@@ -4,8 +4,8 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Enable pgvector for RAG (暂时注释，使用 postgres:15-alpine 镜像)
--- CREATE EXTENSION IF NOT EXISTS "vector";
+-- Enable pgvector for RAG
+CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- ============================================================================
 -- Batches Table
