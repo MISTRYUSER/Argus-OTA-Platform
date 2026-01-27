@@ -40,14 +40,11 @@ func (s *BatchService) CreateBatch (
 	if err := s.batchRepo.Save(ctx,batch); err != nil {
 		return nil,err
 	}
-	events := batch.GetEvents()
 
-	if err := s.kafka.PublishEvents(ctx,events);err != nil {
-		fmt.Printf("Failed to publish events: %v\n", err)
-	}
-	batch.ClearEvents()
+	// 两阶段上传设计：创建 Batch 时不发布 Kafka 事件
+	// BatchCreated 事件将在所有文件上传完成后（CompleteUpload）发布
 
-	return batch,s.batchRepo.Save(ctx,batch)
+	return batch,nil
 }
 
 func (s *BatchService)TransitionBatchStatus(

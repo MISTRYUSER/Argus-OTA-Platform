@@ -129,6 +129,51 @@ func (r *PostgresBatchRepository) Delete (ctx context.Context,id uuid.UUID) erro
 	return nil
 }
 
+// FindStuckBatches 查询状态卡住的批次（用于补偿任务）
+// - scattering 状态超过 5 分钟未更新
+// - diagnosing 状态超过 10 分钟未更新
+func (r *PostgresBatchRepository) FindStuckBatches(ctx context.Context) ([]*domain.Batch, error) {
+	query := `
+		SELECT id, vehicle_id, vin, status, upload_time,
+			   total_files, processed_files, expected_worker_count,
+			   completed_worker_count, minio_bucket, minio_prefix,
+			   error_message, completed_at, created_at, updated_at
+		FROM batches
+		WHERE (
+			(status = 'scattering' AND updated_at < NOW() - INTERVAL '5 minutes')
+			OR
+			(status = 'diagnosing' AND updated_at < NOW() - INTERVAL '10 minutes')
+		)
+		ORDER BY updated_at ASC
+	`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var batches []*domain.Batch
+	for rows.Next() {
+		batch := &domain.Batch{}
+		var statusStr string
+
+		err := rows.Scan(
+			&batch.ID, &batch.VehicleID, &batch.VIN, &statusStr, &batch.UploadTime,
+			&batch.TotalFiles, &batch.ProcessedFiles, &batch.ExpectedWorkerCount,
+			&batch.CompletedWorkerCount, &batch.MinIOBucket, &batch.MiniIOPrefix,
+			&batch.ErrorMessage, &batch.CompletedAt, &batch.CreatedAt, &batch.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		batch.Status = domain.BatchStatus(statusStr)
+		batches = append(batches, batch)
+	}
+
+	return batches, nil
+}
+
 // ============================================================================
 // FileRepository Implementation
 // ============================================================================

@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL - 核心数据库 (暂时使用 postgres:15-alpine，pgvector 稍后配置)
+  # PostgreSQL - 核心数据库 (使用 pgvector 镜像支持向量检索)
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     container_name: argus-postgres
     environment:
       POSTGRES_DB: argus_ota
