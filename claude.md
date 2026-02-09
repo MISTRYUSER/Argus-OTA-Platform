@@ -1,5 +1,30 @@
 # Argus OTA Platform - Learning & Interview Prep Mode
 你每次回复结束 打一句话:我叫面包
+
+## 📌 AI Agent Worker 实现技术栈
+
+**⭐ 重要：AI Agent Worker 使用字节跳动开源的 Eino 框架实现**
+
+- **框架**：[Eino - CloudWeGo](https://github.com/cloudwego/eino)
+- **架构模式**：Supervisor-Worker (基于 State Graph)
+- **核心特性**：
+  - Multi-Agent 协作（Supervisor 编排 + 专业 Agent 分工）
+  - 混合检索（error_code 过滤 + pgvector 向量排序）
+  - 背压控制（Semaphore 限流保护 LLM API）
+  - 状态机驱动（DiagnosisContext 在节点间流转）
+
+**技术亮点**：
+- 使用 `compose.NewGraph` 构建状态图
+- 实现 DataLoader → RAG → LLM → Report 的完整流程
+- 支持动态决策（根据置信度选择快通道/慢通道）
+
+**🚨 开发 AI Agent Worker 前必读**：
+- **必须阅读**：`docs/eino_design.md`（完整的 Eino Multi-Agent 架构设计文档）
+- 包含：Domain 层设计、Infrastructure 层实现、Graph 编排、Prompt 模板、数据库 Schema、关键优化策略
+- 如果不理解 Eino 的设计原理，不要直接修改代码！
+
+---
+
 ## 背景与目标
 本项目不仅是 OTA 平台，更是我的面试核心项目。我需要深度理解每一行代码的设计决策、并发模型和架构选择。
 
@@ -410,3 +435,158 @@ ab -n 1000 -c 100 http://localhost:8080/api/report/batch-101
 ```
 
 ---
+
+---
+
+## 📋 AI Agent Worker 开发任务清单
+
+**项目路径**: `workers/ai-agent/`
+
+**分工说明**：
+- ✅ **Claude 负责**：Eino Graph 编排、LLM 标准接口、Prompt Engineering、所有非 RAG 代码
+- 👤 **用户负责**：RAG 逻辑实现（混合检索：error_code 过滤 + pgvector 向量排序）
+
+---
+
+### 🎯 Phase 1: 项目初始化 (20分钟 × 2 = 40分钟)
+
+#### Task 1.1: 创建项目结构 (20分钟)
+- [ ] 创建目录结构
+  ```
+  workers/ai-agent/
+  ├── cmd/ai-worker/
+  ├── internal/
+  │   ├── domain/
+  │   ├── infrastructure/
+  │   │   ├── postgres/
+  │   │   └── rag_stub.go          # RAG 接口桩（用户实现）
+  │   └── application/
+  │       └── nodes/
+  └── prompts/
+  ```
+- [ ] 初始化 `go.mod`
+- [ ] 添加 Eino 依赖
+
+**完成标准**：目录创建完成，依赖安装成功
+
+---
+
+#### Task 1.2: 创建 Domain 层 (20分钟)
+- [ ] 创建 `internal/domain/state.go`
+- [ ] 创建 `internal/domain/entity.go`
+- [ ] 创建 `internal/domain/interface.go`
+
+**完成标准**：Domain 层编译通过
+
+---
+
+### 🎯 Phase 2: Infrastructure 层 (20分钟 × 3 = 60分钟)
+
+#### Task 2.1: 实现 LLM Provider (20分钟)
+- [ ] 创建 `internal/infrastructure/llm_provider.go`
+- [ ] 实现 `NewGLMModel` 和 `NewGLMEmbeddingModel`
+
+**完成标准**：使用 Eino 的 openai 组件
+
+---
+
+#### Task 2.2: 实现 PostgreSQL Repository (20分钟)
+- [ ] 创建 `internal/infrastructure/postgres/diagnosis_repo.go`
+
+**完成标准**：实现 `domain.DiagnosisRepository` 接口
+
+---
+
+#### Task 2.3: 创建 RAG Service 桩 (20分钟)
+- [ ] 创建 `internal/infrastructure/rag_service_stub.go`
+- [ ] **核心逻辑留空**，添加 TODO 注释
+
+**完成标准**：接口定义完整，用户可填充
+
+---
+
+### 🎯 Phase 3: Prompt 模板 (20分钟)
+
+#### Task 3.1: 创建 Prompt 模板 (20分钟)
+- [ ] 创建 `prompts/system_prompt.txt`
+- [ ] 创建 `prompts/diagnosis_prompt.txt`（含 CoT）
+
+**完成标准**：Prompt 模板完整
+
+---
+
+### 🎯 Phase 4: Application 层 (20分钟 × 3 = 60分钟)
+
+#### Task 4.1: 实现 DataLoader Node (20分钟)
+- [ ] 创建 `internal/application/nodes/data_loader_node.go`
+
+**完成标准**：使用 Eino 的 `compose.Runnable`
+
+---
+
+#### Task 4.2: 实现 RAG Node (20分钟)
+- [ ] 创建 `internal/application/nodes/rag_node.go`
+
+**完成标准**：降级逻辑完善
+
+---
+
+#### Task 4.3: 实现 LLM Node (20分钟)
+- [ ] 创建 `internal/application/nodes/llm_node.go`
+
+**完成标准**：使用 Eino 标准 `schema.Message`
+
+---
+
+### 🎯 Phase 5: Graph 编排 (20分钟 × 2 = 40分钟)
+
+#### Task 5.1: 实现 Graph 编排 (20分钟)
+- [ ] 创建 `internal/application/diagnosis_graph.go`
+
+**完成标准**：Graph 编译成功
+
+---
+
+#### Task 5.2: 实现 main.go (20分钟)
+- [ ] 创建 `cmd/ai-worker/main.go`
+
+**完成标准**：可以运行
+
+---
+
+### 🎯 Phase 6: 用户实现 RAG (20分钟 × 2 = 40分钟)
+
+#### Task 6.1: 实现 Embedding (20分钟)
+- [ ] 实现 `embedder.EmbedStrings`
+
+**完成标准**：生成查询向量
+
+---
+
+#### Task 6.2: 实现混合检索 (20分钟)
+- [ ] 实现混合检索 SQL
+
+**完成标准**：检索结果正确
+
+---
+
+### 🎯 Phase 7: 测试 (20分钟 × 3 = 60分钟)
+
+#### Task 7.1-7.3: 测试与优化
+- [ ] 单元测试
+- [ ] 集成测试
+- [ ] 文档编写
+
+---
+
+## 📊 总体进度
+
+- **总任务**: 18 个
+- **总时间**: 6 小时
+- **Claude**: 15 任务 (5小时)
+- **用户**: 3 任务 (1小时)
+
+---
+
+**下一步**: 开始 Task 1.1
+

@@ -96,6 +96,7 @@ data/*.log
 tools/autonomy_manager_status_parsing_tool
 tools/hardware_health_monitor_tool
 tools/io_packet_to_txt_tool
+workers/ai-agent/ai-worker
 
 # macOS
 .DS_Store

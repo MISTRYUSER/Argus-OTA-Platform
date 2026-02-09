@@ -10,7 +10,18 @@
       "Bash(curl:*)",
       "Bash(export:*)",
       "Bash(echo:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(docker compose:*)",
+      "Bash(go doc:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go get:*)",
+      "Bash(go test:*)"
     ]
   }
 }

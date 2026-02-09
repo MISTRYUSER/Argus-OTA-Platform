@@ -63,19 +63,20 @@ func (s *BatchService)TransitionBatchStatus(
 	if err := batch.TransitionTo(newStatus); err != nil {
 		return err
 	}
-	if err := s.batchRepo.Save(ctx,batch); err != nil {
-		return err
-	}
 
+	// P1 修复：先发布 Kafka 事件，确保事件发布成功后再持久化状态
+	// 这样可以避免"状态已前进但下游未感知"的分叉问题
 	events := batch.GetEvents()
 	if len(events) > 0 {
-		if err := s.kafka.PublishEvents(ctx,events);err != nil {
-			fmt.Printf("Failed to publish events: %v\n", err)
+		if err := s.kafka.PublishEvents(ctx, events); err != nil {
+			// 发布失败，状态不应持久化
+			return fmt.Errorf("failed to publish events: %w", err)
 		}
 	}
-	batch.ClearEvents()
 
-	return s.batchRepo.Save(ctx,batch)
+	// 事件发布成功后，清除事件日志并保存状态
+	batch.ClearEvents()
+	return s.batchRepo.Save(ctx, batch)
 
 }
 
@@ -96,7 +97,12 @@ func (s *BatchService) AddFile(
 		return fmt.Errorf("batch not found %s", batchID)
 	}
 
-	// 2. 创建 File 记录
+	// 2. 先校验状态并增加 Batch 的 TotalFiles 计数（P1 修复：先校验，避免脏数据）
+	if err := batch.AddFile(fileID); err != nil {
+		return err
+	}
+
+	// 3. 创建 File 记录
 	now := time.Now()
 	file := &domain.File{
 		ID:               fileID,
@@ -116,14 +122,12 @@ func (s *BatchService) AddFile(
 		UpdatedAt:        now,
 	}
 
-	// 3. 保存 File 到数据库
+	// 4. 保存 File 到数据库（状态已校验，不会产生脏数据）
 	if err := s.fileRepo.Save(ctx, file); err != nil {
+		// 回滚：减少 TotalFiles 计数
+		batch.TotalFiles--
+		batch.UpdatedAt = now
 		return fmt.Errorf("failed to save file: %w", err)
-	}
-
-	// 4. 增加 Batch 的 TotalFiles 计数
-	if err := batch.AddFile(fileID); err != nil {
-		return err
 	}
 
 	// 5. 保存 Batch

@@ -6,16 +6,16 @@ import (
 	"github.com/google/uuid"
 )
 type ListOptions struct {
-	//page 
-	Limit 		int
-	Offset 		int
+	//page
+	Limit      int
+	Offset     int
 
-	SortBy		string
-	SortOrder	string
+	SortBy     string
+	SortOrder  string
 
-	vehicleID	*string
-	VIN			*string
-	Status 		*string
+	VehicleID  *string
+	VIN        *string
+	Status     *string
 }
 type BatchRepository interface {
 	Save(ctx context.Context, batch *Batch) error

@@ -399,7 +399,21 @@ func (k *kafkaEventProducer) publishDiagnosisCompleted(ctx context.Context, even
 	return nil
 }
 // Close - 关闭 Kafka Producer
+// P2-2: 同时关闭主 producer 和 DLQ producer，避免连接泄漏
 func (k *kafkaEventProducer) Close() error {
 	log.Printf("[Kafka] Closing producer...")
-	return k.producer.Close()
+
+	// 关闭主 producer
+	if err := k.producer.Close(); err != nil {
+		log.Printf("[Kafka] Error closing main producer: %v", err)
+	}
+
+	// P2-2: 关闭 DLQ producer
+	if k.dlqProducer != nil {
+		if err := k.dlqProducer.Close(); err != nil {
+			log.Printf("[Kafka] Error closing DLQ producer: %v", err)
+		}
+	}
+
+	return nil
 }

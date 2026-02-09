@@ -10,4 +10,4 @@ type KafkaEventPublisher interface {
 	PublishStatusChanged(ctx context.Context, event domain.BatchStatusChanged) error
 
 	PublishEvents(ctx context.Context, events []domain.DomainEvent) error
-}
+} 

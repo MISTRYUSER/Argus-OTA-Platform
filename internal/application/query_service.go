@@ -111,27 +111,42 @@ func (s *QueryService) setReportToCache(ctx context.Context, report *domain.Repo
 	// 2. 写入 Redis（带过期时间）
 	return s.cache.SET(ctx, key, string(data), ttl)
 }
-func (s *QueryService) getReportFromDatabase(ctx context.Context, batchID uuid.UUID) (*domain.Report,error) {
-	report , err :=s.reportRepo.FindByBatchID(ctx,batchID)
+func (s *QueryService) getReportFromDatabase(ctx context.Context, batchID uuid.UUID) (*domain.Report, error) {
+	report, err := s.reportRepo.FindByBatchID(ctx, batchID)
 	if err == nil && report != nil {
-		return report,nil
+		return report, nil
 	}
 
-	batch,err := s.batchRepo.FindByID(ctx,batchID)
+	// P1-3: 检查 batch 是否为 nil，避免空指针 panic
+	batch, err := s.batchRepo.FindByID(ctx, batchID)
 	if err != nil {
-		return nil,fmt.Errorf("batch not found : %w",err)
+		return nil, fmt.Errorf("batch not found: %w", err)
+	}
+	if batch == nil {
+		return nil, fmt.Errorf("batch %s not found (nil returned without error)", batchID)
 	}
 
 	report = domain.NewReport(batch)
-	if err := s.reportRepo.Save(ctx,report);err != nil {
+	if err := s.reportRepo.Save(ctx, report); err != nil {
 		log.Printf("[QueryService] Warning: failed to save report: %v", err)
 	}
-	return report,err
+	return report, err
 }
+
 func (s *QueryService) GetProgress(ctx context.Context, batchID uuid.UUID) (map[string]interface{}, error) {
 	batch, err := s.batchRepo.FindByID(ctx, batchID)
 	if err != nil {
 		return nil, err
+	}
+	// P1-3: 检查 batch 是否为 nil
+	if batch == nil {
+		return nil, fmt.Errorf("batch %s not found (nil returned without error)", batchID)
+	}
+
+	// P2-3: 避免除以零，TotalFiles == 0 时返回 0%
+	progressPercent := 0.0
+	if batch.TotalFiles > 0 {
+		progressPercent = float64(batch.ProcessedFiles) / float64(batch.TotalFiles) * 100
 	}
 
 	progress := map[string]interface{}{
@@ -139,7 +154,7 @@ func (s *QueryService) GetProgress(ctx context.Context, batchID uuid.UUID) (map[
 		"status":          batch.Status,
 		"total_files":     batch.TotalFiles,
 		"processed_files": batch.ProcessedFiles,
-		"progress_percent": float64(batch.ProcessedFiles) / float64(batch.TotalFiles) * 100,
+		"progress_percent": progressPercent,
 		"created_at":      batch.CreatedAt,
 		"updated_at":      batch.UpdatedAt,
 	}

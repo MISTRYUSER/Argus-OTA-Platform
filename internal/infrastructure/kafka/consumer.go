@@ -91,11 +91,14 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			if !ok {
 				return nil
 			}
+			// P1-5: 只有处理成功才 MarkMessage，失败则不提交 offset，允许 Kafka 重试
 			if err := h.messageHandler(context.Background(), msg.Value); err != nil {
-				log.Printf("Message handler failed: %v", err)
+				log.Printf("[Kafka] Message handler failed: %v (message NOT marked, will retry)", err)
+				// 不调用 MarkMessage，让 Kafka 重新投递这条消息
+			} else {
+				// 处理成功，标记消息已消费
+				session.MarkMessage(msg, "")
 			}
-
-			session.MarkMessage(msg, "")
 		case <-session.Context().Done():
 			return nil
 		}

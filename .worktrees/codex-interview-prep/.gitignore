@@ -1,0 +1,164 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+build/
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Log files
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# C++ Build files
+*.o
+*.a
+CMakeFiles/
+cmake_install.cmake
+Makefile.in
+*.cmake
+!CMakeLists.txt
+
+# Kafka and Zookeeper data
+kafka-data/
+zookeeper-data/
+
+# Redis dump
+dump.rdb
+
+# MinIO data
+.minio/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Data files (large test data and logs should not be committed)
+data/*.rec
+data/*.log
+
+# Compiled tools (should be built from source, not committed)
+tools/autonomy_manager_status_parsing_tool
+tools/hardware_health_monitor_tool
+tools/io_packet_to_txt_tool
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Package Manager
+go.sum
+# Uncomment if you don't want to commit go.sum
+# go.sum
+
+# Profiling and profiling tools
+*.prof
+*.pprof
+cpu.prof
+mem.prof
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Docker
+.dockerignore

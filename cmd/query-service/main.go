@@ -13,10 +13,8 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"github.com/xuewentao/argus-ota-platform/internal/application"
-	"github.com/xuewentao/argus-ota-platform/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
 	redisinfra "github.com/xuewentao/argus-ota-platform/internal/infrastructure/redis"
 	"github.com/xuewentao/argus-ota-platform/internal/interfaces/http/handlers"
@@ -33,7 +31,7 @@ func main() {
 
 	// 3. 初始化 Repository
 	batchRepo := postgres.NewPostgresBatchRepository(db)
-	reportRepo := &mockReportRepository{} // TODO: 替换为真实的 ReportRepository
+	reportRepo := postgres.NewPostgresReportRepository(db)
 
 	// 4. 初始化 QueryService
 	queryService := application.NewQueryService(batchRepo, reportRepo, redisClient)
@@ -129,20 +127,4 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// mockReportRepository Mock ReportRepository（临时实现）
-// TODO: 替换为真实的 PostgresReportRepository
-type mockReportRepository struct{}
-
-func (m *mockReportRepository) Save(ctx context.Context, report *domain.Report) error {
-	log.Printf("[MockReportRepository] Save: %s (batchID=%s)", report.ID, report.BatchID)
-	return nil
-}
-
-func (m *mockReportRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Report, error) {
-	return nil, nil
-}
-
-func (m *mockReportRepository) FindByBatchID(ctx context.Context, batchID uuid.UUID) (*domain.Report, error) {
-	return nil, nil
-}
-
+// NOTE: Mock ReportRepository removed; use PostgresReportRepository instead.

@@ -1,0 +1,14 @@
+./assertI2I.go
+./base64_compat.go
+./fastconv.go
+./fastmem.go
+./fastvalue.go
+./gcwb.go
+./growslice.go
+./int48.go
+./map_siwss_go124.go
+./pool.go
+./stubs.go
+./table.go
+./types.go
+./asm_compat.s

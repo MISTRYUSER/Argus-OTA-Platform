@@ -59,6 +59,50 @@ func (m *MockBatchRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
+func (m *MockBatchRepository) FindStuckBatches(ctx context.Context) ([]*domain.Batch, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*domain.Batch), args.Error(1)
+}
+
+// MockFileRepository - P0 fix: FileRepository Mock
+type MockFileRepository struct {
+	mock.Mock
+}
+
+func (m *MockFileRepository) Save(ctx context.Context, file *domain.File) error {
+	args := m.Called(ctx, file)
+	return args.Error(0)
+}
+
+func (m *MockFileRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.File, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.File), args.Error(1)
+}
+
+func (m *MockFileRepository) FindByBatchID(ctx context.Context, batchID uuid.UUID) ([]*domain.File, error) {
+	args := m.Called(ctx, batchID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*domain.File), args.Error(1)
+}
+
+func (m *MockFileRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockFileRepository) UpdateProcessingStatus(ctx context.Context, id uuid.UUID, status domain.ProcessingStatus) error {
+	args := m.Called(ctx, id, status)
+	return args.Error(0)
+}
+
 // MockKafkaEventPublisher - KafkaEventPublisher 的 Mock 实现
 type MockKafkaEventPublisher struct {
 	mock.Mock
@@ -78,14 +122,15 @@ func (m *MockKafkaEventPublisher) Close() error {
 func TestCreateBatch_Success(t *testing.T) {
 	// 1. 创建 Mock
 	mockRepo := new(MockBatchRepository)
+	mockFileRepo := new(MockFileRepository)
 	mockKafka := new(MockKafkaEventPublisher)
 
-	// 2. 设置期望（Save 会被调用两次，PublishEvents 会被调用一次）
-	mockRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Batch")).Return(nil).Times(2)
-	mockKafka.On("PublishEvents", mock.Anything, mock.AnythingOfType("[]domain.DomainEvent")).Return(nil)
+	// 2. 设置期望（P2 修复：两阶段上传设计，只保存一次，不发布事件）
+	mockRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Batch")).Return(nil).Times(1)
+	// 注意：CreateBatch 不再发布 Kafka 事件，事件在 CompleteUpload 时发布
 
 	// 3. 创建 BatchService
-	service := application.NewBatchService(mockRepo, mockKafka)
+	service := application.NewBatchService(mockRepo, mockFileRepo, mockKafka)
 
 	// 4. 执行测试
 	ctx := context.Background()
@@ -106,150 +151,117 @@ func TestCreateBatch_Success(t *testing.T) {
 
 // TestCreateBatch_RepositoryError - 测试 Repository 保存失败
 func TestCreateBatch_RepositoryError(t *testing.T) {
-	// 1. 创建 Mock
 	mockRepo := new(MockBatchRepository)
+	mockFileRepo := new(MockFileRepository)
 	mockKafka := new(MockKafkaEventPublisher)
 
-	// 2. 设置期望：第一次 Save 就失败
 	mockRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Batch")).Return(errors.New("database error"))
 
-	// 3. 创建 BatchService
-	service := application.NewBatchService(mockRepo, mockKafka)
+	service := application.NewBatchService(mockRepo, mockFileRepo, mockKafka)
 
-	// 4. 执行测试
 	ctx := context.Background()
 	batch, err := service.CreateBatch(ctx, "vehicle-001", "VIN123", 5)
 
-	// 5. 验证结果
 	assert.Error(t, err)
 	assert.Nil(t, batch)
 	assert.Contains(t, err.Error(), "database error")
 
-	// 6. 验证 Mock 调用
 	mockRepo.AssertExpectations(t)
 }
 
 // TestTransitionBatchStatus_Success - 测试成功转换状态
 func TestTransitionBatchStatus_Success(t *testing.T) {
-	// 1. 创建测试数据
 	testBatch, _ := domain.NewBatch("vehicle-001", "VIN123", 5)
-	testBatch.TransitionTo(domain.BatchStatusUploaded) // 先转换到 uploaded
+	testBatch.TransitionTo(domain.BatchStatusUploaded)
 
-	// 2. 创建 Mock
 	mockRepo := new(MockBatchRepository)
+	mockFileRepo := new(MockFileRepository)
 	mockKafka := new(MockKafkaEventPublisher)
 
-	// 3. 设置期望
 	mockRepo.On("FindByID", mock.Anything, testBatch.ID).Return(testBatch, nil)
 	mockRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Batch")).Return(nil)
 	mockKafka.On("PublishEvents", mock.Anything, mock.AnythingOfType("[]domain.DomainEvent")).Return(nil)
 
-	// 4. 创建 BatchService
-	service := application.NewBatchService(mockRepo, mockKafka)
+	service := application.NewBatchService(mockRepo, mockFileRepo, mockKafka)
 
-	// 5. 执行测试
 	ctx := context.Background()
 	err := service.TransitionBatchStatus(ctx, testBatch.ID, domain.BatchStatusScattering)
 
-	// 6. 验证结果
 	assert.NoError(t, err)
-
-	// 7. 验证 Mock 调用
 	mockRepo.AssertExpectations(t)
 	mockKafka.AssertExpectations(t)
 }
 
 // TestTransitionBatchStatus_BatchNotFound - 测试 Batch 不存在
 func TestTransitionBatchStatus_BatchNotFound(t *testing.T) {
-	// 1. 创建测试数据
 	batchID := uuid.New()
 
-	// 2. 创建 Mock
 	mockRepo := new(MockBatchRepository)
+	mockFileRepo := new(MockFileRepository)
 	mockKafka := new(MockKafkaEventPublisher)
 
-	// 3. 设置期望：返回 nil（Batch 不存在）
 	mockRepo.On("FindByID", mock.Anything, batchID).Return(nil, nil)
 
-	// 4. 创建 BatchService
-	service := application.NewBatchService(mockRepo, mockKafka)
+	service := application.NewBatchService(mockRepo, mockFileRepo, mockKafka)
 
-	// 5. 执行测试
 	ctx := context.Background()
 	err := service.TransitionBatchStatus(ctx, batchID, domain.BatchStatusScattering)
 
-	// 6. 验证结果
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "batch not found")
 
-	// 7. 验证 Mock 调用
 	mockRepo.AssertExpectations(t)
 }
 
 // TestAddFile_Success - 测试成功添加文件
 func TestAddFile_Success(t *testing.T) {
-	// 1. 创建测试数据
 	testBatch, _ := domain.NewBatch("vehicle-001", "VIN123", 5)
 	fileID := uuid.New()
 
-	// 2. 创建 Mock
 	mockRepo := new(MockBatchRepository)
+	mockFileRepo := new(MockFileRepository)
 	mockKafka := new(MockKafkaEventPublisher)
 
-	// 3. 设置期望
 	mockRepo.On("FindByID", mock.Anything, testBatch.ID).Return(testBatch, nil)
 	mockRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.Batch")).Return(nil)
+	mockFileRepo.On("Save", mock.Anything, mock.AnythingOfType("*domain.File")).Return(nil)
 
-	// 4. 创建 BatchService
-	service := application.NewBatchService(mockRepo, mockKafka)
+	service := application.NewBatchService(mockRepo, mockFileRepo, mockKafka)
 
-	// 5. 执行测试
 	ctx := context.Background()
-	err := service.AddFile(ctx, testBatch.ID, fileID)
+	err := service.AddFile(ctx, testBatch.ID, fileID, "test.dat", 1024, "minio/test.dat")
 
-	// 6. 验证结果
 	assert.NoError(t, err)
 	assert.Equal(t, 1, testBatch.TotalFiles)
 
-	// 7. 验证 Mock 调用
 	mockRepo.AssertExpectations(t)
+	mockFileRepo.AssertExpectations(t)
 }
 
 // TestAddFile_WrongStatus - 测试在错误状态下添加文件
 func TestAddFile_WrongStatus(t *testing.T) {
-	// 1. 创建测试数据
 	testBatch, _ := domain.NewBatch("vehicle-001", "VIN123", 5)
 
-	// 先转换到 uploaded，然后再到 scattering
-	err := testBatch.TransitionTo(domain.BatchStatusUploaded)
-	assert.NoError(t, err, "TransitionTo uploaded should succeed")
+	testBatch.TransitionTo(domain.BatchStatusUploaded)
+	testBatch.TransitionTo(domain.BatchStatusScattering)
 
-	err = testBatch.TransitionTo(domain.BatchStatusScattering)
-	assert.NoError(t, err, "TransitionTo scattering should succeed")
-
-	// 验证状态确实是 scattering
 	assert.Equal(t, domain.BatchStatusScattering, testBatch.Status)
 
 	fileID := uuid.New()
 
-	// 2. 创建 Mock
 	mockRepo := new(MockBatchRepository)
+	mockFileRepo := new(MockFileRepository)
 	mockKafka := new(MockKafkaEventPublisher)
 
-	// 3. 设置期望
 	mockRepo.On("FindByID", mock.Anything, testBatch.ID).Return(testBatch, nil)
 
-	// 4. 创建 BatchService
-	service := application.NewBatchService(mockRepo, mockKafka)
+	service := application.NewBatchService(mockRepo, mockFileRepo, mockKafka)
 
-	// 5. 执行测试
 	ctx := context.Background()
-	err = service.AddFile(ctx, testBatch.ID, fileID)
+	err := service.AddFile(ctx, testBatch.ID, fileID, "test.dat", 1024, "minio/test.dat")
 
-	// 6. 验证结果
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not in pending or uploaded status")
 
-	// 7. 验证 Mock 调用
 	mockRepo.AssertExpectations(t)
 }

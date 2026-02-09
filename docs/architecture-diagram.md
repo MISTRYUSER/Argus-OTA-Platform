@@ -1,6 +1,9 @@
 # Argus OTA Platform - 架构图
 
-**使用 Mermaid 绘制的系统架构**
+**使用 Mermaid 绘制的系统架构**  
+**权威事实源**：`docs/Argus_OTA_Platform.md`  
+本文件只保留图示与示意结构，状态标记可能滞后；**以权威文档为准**。  
+（当前阶段可**忽略 Python Worker**，不作为必完成项）
 
 ---
 
@@ -16,7 +19,7 @@ graph TB
 
     subgraph "接入层 (Gin)"
         Ingestor[Ingestor<br/>cmd/ingestor/main.go<br/>✅ 已完成]
-        QueryService[Query Service<br/>cmd/query-service/main.go<br/>⬜ 待实现]
+        QueryService[Query Service<br/>cmd/query-service/main.go<br/>✅ 已完成]
     end
 
     subgraph "存储层"
@@ -36,7 +39,7 @@ graph TB
     subgraph "Worker层"
         CppWorker[Mock C++ Worker<br/>cmd/mock-cpp-worker/main.go<br/>✅ 已完成]
         PythonWorker[Python Worker<br/>⬜ 待实现]
-        AIAgent[AI Agent<br/>⬜ 待实现<br/>计划使用 eino]
+        AIAgent[AI Agent<br/>🟨 进行中<br/>RAG/动态路由待完善]
     end
 
     Vehicle -->|HTTP Stream| Ingestor
@@ -68,7 +71,7 @@ graph TB
     style Ingestor fill:#90EE90
     style Orchestrator fill:#90EE90
     style CppWorker fill:#90EE90
-    style QueryService fill:#FFB6C1
+    style QueryService fill:#90EE90
     style PythonWorker fill:#FFB6C1
     style AIAgent fill:#FFB6C1
 ```
@@ -146,14 +149,14 @@ sequenceDiagram
 ```mermaid
 graph TB
     subgraph "接口层 (Interfaces)"
-        HTTP[HTTP Handlers<br/>✅ batch_handler.go<br/>⬜ query_handler.go]
+        HTTP[HTTP Handlers<br/>✅ batch_handler.go<br/>✅ query_handler.go]
         SSE[SSE Handler<br/>⬜ 待实现]
     end
 
     subgraph "应用层 (Application)"
         BatchService[BatchService<br/>✅ CreateBatch<br/>✅ AddFile<br/>✅ TransitionBatchStatus]
         OrchestrateService[OrchestrateService<br/>✅ 事件路由<br/>✅ 状态机<br/>✅ Redis Barrier]
-        QueryService[QueryService<br/>⬜ GetReport<br/>⬜ Singleflight]
+        QueryService[QueryService<br/>✅ GetReport<br/>✅ Singleflight]
     end
 
     subgraph "领域层 (Domain)"

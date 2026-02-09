@@ -1,0 +1,7 @@
+./batch.go
+./errors.go
+./events.go
+./file.go
+./report.go
+./repository.go
+./status.go
