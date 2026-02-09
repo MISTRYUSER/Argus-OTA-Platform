@@ -144,7 +144,6 @@ $RECYCLE.BIN/
 .nfs*
 
 # Package Manager
-go.sum
 # Uncomment if you don't want to commit go.sum
 # go.sum
 

@@ -16,6 +16,12 @@ type BatchService struct {
 	kafka     messaging.KafkaEventPublisher
 }
 
+// batchFileAtomicSaver 是可选能力：在一个事务内同时写 batch 和 file。
+// PostgreSQL 实现会实现该接口；其它实现自动回落到普通两步写入。
+type batchFileAtomicSaver interface {
+	SaveBatchAndFile(ctx context.Context, batch *domain.Batch, file *domain.File) error
+}
+
 func NewBatchService(
 	batchRepo domain.BatchRepository,
 	fileRepo domain.FileRepository,
@@ -28,54 +34,57 @@ func NewBatchService(
 	}
 }
 
-func (s *BatchService) CreateBatch (
+func (s *BatchService) CreateBatch(
 	ctx context.Context,
 	vehicleID, vin string,
 	expectedWorkers int,
-) (*domain.Batch,error) {
-	batch, err := domain.NewBatch(vehicleID,vin,expectedWorkers)
+) (*domain.Batch, error) {
+	batch, err := domain.NewBatch(vehicleID, vin, expectedWorkers)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	if err := s.batchRepo.Save(ctx,batch); err != nil {
-		return nil,err
+	if err := s.batchRepo.Save(ctx, batch); err != nil {
+		return nil, err
 	}
 
 	// 两阶段上传设计：创建 Batch 时不发布 Kafka 事件
 	// BatchCreated 事件将在所有文件上传完成后（CompleteUpload）发布
 
-	return batch,nil
+	return batch, nil
 }
 
-func (s *BatchService)TransitionBatchStatus(
+func (s *BatchService) TransitionBatchStatus(
 	ctx context.Context,
 	batchID uuid.UUID,
 	newStatus domain.BatchStatus,
 ) error {
-	batch,err := s.batchRepo.FindByID(ctx,batchID) 
+	batch, err := s.batchRepo.FindByID(ctx, batchID)
 	if err != nil {
 		return err
 	}
 	if batch == nil {
-		return fmt.Errorf("batch not found %s",batchID)
+		return fmt.Errorf("batch not found %s", batchID)
 	}
 
 	if err := batch.TransitionTo(newStatus); err != nil {
 		return err
 	}
-	if err := s.batchRepo.Save(ctx,batch); err != nil {
+	if err := s.batchRepo.Save(ctx, batch); err != nil {
 		return err
 	}
 
 	events := batch.GetEvents()
 	if len(events) > 0 {
-		if err := s.kafka.PublishEvents(ctx,events);err != nil {
-			fmt.Printf("Failed to publish events: %v\n", err)
+		if s.kafka == nil {
+			return fmt.Errorf("kafka publisher is nil")
+		}
+		if err := s.kafka.PublishEvents(ctx, events); err != nil {
+			return fmt.Errorf("failed to publish events: %w", err)
 		}
 	}
 	batch.ClearEvents()
 
-	return s.batchRepo.Save(ctx,batch)
+	return nil
 
 }
 
@@ -96,7 +105,12 @@ func (s *BatchService) AddFile(
 		return fmt.Errorf("batch not found %s", batchID)
 	}
 
-	// 2. 创建 File 记录
+	// 2. 先做 Batch 状态校验并更新计数，避免错误状态下写入脏文件记录
+	if err := batch.AddFile(fileID); err != nil {
+		return err
+	}
+
+	// 3. 创建 File 记录
 	now := time.Now()
 	file := &domain.File{
 		ID:               fileID,
@@ -116,16 +130,21 @@ func (s *BatchService) AddFile(
 		UpdatedAt:        now,
 	}
 
-	// 3. 保存 File 到数据库
+	// 4. 保存 File 到数据库
+	if atomicSaver, ok := s.batchRepo.(batchFileAtomicSaver); ok {
+		if err := atomicSaver.SaveBatchAndFile(ctx, batch, file); err != nil {
+			return fmt.Errorf("failed to save batch+file atomically: %w", err)
+		}
+		return nil
+	}
+
 	if err := s.fileRepo.Save(ctx, file); err != nil {
 		return fmt.Errorf("failed to save file: %w", err)
 	}
 
-	// 4. 增加 Batch 的 TotalFiles 计数
-	if err := batch.AddFile(fileID); err != nil {
-		return err
+	// 5. 保存 Batch（非事务实现的回退路径）
+	if err := s.batchRepo.Save(ctx, batch); err != nil {
+		return fmt.Errorf("failed to save batch after file persisted: %w", err)
 	}
-
-	// 5. 保存 Batch
-	return s.batchRepo.Save(ctx, batch)
+	return nil
 }

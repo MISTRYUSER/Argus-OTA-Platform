@@ -11,12 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 
 	"github.com/xuewentao/argus-ota-platform/internal/application"
-	"github.com/xuewentao/argus-ota-platform/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
 	redisinfra "github.com/xuewentao/argus-ota-platform/internal/infrastructure/redis"
 	"github.com/xuewentao/argus-ota-platform/internal/interfaces/http/handlers"

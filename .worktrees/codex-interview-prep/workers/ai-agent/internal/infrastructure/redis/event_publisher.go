@@ -14,17 +14,17 @@ type EventPublisher struct {
 }
 
 func NewEventPublisher(client *redis.Client) domain.EventPublisher {
-	return &EventPublisher{client : client}
+	return &EventPublisher{client: client}
 }
 
-//SSE
+// SSE
 func (p *EventPublisher) PublishProgress(ctx context.Context, batchID string, event domain.StreamEvent) error {
-	channel := fmt.Sprintf("batch:%s:progress",batchID)
-	data,err := json.Marshal(event)
+	channel := fmt.Sprintf("batch:%s:progress", batchID)
+	data, err := json.Marshal(event)
 	if err != nil {
-		return fmt.Errorf("failed to marshal event : %w",err)
+		return fmt.Errorf("failed to marshal event : %w", err)
 	}
-	result := p.client.Publish(ctx,channel,data)
+	result := p.client.Publish(ctx, channel, data)
 	if result.Err() != nil {
 		return fmt.Errorf("failed to publish event: %w", result.Err())
 	}

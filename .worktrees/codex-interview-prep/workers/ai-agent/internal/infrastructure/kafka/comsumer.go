@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"sort"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application"
@@ -35,9 +38,12 @@ func (c *Consumer) Consume(ctx context.Context) error {
 		default:
 		}
 
-		// 读取消息
-		msg, err := c.reader.ReadMessage(ctx)
+		// 读取消息（手动提交 offset）
+		msg, err := c.reader.FetchMessage(ctx)
 		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			log.Printf("[Kafka] Failed to read message: %v", err)
 			continue
 		}
@@ -46,15 +52,46 @@ func (c *Consumer) Consume(ctx context.Context) error {
 		var event GatheringCompletedEvent
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
 			log.Printf("[Kafka] Failed to unmarshal event: %v", err)
+			// 脏消息直接提交，避免 poison pill 无限重试
+			if commitErr := c.reader.CommitMessages(ctx, msg); commitErr != nil {
+				log.Printf("[Kafka] Failed to commit malformed message: %v", commitErr)
+			}
+			continue
+		}
+		if event.BatchID == "" {
+			log.Printf("[Kafka] Invalid event: empty batch_id")
+			if commitErr := c.reader.CommitMessages(ctx, msg); commitErr != nil {
+				log.Printf("[Kafka] Failed to commit invalid message: %v", commitErr)
+			}
+			continue
+		}
+		if _, err := uuid.Parse(event.BatchID); err != nil {
+			log.Printf("[Kafka] Invalid event: bad batch_id=%s err=%v", event.BatchID, err)
+			if commitErr := c.reader.CommitMessages(ctx, msg); commitErr != nil {
+				log.Printf("[Kafka] Failed to commit invalid message: %v", commitErr)
+			}
+			continue
+		}
+		if !isGatheringCompletedEvent(event.EventType) {
+			log.Printf("[Kafka] Ignored event type=%s", event.EventType)
+			if commitErr := c.reader.CommitMessages(ctx, msg); commitErr != nil {
+				log.Printf("[Kafka] Failed to commit ignored message: %v", commitErr)
+			}
 			continue
 		}
 
 		log.Printf("[Kafka] Received event: type=%s, batchID=%s", event.EventType, event.BatchID)
+		topErrorCodes := extractTopKErrorCodes(event.Data.ErrorCodes, 5)
 
 		// 调用 MultiAgentService 进行诊断
-		if err := c.service.DiagnoseBatch(ctx, event.BatchID); err != nil {
+		if err := c.service.DiagnoseBatchWithTopErrorCodes(ctx, event.BatchID, topErrorCodes); err != nil {
 			log.Printf("[Kafka] Failed to diagnose batch %s: %v", event.BatchID, err)
-			// 可以选择重试或记录到死信队列
+			// 业务失败不提交，让 Kafka 重试
+			continue
+		}
+
+		if err := c.reader.CommitMessages(ctx, msg); err != nil {
+			log.Printf("[Kafka] Failed to commit message for batch %s: %v", event.BatchID, err)
 			continue
 		}
 
@@ -79,8 +116,46 @@ type GatheringCompletedEvent struct {
 type AggregatedData struct {
 	BatchID    string                 `json:"batch_id"` // 改为 string，因为前面是 string
 	TotalFiles int                    `json:"total_files"`
-	TotalLogs  int64                   `json:"total_logs"`
+	TotalLogs  int64                  `json:"total_logs"`
 	ErrorCodes map[string]int         `json:"error_codes"`
 	ChartFiles []string               `json:"chart_files"`
 	Statistics map[string]interface{} `json:"statistics"`
+}
+
+func isGatheringCompletedEvent(eventType string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(eventType))
+	return normalized == "gatheringcompleted" || normalized == "gathering-completed"
+}
+
+func extractTopKErrorCodes(errorCodeStats map[string]int, k int) []string {
+	if len(errorCodeStats) == 0 || k <= 0 {
+		return []string{}
+	}
+
+	type codeCount struct {
+		code  string
+		count int
+	}
+	counts := make([]codeCount, 0, len(errorCodeStats))
+	for code, count := range errorCodeStats {
+		if strings.TrimSpace(code) == "" {
+			continue
+		}
+		counts = append(counts, codeCount{code: code, count: count})
+	}
+	sort.Slice(counts, func(i, j int) bool {
+		if counts[i].count == counts[j].count {
+			return counts[i].code < counts[j].code
+		}
+		return counts[i].count > counts[j].count
+	})
+	if len(counts) < k {
+		k = len(counts)
+	}
+
+	result := make([]string, 0, k)
+	for i := 0; i < k; i++ {
+		result = append(result, counts[i].code)
+	}
+	return result
 }

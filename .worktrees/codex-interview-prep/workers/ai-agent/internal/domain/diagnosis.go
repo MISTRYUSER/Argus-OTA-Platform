@@ -10,8 +10,8 @@ import (
 type AggregatedData struct {
 	BatchID        string
 	ErrorCodeStats map[string]int
-	RawLogs       string
-	LogsSummary   string
+	RawLogs        string
+	LogsSummary    string
 }
 
 // DiagnosisResult 诊断结果（由 LLM 生成）
@@ -63,13 +63,13 @@ type SimilarCase struct {
 
 // StreamEvent 流式事件（用于 SSE）
 type StreamEvent struct {
-	EventType   string                 `json:"event_type"`
-	BatchID     string                 `json:"batch_id"`
-	Status      string                 `json:"status"`
-	Message     string                 `json:"message"`
-	Progress    float64                `json:"progress"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	EventType string                 `json:"event_type"`
+	BatchID   string                 `json:"batch_id"`
+	Status    string                 `json:"status"`
+	Message   string                 `json:"message"`
+	Progress  float64                `json:"progress"`
+	Timestamp time.Time              `json:"timestamp"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // NewDiagnosis 创建新的诊断

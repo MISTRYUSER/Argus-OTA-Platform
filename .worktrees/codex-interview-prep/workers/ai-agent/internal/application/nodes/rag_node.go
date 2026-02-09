@@ -28,24 +28,29 @@ func NewRAGNode(vectorRetriever domain.VectorRetriever) *RAGNode {
 
 // Transform 实现 Eino Node 接口
 func (n *RAGNode) Transform(ctx context.Context, input *domain.DiagnosisContext) (*domain.DiagnosisContext, error) {
+	if input == nil {
+		return nil, fmt.Errorf("diagnosis context is nil")
+	}
+	if input.AggregatedData == nil {
+		input.AggregatedData = &domain.AggregatedData{}
+	}
+	if n.vectorRetriever == nil {
+		return degradeRAG(input, fmt.Errorf("vector retriever is nil")), nil
+	}
+
 	// 1. 提取错误码列表
 	errorCodes := extractErrorCodes(input.AggregatedData)
 
 	// 2. 混合检索：错误码过滤 + 向量排序
 	cases, err := n.vectorRetriever.Search(ctx, domain.SearchParams{
-		ErrorCodes:   errorCodes,
+		ErrorCodes:    errorCodes,
 		EmbeddingText: input.AggregatedData.LogsSummary,
 		TopK:          5, // 只检索 Top-5
 	})
 
 	// 3. 降级处理
 	if err != nil {
-		// 📌 P1 改进：标记 RAG 不可用，而不是返回空列表
-		input.RAGCases = []domain.SimilarCase{}
-		input.RAGUnavailable = true
-		input.ProcessingStatus = domain.StatusProcessing // 继续流程，让 LLM 降级处理
-
-		return input, fmt.Errorf("RAG failed but continuing: %w", err)
+		return degradeRAG(input, err), nil
 	}
 
 	// 4. 填充检索结果
@@ -53,6 +58,14 @@ func (n *RAGNode) Transform(ctx context.Context, input *domain.DiagnosisContext)
 	input.RAGUnavailable = false
 
 	return input, nil
+}
+
+func degradeRAG(input *domain.DiagnosisContext, err error) *domain.DiagnosisContext {
+	input.RAGCases = []domain.SimilarCase{}
+	input.RAGUnavailable = true
+	input.ProcessingStatus = domain.StatusProcessing
+	input.ErrorMessage = fmt.Sprintf("RAG degraded: %v", err)
+	return input
 }
 
 // extractErrorCodes 从聚合数据中提取错误码

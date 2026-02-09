@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/components/model"
 )
 
 // GLM4Config GLM-4 配置
 type GLM4Config struct {
-	APIKey string
+	APIKey  string
 	BaseURL string
-	Model  string
+	Model   string
 }
 
 // NewGLM4ChatModel 创建 GLM-4 Chat Model（使用 Eino Model 接口）
@@ -51,12 +51,12 @@ func NewGLM4ChatModel(conf *GLM4Config) (model.ChatModel, error) {
 	topP := float32(0.9)
 
 	config := &openai.ChatModelConfig{
-		APIKey:       conf.APIKey,
-		BaseURL:      conf.BaseURL,
-		Model:        conf.Model,
-		MaxTokens:    &maxTokens,
-		Temperature:  &temperature,
-		TopP:         &topP,
+		APIKey:      conf.APIKey,
+		BaseURL:     conf.BaseURL,
+		Model:       conf.Model,
+		MaxTokens:   &maxTokens,
+		Temperature: &temperature,
+		TopP:        &topP,
 		ResponseFormat: &openai.ChatCompletionResponseFormat{
 			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
 		}, // P1: 显式开启 JSON Mode
@@ -122,9 +122,9 @@ func GeneratePrompt(ctx *DiagnosisInput) string {
 
 // DiagnosisInput 诊断输入（用于 Prompt 生成）
 type DiagnosisInput struct {
-	BatchID      string
-	ErrorCodes   string
-	LogsSummary  string
-	CasesText    string
+	BatchID        string
+	ErrorCodes     string
+	LogsSummary    string
+	CasesText      string
 	RAGUnavailable bool
 }

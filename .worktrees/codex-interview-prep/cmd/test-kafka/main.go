@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/lib/pq" // PostgreSQL 驱动
 	"github.com/google/uuid"
+	_ "github.com/lib/pq" // PostgreSQL 驱动
 	"github.com/xuewentao/argus-ota-platform/internal/application"
 	"github.com/xuewentao/argus-ota-platform/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/kafka"
@@ -31,9 +31,11 @@ func main() {
 	log.Println("✅ Database connected successfully")
 
 	// 2. 创建 Kafka Producer
+	// P0 fix: 添加 dlqTopic 参数
 	kafkaProducer, err := kafka.NewKafkaEventProducer(
 		[]string{"localhost:9092"}, // Kafka brokers
 		"batch-events",             // Topic
+		"",                         // dlqTopic (空字符串表示不使用 DLQ)
 	)
 	if err != nil {
 		log.Fatalf("Failed to create Kafka producer: %v", err)
@@ -43,9 +45,11 @@ func main() {
 
 	// 3. 创建 Repository
 	batchRepo := postgres.NewPostgresBatchRepository(db)
+	fileRepo := postgres.NewPostgresFileRepository(db) // P0 fix: 需要 FileRepository
 
 	// 4. 创建 BatchService
-	batchService := application.NewBatchService(batchRepo, kafkaProducer)
+	// P0 fix: 添加 fileRepo 参数
+	batchService := application.NewBatchService(batchRepo, fileRepo, kafkaProducer)
 
 	// 5. 测试：创建 Batch
 	log.Println("\n--- Test 1: Create Batch ---")
@@ -69,13 +73,14 @@ func main() {
 	fileID1 := uuid.New()
 	fileID2 := uuid.New()
 
-	err = batchService.AddFile(ctx, batch.ID, fileID1)
+	// P0 fix: AddFile 现在需要 originalFilename, fileSize, minioPath 参数
+	err = batchService.AddFile(ctx, batch.ID, fileID1, "rec_file_1.dat", 1024000, "minio/batches/"+batch.ID.String()+"/rec_file_1.dat")
 	if err != nil {
 		log.Fatalf("Failed to add file 1: %v", err)
 	}
 	log.Printf("✅ File 1 added: %s", fileID1)
 
-	err = batchService.AddFile(ctx, batch.ID, fileID2)
+	err = batchService.AddFile(ctx, batch.ID, fileID2, "rec_file_2.dat", 2048000, "minio/batches/"+batch.ID.String()+"/rec_file_2.dat")
 	if err != nil {
 		log.Fatalf("Failed to add file 2: %v", err)
 	}
@@ -111,5 +116,5 @@ func main() {
 	log.Println("\n=== All tests completed successfully! ===")
 	log.Println("Check your Kafka topic 'batch-events' to see the published events.")
 	log.Println("You can use kafkacat or kafka-console-consumer to read the events:")
-	log.Println("  kafkacat -C -b localhost:9092 -t batch-events -f '%T: %s\n'")
+	log.Println("  kafkacat -C -b localhost:9092 -t batch-events")
 }

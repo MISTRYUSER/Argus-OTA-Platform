@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/google/uuid"
+	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/xuewentao/argus-ota-platform/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/kafka"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
@@ -22,26 +22,27 @@ import (
 
 // Worker - Mock C++ Worker 结构体
 type Worker struct {
-	kafka 		messaging.KafkaEventPublisher
-	batchRepo  	domain.BatchRepository
-	db			*sql.DB
+	kafka     messaging.KafkaEventPublisher
+	batchRepo domain.BatchRepository
+	db        *sql.DB
 }
 type Config struct {
 	Database DatabaseConfig
 }
 type DatabaseConfig struct {
 	Host     string
-	Port 	 int
+	Port     int
 	User     string
 	Password string
 	DBName   string
 }
+
 // NewWorker 创建 Worker
-func NewWorker(kafka messaging.KafkaEventPublisher,batchRepo domain.BatchRepository,db *sql.DB) *Worker {
+func NewWorker(kafka messaging.KafkaEventPublisher, batchRepo domain.BatchRepository, db *sql.DB) *Worker {
 	return &Worker{
-		kafka: 		kafka,
-		batchRepo:  batchRepo,
-		db: 		db,
+		kafka:     kafka,
+		batchRepo: batchRepo,
+		db:        db,
 	}
 }
 
@@ -75,13 +76,14 @@ func (w *Worker) HandleMessage(ctx context.Context, data []byte) error {
 
 	return nil
 }
-func mustAtoi(s string, field string) int  {
+func mustAtoi(s string, field string) int {
 	i, err := strconv.Atoi(s)
-    if err != nil {
-        log.Fatalf("invalid %s: %s", field, s)
-    }
-    return i
+	if err != nil {
+		log.Fatalf("invalid %s: %s", field, s)
+	}
+	return i
 }
+
 // handleBatchCreated 处理 BatchCreated 事件
 // 模拟 C++ Worker 解析 rec 文件
 func (w *Worker) handleBatchCreated(ctx context.Context, event map[string]interface{}) error {
@@ -98,13 +100,12 @@ func (w *Worker) handleBatchCreated(ctx context.Context, event map[string]interf
 	}
 	batch, err := w.batchRepo.FindByID(ctx, batchID)
 	if err != nil {
-		return fmt.Errorf("failed to find batch: %w",err)
+		return fmt.Errorf("failed to find batch: %w", err)
 	}
-	if batch == nil {  // ← 添加这个检查
+	if batch == nil { // ← 添加这个检查
 		return fmt.Errorf("batch not found: %s", batchID)
 	}
-  
-  
+
 	log.Printf("[Worker] Received BatchCreated: batch=%s", batchID)
 
 	// 模拟解析 rec 文件（sleep 2 秒）
@@ -112,12 +113,12 @@ func (w *Worker) handleBatchCreated(ctx context.Context, event map[string]interf
 	time.Sleep(2 * time.Second)
 
 	log.Printf("[Worker] ✅ Parsing completed for batch %s", batchID)
-	fileParsedEvents := make([]domain.FileParsed,0,batch.TotalFiles)
-	for i := 0;i < batch.TotalFiles;i ++{
-		fileParsedEvents = append(fileParsedEvents,domain.FileParsed{
-			BatchID:   batchID,
-			FileID:	   uuid.New(),
-			OccurredAt:time.Now(),
+	fileParsedEvents := make([]domain.FileParsed, 0, batch.TotalFiles)
+	for i := 0; i < batch.TotalFiles; i++ {
+		fileParsedEvents = append(fileParsedEvents, domain.FileParsed{
+			BatchID:    batchID,
+			FileID:     uuid.New(),
+			OccurredAt: time.Now(),
 		})
 	}
 	// 转换为 DomainEvent 接口类型
@@ -144,20 +145,20 @@ func initDB(cfg *Config) *sql.DB {
 		cfg.Database.Password,
 		cfg.Database.DBName,
 	)
-	db,err := sql.Open("postgres",dsn)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Failed to open database : ",err)
+		log.Fatal("Failed to open database : ", err)
 	}
 	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)  // Idle 应该小于 Open
+	db.SetMaxIdleConns(5) // Idle 应该小于 Open
 	db.SetConnMaxIdleTime(5 * time.Minute)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	if err := db.Ping();err != nil {
+	if err := db.Ping(); err != nil {
 		log.Fatal("Failed to ping database:", err)
 	}
 	log.Println("[DB] Database connected successfully")
-    return db
+	return db
 }
 func main() {
 	ctx := context.Background()
@@ -174,10 +175,10 @@ func main() {
 		log.Fatalf("Failed to create Kafka consumer: %v", err)
 	}
 	//初始化 DB
-	cfg := &Config {
+	cfg := &Config{
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     mustAtoi(getEnv("DB_PORT","5432"), "DB_PORT"),
+			Port:     mustAtoi(getEnv("DB_PORT", "5432"), "DB_PORT"),
 			User:     getEnv("DB_USER", "argus"),
 			Password: getEnv("DB_PASSWORD", "argus123"),
 			DBName:   getEnv("DB_NAME", "argus_ota"),
@@ -186,7 +187,7 @@ func main() {
 	db := initDB(cfg)
 	batchRepo := postgres.NewPostgresBatchRepository(db)
 	// 3. 创建 Worker
-	worker := NewWorker(kafkaProducer,batchRepo,db)
+	worker := NewWorker(kafkaProducer, batchRepo, db)
 
 	// 4. 启动 Kafka Consumer
 	topics := []string{"batch-events"}
@@ -234,7 +235,7 @@ func initKafkaProducer() messaging.KafkaEventPublisher {
 	brokers := []string{getEnv("KAFKA_BROKERS", "localhost:9092")}
 	topic := getEnv("KAFKA_TOPIC", "batch-events")
 
-	producer, err := kafka.NewKafkaEventProducer(brokers, topic)
+	producer, err := kafka.NewKafkaEventProducer(brokers, topic, "") // P0 fix: 新增 dlqTopic 参数
 	if err != nil {
 		log.Fatalf("Failed to create Kafka producer: %v", err)
 	}

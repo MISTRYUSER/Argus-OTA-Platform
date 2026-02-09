@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/xuewentao/github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application"
-	"github.com/xuewentao/github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm"
 )
 
 func main() {
@@ -18,9 +18,9 @@ func main() {
 		data: &domain.AggregatedData{
 			BatchID: "test-batch-001",
 			ErrorCodeStats: map[string]int{
-				"E_CAN_TIMEOUT":     5,
-				"E_SENSOR_INVALID":  3,
-				"E_BRAKE_FAILURE":   2,
+				"E_CAN_TIMEOUT":    5,
+				"E_SENSOR_INVALID": 3,
+				"E_BRAKE_FAILURE":  2,
 			},
 			RawLogs: `
 [2025-01-01 10:00:00] ERROR: CAN bus timeout, device_id=0x123
@@ -39,19 +39,13 @@ func main() {
 				Confidence: 0.92,
 			},
 		},
-		llmConfig: &MockGLM4Config{
-		mockResponse: `{
-  "root_cause": "CAN 总线抗干扰能力不足，导致频繁超时",
-  "suggestions": [
-    "更换屏蔽双绞线",
-    "增加终端电阻",
-    "检查CAN总线终端电阻配置"
-  ],
-  "severity": "high",
-  "confidence": 0.92
-}`,
-	},
-}
+	}
+
+	llmConfig := &llm.GLM4Config{
+		APIKey:  "mock-api-key",
+		BaseURL: "mock://test",
+		Model:   "mock-model",
+	}
 
 	// 2. 创建 Diagnosis Graph
 	graph, err := application.NewDiagnosisGraph(
@@ -101,8 +95,20 @@ func (m *MockDiagnosisRepository) GetAggregatedData(ctx context.Context, batchID
 	return m.data, nil
 }
 
-func (m *MockDiagnosisRepository) Save(ctx context.Context, diagnosis *domain.Diagnosis) error {
+func (m *MockDiagnosisRepository) Save(ctx context.Context, diagnose *domain.Diagnosis) error {
 	return nil
+}
+
+func (m *MockDiagnosisRepository) FindByBatchID(ctx context.Context, batchID string) (*domain.Diagnosis, error) {
+	return &domain.Diagnosis{}, nil
+}
+
+func (m *MockDiagnosisRepository) FindByID(ctx context.Context, id string) (*domain.Diagnosis, error) {
+	return &domain.Diagnosis{}, nil
+}
+
+func (m *MockDiagnosisRepository) FindSimilar(ctx context.Context, embedding []float32, limit int) ([]*domain.Diagnosis, error) {
+	return []*domain.Diagnosis{}, nil
 }
 
 // MockVectorRetriever Mock Vector Retriever
@@ -122,23 +128,5 @@ func (m *MockVectorRetriever) Retrieve(ctx context.Context, query string, topK i
 }
 
 func (m *MockVectorRetriever) Index(ctx context.Context, diagnosis *domain.Diagnosis) error {
-	// Mock implementation
 	return nil
-}
-
-// MockGLM4Config Mock LLM Config
-type MockGLM4Config struct {
-	mockResponse string
-}
-
-func (m *MockGLM4Config) GetBaseURL() string {
-	return "mock://test"
-}
-
-func (m *MockGLM4Config) GetToken() string {
-	return "mock-token"
-}
-
-func (m *MockGLM4Config) GetModel() string {
-	return "mock-model"
 }

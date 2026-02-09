@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"context"
 	"database/sql"
 	"fmt"
@@ -23,20 +22,21 @@ import (
 	"github.com/xuewentao/argus-ota-platform/internal/interfaces/http/handlers"
 	"github.com/xuewentao/argus-ota-platform/internal/messaging"
 )
+
 type Config struct {
-	Server 	 ServerConfig
+	Server   ServerConfig
 	Database DatabaseConfig
 	MinIO    MinIOConfig
 	Kafka    KafkaConfig
 }
 
 type ServerConfig struct {
-	Port 	int 
+	Port    int
 	Timeout time.Duration
 }
 type DatabaseConfig struct {
 	Host     string
-	Port 	 int
+	Port     int
 	User     string
 	Password string
 	DBName   string
@@ -53,18 +53,19 @@ type KafkaConfig struct {
 	Brokers []string
 	Topic   string
 }
-func getEnv(key , defaultValue string) string {
-	if value := os.Getenv(key);value != "" {
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue
 }
-func mustAtoi(s string, field string) int  {
+func mustAtoi(s string, field string) int {
 	i, err := strconv.Atoi(s)
-    if err != nil {
-        log.Fatalf("invalid %s: %s", field, s)
-    }
-    return i
+	if err != nil {
+		log.Fatalf("invalid %s: %s", field, s)
+	}
+	return i
 }
 func parseBool(s string) bool {
 	b, _ := strconv.ParseBool(s)
@@ -73,15 +74,15 @@ func parseBool(s string) bool {
 func loadConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port:  		mustAtoi(getEnv("SERVER_PORT","8080"),"SERVER_PORT"),
-			Timeout:	30 * time.Second,
+			Port:    mustAtoi(getEnv("SERVER_PORT", "8080"), "SERVER_PORT"),
+			Timeout: 30 * time.Second,
 		},
 		Database: DatabaseConfig{
-			Host:  		getEnv("DB_HOST","localhost"),
-			Port:  		mustAtoi(getEnv("DB_PORT","5432"), "DB_PORT"),
-			User: 		getEnv("DB_USER","postgres"),
-			Password: 	getEnv("DB_PASSWORD",""),
-			DBName: 	getEnv("DB_NAME","argus_ota"),
+			Host:     getEnv("DB_HOST", "localhost"),
+			Port:     mustAtoi(getEnv("DB_PORT", "5432"), "DB_PORT"),
+			User:     getEnv("DB_USER", "postgres"),
+			Password: getEnv("DB_PASSWORD", ""),
+			DBName:   getEnv("DB_NAME", "argus_ota"),
 		},
 		MinIO: MinIOConfig{
 			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
@@ -105,20 +106,20 @@ func initDB(cfg *Config) *sql.DB {
 		cfg.Database.Password,
 		cfg.Database.DBName,
 	)
-	db,err := sql.Open("postgres",dsn)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Failed to open database : ",err)
+		log.Fatal("Failed to open database : ", err)
 	}
 	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)  // Idle 应该小于 Open
+	db.SetMaxIdleConns(5) // Idle 应该小于 Open
 	db.SetConnMaxIdleTime(5 * time.Minute)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	if err := db.Ping();err != nil {
+	if err := db.Ping(); err != nil {
 		log.Fatal("Failed to ping database:", err)
 	}
 	log.Println("[DB] Database connected successfully")
-    return db
+	return db
 }
 func initMinIO(cfg *Config) *minio.MinIOClient {
 	client, err := minio.NewMinIOClient(
@@ -139,6 +140,7 @@ func initKafkaProducer(cfg *Config) (messaging.KafkaEventPublisher, error) {
 	producer, err := kafka.NewKafkaEventProducer(
 		cfg.Kafka.Brokers,
 		cfg.Kafka.Topic,
+		"", // dlqTopic - P0 fix: 新增必需参数
 	)
 	if err != nil {
 		return nil, err
@@ -155,7 +157,7 @@ func initRouter(batchService *application.BatchService, minioClient *minio.MinIO
 
 	return router
 }
-func startServer(router *gin.Engine,port string) *http.Server {
+func startServer(router *gin.Engine, port string) *http.Server {
 	server := &http.Server{
 		Addr:         ":" + port,
 		Handler:      router,
@@ -166,9 +168,9 @@ func startServer(router *gin.Engine,port string) *http.Server {
 
 	go func() {
 		log.Printf("[Server] Starting on port %s", port)
-          if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-              log.Fatal("Server failed:", err)
-          }
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Server failed:", err)
+		}
 	}()
 	return server
 }

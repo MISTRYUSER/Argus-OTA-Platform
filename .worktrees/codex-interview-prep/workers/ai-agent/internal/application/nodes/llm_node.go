@@ -36,11 +36,11 @@ func NewLLMNode(chatModel model.ChatModel) *LLMNode {
 func (n *LLMNode) Transform(ctx context.Context, input *domain.DiagnosisContext) (*domain.DiagnosisContext, error) {
 	// 1. 构造诊断输入
 	diagnosisInput := &llm.DiagnosisInput{
-		BatchID:         input.BatchID,
-		ErrorCodes:      formatErrorCodes(input.AggregatedData),
-		LogsSummary:     input.AggregatedData.LogsSummary,
-		CasesText:       formatRAGCases(input.RAGCases, input.RAGUnavailable),
-		RAGUnavailable:  input.RAGUnavailable,
+		BatchID:        input.BatchID,
+		ErrorCodes:     formatErrorCodes(input.AggregatedData),
+		LogsSummary:    input.AggregatedData.LogsSummary,
+		CasesText:      formatRAGCases(input.RAGCases, input.RAGUnavailable),
+		RAGUnavailable: input.RAGUnavailable,
 	}
 
 	// 2. 生成 Prompt（带思维链）

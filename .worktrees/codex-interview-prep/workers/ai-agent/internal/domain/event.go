@@ -14,11 +14,11 @@ type DomainEvent interface {
 
 // DiagnosisStatusChangedEvent 诊断状态变更事件
 type DiagnosisStatusChangedEvent struct {
-	aggregateID  uuid.UUID
-	BatchID      uuid.UUID
-	OldStatus    DiagnosisStatus
-	NewStatus    DiagnosisStatus
-	occurredAt   time.Time
+	aggregateID uuid.UUID
+	BatchID     uuid.UUID
+	OldStatus   DiagnosisStatus
+	NewStatus   DiagnosisStatus
+	occurredAt  time.Time
 }
 
 func NewDiagnosisStatusChangedEvent(aggregateID, batchID uuid.UUID, oldStatus, newStatus DiagnosisStatus) *DiagnosisStatusChangedEvent {
