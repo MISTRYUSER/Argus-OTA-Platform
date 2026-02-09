@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/xuewentao/argus-ota-platform/internal/domain"
@@ -16,12 +17,6 @@ func NewPostgresBatchRepository(db *sql.DB) domain.BatchRepository {
 	return &PostgresBatchRepository{db: db}
 }
 
-func (r *PostgresBatchRepository)FindByVIN(ctx context.Context, vin string) ([]*domain.Batch, error) {
-	return nil,nil
-}
-func (r *PostgresBatchRepository)List(ctx context.Context, opts domain.ListOptions) ([]*domain.Batch,error) {
-	return nil,nil
-}
 func (r *PostgresBatchRepository) Save(ctx context.Context,batch *domain.Batch) error {
 	query := `
           INSERT INTO batches (
@@ -292,4 +287,99 @@ func (r *PostgresFileRepository) UpdateProcessingStatus(ctx context.Context, id 
 	}
 
 	return nil
+}// P2-4: 实现真实的 VIN 查询和分页查询
+func (r *PostgresBatchRepository) FindByVIN(ctx context.Context, vin string) ([]*domain.Batch, error) {
+	query := `
+		SELECT id, vehicle_id, vin, status, upload_time,
+			   total_files, processed_files, expected_worker_count,
+			   completed_worker_count, minio_bucket, minio_prefix,
+			   error_message, completed_at, created_at, updated_at
+		FROM batches
+		WHERE vin = $1
+		ORDER BY created_at DESC
+	`
+	return r.scanBatches(ctx, query, vin)
+}
+
+func (r *PostgresBatchRepository) List(ctx context.Context, opts domain.ListOptions) ([]*domain.Batch,error) {
+	query := `
+		SELECT id, vehicle_id, vin, status, upload_time,
+			   total_files, processed_files, expected_worker_count,
+			   completed_worker_count, minio_bucket, minio_prefix,
+			   error_message, completed_at, created_at, updated_at
+		FROM batches
+		WHERE 1=1
+	`
+
+	args := []interface{}{}
+	argPos := 1
+
+	if opts.VIN != nil && *opts.VIN != "" {
+		query += fmt.Sprintf(" AND vin = $%d", argPos)
+		args = append(args, *opts.VIN)
+		argPos++
+	}
+	if opts.VehicleID != nil && *opts.VehicleID != "" {
+		query += fmt.Sprintf(" AND vehicle_id = $%d", argPos)
+		args = append(args, *opts.VehicleID)
+		argPos++
+	}
+	if opts.Status != nil && *opts.Status != "" {
+		query += fmt.Sprintf(" AND status = $%d", argPos)
+		args = append(args, *opts.Status)
+		argPos++
+	}
+
+	if opts.SortBy != "" {
+		query += fmt.Sprintf(" ORDER BY %s", opts.SortBy)
+		if opts.SortOrder != "" {
+			query += " " + opts.SortOrder
+		}
+	} else {
+		query += " ORDER BY created_at DESC"
+	}
+
+	if opts.Limit > 0 {
+		query += fmt.Sprintf(" LIMIT $%d", argPos)
+		args = append(args, opts.Limit)
+		argPos++
+		if opts.Offset > 0 {
+			query += fmt.Sprintf(" OFFSET $%d", argPos)
+			args = append(args, opts.Offset)
+		}
+	}
+
+	return r.scanBatches(ctx, query, args...)
+}
+
+// scanBatches 辅助方法：扫描批次行
+func (r *PostgresBatchRepository) scanBatches(ctx context.Context, query string, args ...interface{}) ([]*domain.Batch, error) {
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var batches []*domain.Batch
+	for rows.Next() {
+		var batch domain.Batch
+		var statusStr string
+		err := rows.Scan(
+			&batch.ID, &batch.VehicleID, &batch.VIN, &statusStr, &batch.UploadTime,
+			&batch.TotalFiles, &batch.ProcessedFiles, &batch.ExpectedWorkerCount,
+			&batch.CompletedWorkerCount, &batch.MinIOBucket, &batch.MiniIOPrefix,
+			&batch.ErrorMessage, &batch.CompletedAt, &batch.CreatedAt, &batch.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		batch.Status = domain.BatchStatus(statusStr)
+		batches = append(batches, &batch)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return batches, nil
 }

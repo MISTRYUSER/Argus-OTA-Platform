@@ -234,7 +234,7 @@ func initKafkaProducer() messaging.KafkaEventPublisher {
 	brokers := []string{getEnv("KAFKA_BROKERS", "localhost:9092")}
 	topic := getEnv("KAFKA_TOPIC", "batch-events")
 
-	producer, err := kafka.NewKafkaEventProducer(brokers, topic)
+	producer, err := kafka.NewKafkaEventProducer(brokers, topic, "") // P0 fix: 新增 dlqTopic 参数
 	if err != nil {
 		log.Fatalf("Failed to create Kafka producer: %v", err)
 	}

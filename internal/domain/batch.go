@@ -75,8 +75,10 @@ func (b *Batch) TransitionTo(status BatchStatus) error {
 	// 记录状态转换事件
 	// 两阶段上传设计：pending → uploaded 时发布 BatchCreated 事件
 	if oldStatus == BatchStatusPending && status == BatchStatusUploaded {
+		// P2-1: 修复缺失的 VehicleID 字段
 		event := BatchCreated{
 			BatchID:    b.ID,
+			VehicleID:  b.VehicleID, // P2-1: 补充缺失字段
 			VIN:        b.VIN,
 			OccurredAt: time.Now(),
 		}

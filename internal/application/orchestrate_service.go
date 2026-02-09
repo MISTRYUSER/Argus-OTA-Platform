@@ -13,6 +13,24 @@ import (
 	"github.com/xuewentao/argus-ota-platform/internal/messaging"
 )
 
+// P1-4: 安全的类型断言辅助函数，避免 panic
+func getString(event map[string]interface{}, key string) (string, bool) {
+	val, ok := event[key]
+	if !ok {
+		return "", false
+	}
+	str, ok := val.(string)
+	return str, ok
+}
+
+func getUUID(event map[string]interface{}, key string) (uuid.UUID, error) {
+	str, ok := getString(event, key)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("missing or invalid %s", key)
+	}
+	return uuid.Parse(str)
+}
+
 type OrchestrateService struct {
 	batchRepo domain.BatchRepository
 	redis     *redis.RedisClient
@@ -36,7 +54,12 @@ func (s *OrchestrateService) HandleMessage(ctx context.Context, data []byte) err
 	if err := json.Unmarshal(data, &event); err != nil {
 		return err
 	}
-	eventType := event["event_type"].(string)
+
+	// P1-4: 安全获取 event_type
+	eventType, ok := getString(event, "event_type")
+	if !ok {
+		return fmt.Errorf("missing or invalid event_type in event")
+	}
 
 	switch eventType {
 	case "BatchCreated":
@@ -62,50 +85,75 @@ func (s *OrchestrateService) HandleMessage(ctx context.Context, data []byte) err
 }
 
 func (s *OrchestrateService) handleBatchCreated(ctx context.Context, event map[string]interface{}) error {
-	batchIDStr := event["batch_id"].(string)
-	batchID, _ := uuid.Parse(batchIDStr)
+	// P1-4: 安全获取 batch_id
+	batchID, err := getUUID(event, "batch_id")
+	if err != nil {
+		return fmt.Errorf("invalid batch_id: %w", err)
+	}
 
 	batch, err := s.batchRepo.FindByID(ctx, batchID)
 	if err != nil {
 		return err
 	}
-	if batch == nil {  // ← 添加这个检查
+	if batch == nil {
 		return fmt.Errorf("batch not found: %s", batchID)
 	}
-  
-  
+
+	// P2 修复：检查状态迁移错误，并对异常状态返回错误
 	switch batch.Status {
 	case domain.BatchStatusPending:
-		batch.TransitionTo(domain.BatchStatusUploaded)
-		batch.TransitionTo(domain.BatchStatusScattering)
+		// pending → uploaded → scattering
+		if err := batch.TransitionTo(domain.BatchStatusUploaded); err != nil {
+			return fmt.Errorf("failed to transition to uploaded: %w", err)
+		}
+		if err := batch.TransitionTo(domain.BatchStatusScattering); err != nil {
+			return fmt.Errorf("failed to transition to scattering: %w", err)
+		}
 	case domain.BatchStatusUploaded:
-		batch.TransitionTo(domain.BatchStatusScattering)
+		// uploaded → scattering
+		if err := batch.TransitionTo(domain.BatchStatusScattering); err != nil {
+			return fmt.Errorf("failed to transition to scattering: %w", err)
+		}
+	default:
+		// P2 修复：异常状态返回错误
+		return fmt.Errorf("unexpected batch status: %s, expected pending or uploaded", batch.Status)
 	}
-  
-  
-  
-	// 5. 保存状态
+
+	// 保存状态
 	if err := s.batchRepo.Save(ctx, batch); err != nil {
 		return err
 	}
-	
+
 	events := batch.GetEvents()
-	if err := s.kafka.PublishEvents(ctx, events); err != nil {
-		log.Printf("Failed to publish events: %v", err)
+	if len(events) > 0 {
+		if err := s.kafka.PublishEvents(ctx, events); err != nil {
+			log.Printf("Failed to publish events: %v", err)
+		}
+		batch.ClearEvents()
 	}
-	batch.ClearEvents()
 	log.Printf("[Orchestrator] Batch %s transitioned to scattering", batchID)
 	return nil
 }
 
 func (s *OrchestrateService) handleFileParsed(ctx context.Context, event map[string]interface{}) error {
-	batchIDStr := event["batch_id"].(string)
-	batchID, _ := uuid.Parse(batchIDStr)
-	fileIDStr := event["file_id"].(string)
+	// P1-4: 安全获取 batch_id 和 file_id
+	batchID, err := getUUID(event, "batch_id")
+	if err != nil {
+		return fmt.Errorf("invalid batch_id: %w", err)
+	}
+
+	fileIDStr, ok := getString(event, "file_id")
+	if !ok {
+		return fmt.Errorf("missing or invalid file_id in event")
+	}
+	fileID, err := uuid.Parse(fileIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid file_id: %w", err)
+	}
 
 	// Redis Barrier 计数（使用 Set，天然幂等）
 	key := fmt.Sprintf("batch:%s:processed_files", batchID)
-	added, err := s.redis.SADD(ctx, key, fileIDStr)
+	added, err := s.redis.SADD(ctx, key, fileID.String())
 	if err != nil {
 		return fmt.Errorf("failed to add to Redis set: %w", err)
 	}
@@ -130,8 +178,12 @@ func (s *OrchestrateService) handleFileParsed(ctx context.Context, event map[str
 		return fmt.Errorf("batch not found: %s", batchID)
 	}
 
-	// 更新处理进度（仅内存，不持久化）
+	// P1-6: 更新处理进度并持久化到数据库（补偿任务需要此数据）
 	batch.ProcessedFiles = int(count)
+	if err := s.batchRepo.Save(ctx, batch); err != nil {
+		log.Printf("[Orchestrator] Failed to save batch progress: %v", err)
+		// 继续执行，不阻塞流程
+	}
 	log.Printf("[Orchestrator] Progress: %d/%d files processed", count, batch.TotalFiles)
 
 	// 检查是否所有文件都已处理
@@ -163,8 +215,8 @@ func (s *OrchestrateService) handleStatusChanged(ctx context.Context, event map[
 
 // handleGatheringCompleted - 处理 Python Worker 完成数据聚合事件
 func (s *OrchestrateService) handleGatheringCompleted(ctx context.Context, event map[string]interface{}) error {
-	batchIDStr := event["batch_id"].(string)
-	batchID, err := uuid.Parse(batchIDStr)
+	// P1-4: 安全获取 batch_id
+	batchID, err := getUUID(event, "batch_id")
 	if err != nil {
 		return fmt.Errorf("invalid batch_id: %w", err)
 	}
@@ -228,14 +280,13 @@ func (s *OrchestrateService) handleGatheringCompleted(ctx context.Context, event
 
 // handleDiagnosisCompleted - 处理 AI Agent 完成诊断事件
 func (s *OrchestrateService) handleDiagnosisCompleted(ctx context.Context, event map[string]interface{}) error {
-	batchIDStr := event["batch_id"].(string)
-	batchID, err := uuid.Parse(batchIDStr)
+	// P1-4: 安全获取 batch_id 和 diagnosis_id
+	batchID, err := getUUID(event, "batch_id")
 	if err != nil {
 		return fmt.Errorf("invalid batch_id: %w", err)
 	}
 
-	diagnosisIDStr := event["diagnosis_id"].(string)
-	diagnosisID, err := uuid.Parse(diagnosisIDStr)
+	diagnosisID, err := getUUID(event, "diagnosis_id")
 	if err != nil {
 		return fmt.Errorf("invalid diagnosis_id: %w", err)
 	}

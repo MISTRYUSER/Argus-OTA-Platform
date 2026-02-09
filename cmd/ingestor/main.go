@@ -139,6 +139,7 @@ func initKafkaProducer(cfg *Config) (messaging.KafkaEventPublisher, error) {
 	producer, err := kafka.NewKafkaEventProducer(
 		cfg.Kafka.Brokers,
 		cfg.Kafka.Topic,
+		"", // dlqTopic - P0 fix: 新增必需参数
 	)
 	if err != nil {
 		return nil, err
