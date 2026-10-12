@@ -25,6 +25,8 @@ type ErrorCodeSummary struct {
 
 // DiagnosisResult 诊断结果（由 LLM 生成）
 type DiagnosisResult struct {
+	ModelSteps         int          `json:"model_steps"`
+	ReservedTokens     int          `json:"reserved_token_units"`
 	ContextCompactions int          `json:"context_compactions,omitempty"`
 	Hypotheses         []Hypothesis `json:"hypotheses,omitempty"`
 	HypothesisID       string       `json:"hypothesis_id,omitempty"`
@@ -166,6 +168,8 @@ type ToolObservation struct {
 }
 
 var ErrInvalidDiagnosis = errors.New("invalid diagnosis")
+var ErrModelQueueFull = errors.New("model admission queue full")
+
 var ErrInvestigationBudget = errors.New("investigation budget exhausted")
 
 type Hypothesis struct {

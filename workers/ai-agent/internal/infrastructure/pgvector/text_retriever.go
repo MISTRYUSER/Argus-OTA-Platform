@@ -18,7 +18,7 @@ func (r *PgvectorRetriever) searchText(ctx context.Context, p domain.SearchParam
 	if limit > 10 {
 		limit = 10
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT id,symptom_text,solution_text FROM knowledge_base WHERE ($1::text[] IS NULL OR error_code=ANY($1)) AND ($1::text[] IS NOT NULL OR symptom_text ILIKE '%'||$2||'%' OR solution_text ILIKE '%'||$2||'%') ORDER BY id LIMIT $3`, buildErrorCodesParam(p.ErrorCodes), p.EmbeddingText, limit)
+	rows, err := r.db.QueryContext(ctx, `SELECT id,symptom_text,solution_text FROM knowledge_base WHERE ($1::text[] IS NULL OR error_code=ANY($1)) AND ($1::text[] IS NOT NULL OR symptom_text ILIKE '%'||$2||'%' OR solution_text ILIKE '%'||$2||'%') ORDER BY (CASE WHEN $2 <> '' AND (symptom_text ILIKE '%'||$2||'%' OR solution_text ILIKE '%'||$2||'%') THEN 1 ELSE 0 END) DESC, ts_rank(to_tsvector('simple',symptom_text||' '||solution_text),plainto_tsquery('simple',$2)) DESC,id LIMIT $3`, buildErrorCodesParam(p.ErrorCodes), p.EmbeddingText, limit)
 	if err != nil {
 		return nil, err
 	}

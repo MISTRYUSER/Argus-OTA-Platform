@@ -1,0 +1,1858 @@
+{
+  "date": "2026-10-12",
+  "runtime_source_commit": "b290fbebc39fd2c80223af64c4b9883c694cca02",
+  "runtime_source_tree": "3377d92a776fd5aae4787d244ad4c1f08240222b",
+  "dataset_revision": "d0916b08ba421ce5e672e9ad68aa947d938dfef0",
+  "evaluator_revision": "14f026fc9cc348c4ecec5ab32714de954c95c1b1",
+  "benchmark_type": "adapted offline SRE transfer pilot, not official leaderboard or automotive/production validation",
+  "model": "deepseek-flash",
+  "judge": "deepseek-flash, separate same-model calls, official rubric and aggregation; human review not completed",
+  "modalities": [
+    "alerts",
+    "warning k8s events",
+    "latest otel-demo objects"
+  ],
+  "omitted": [
+    "metrics",
+    "application logs",
+    "traces"
+  ],
+  "host": {
+    "cpu": "Apple M4 Pro",
+    "cores": 14,
+    "ram_gib": 24,
+    "os": "macOS 26.5.2",
+    "go": "1.24.12 darwin/arm64"
+  },
+  "runs": {
+    "itbench-agent-runs": {
+      "runs": 30,
+      "valid_reports": 0,
+      "failures": [
+        {
+          "scenario": "1",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "1",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "1",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "11",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "11",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "11",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "12",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "12",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "12",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "2",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "2",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "2",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "4",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "4",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "4",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "5",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "5",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "5",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "6",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "6",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "6",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "7",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "7",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "7",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "8",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "8",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "8",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "9",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "9",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "9",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model context exceeds character budget\n------------------------\nnode path: [plan]"
+        }
+      ],
+      "provider_attempts": 278,
+      "provider_reported_tokens": 1986548,
+      "latency_ms": {
+        "median": 9080.5,
+        "p95_nearest_rank": 10570
+      },
+      "raw_folder": "itbench-agent-runs"
+    },
+    "itbench-agent-v2": {
+      "runs": 30,
+      "valid_reports": 0,
+      "failures": [
+        {
+          "scenario": "1",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "1",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "1",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "11",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "11",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "11",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "12",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "12",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "12",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "2",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "2",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "2",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "4",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "4",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "4",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "5",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "5",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "5",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "6",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "6",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "6",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "7",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "7",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "7",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "8",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "8",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "8",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "9",
+          "trial": 0,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "9",
+          "trial": 1,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        },
+        {
+          "scenario": "9",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted (12)\n------------------------\nnode path: [plan]"
+        }
+      ],
+      "provider_attempts": 336,
+      "provider_reported_tokens": 2242847,
+      "latency_ms": {
+        "median": 10269.0,
+        "p95_nearest_rank": 12525
+      },
+      "raw_folder": "itbench-agent-v2"
+    },
+    "itbench-agent-final": {
+      "runs": 30,
+      "valid_reports": 29,
+      "failures": [
+        {
+          "scenario": "4",
+          "trial": 2,
+          "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]"
+        }
+      ],
+      "provider_attempts": 308,
+      "provider_reported_tokens": 1957979,
+      "latency_ms": {
+        "median": 14715.0,
+        "p95_nearest_rank": 18232
+      },
+      "raw_folder": "itbench-agent-final"
+    },
+    "itbench-baseline-v2": {
+      "runs": 10,
+      "valid_reports": 10,
+      "failures": [],
+      "provider_attempts": 10,
+      "provider_reported_tokens": 89881,
+      "latency_ms": {
+        "median": 5189.0,
+        "p95_nearest_rank": 8717
+      },
+      "raw_folder": "itbench-baseline-v2"
+    },
+    "itbench-holdout-agent": {
+      "runs": 5,
+      "valid_reports": 5,
+      "failures": [],
+      "provider_attempts": 52,
+      "provider_reported_tokens": 336951,
+      "latency_ms": {
+        "median": 14950,
+        "p95_nearest_rank": 16451
+      },
+      "raw_folder": "itbench-holdout-agent"
+    },
+    "itbench-holdout-baseline": {
+      "runs": 5,
+      "valid_reports": 5,
+      "failures": [],
+      "provider_attempts": 5,
+      "provider_reported_tokens": 43978,
+      "latency_ms": {
+        "median": 4171,
+        "p95_nearest_rank": 5651
+      },
+      "raw_folder": "itbench-holdout-baseline"
+    }
+  },
+  "scores": {
+    "itbench-agent-final": {
+      "zero_inclusive_entity_f1": 0.011111111111111112,
+      "upstream_statistics": {
+        "per_incident": {
+          "1": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 2
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "11": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "12": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "2": {
+            "root_cause_entity_precision": {
+              "mean": 0.06666666666666667,
+              "stderr": 0.054433105395181744,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.2721655269759087,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.11111111111111112,
+              "stderr": 0.0907218423253029,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.1111111111111111,
+              "stderr": 0.09072184232530289,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.2721655269759087,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.16666666666666666,
+              "stderr": 0.13608276348795434,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.2721655269759087,
+              "n": 3
+            }
+          },
+          "4": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 2
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "5": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "6": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "7": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 2
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "8": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 2
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          },
+          "9": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 3
+            }
+          }
+        },
+        "overall": {
+          "root_cause_entity_precision": {
+            "mean": 0.006666666666666666,
+            "stderr": 0.006666666666666665,
+            "n_incidents": 10
+          },
+          "root_cause_entity_recall": {
+            "mean": 0.03333333333333333,
+            "stderr": 0.033333333333333326,
+            "n_incidents": 10
+          },
+          "root_cause_entity_f1": {
+            "mean": 0.011111111111111112,
+            "stderr": 0.011111111111111113,
+            "n_incidents": 10
+          },
+          "root_cause_entity_k_precision": {
+            "mean": 0.01111111111111111,
+            "stderr": 0.011111111111111112,
+            "n_incidents": 10
+          },
+          "root_cause_entity_k_recall": {
+            "mean": 0.03333333333333333,
+            "stderr": 0.033333333333333326,
+            "n_incidents": 10
+          },
+          "root_cause_entity_k_f1": {
+            "mean": 0.016666666666666666,
+            "stderr": 0.016666666666666663,
+            "n_incidents": 10
+          },
+          "root_cause_reasoning": {
+            "mean": 0.03333333333333333,
+            "stderr": 0.033333333333333326,
+            "n_incidents": 10
+          },
+          "total_bad_runs": 0
+        }
+      },
+      "raw_score_count": 30,
+      "sha256": "43f27dc99f91ba39d8d97568f201a1fec31f4d8146f7c5c72e3a8b36477a6359",
+      "path": "itbench-agent-final-scores.json"
+    },
+    "itbench-baseline-official": {
+      "zero_inclusive_entity_f1": 0.2531818181818182,
+      "upstream_statistics": {
+        "per_incident": {
+          "1": {
+            "root_cause_entity_precision": {
+              "mean": 0.25,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.4,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "11": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "12": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "2": {
+            "root_cause_entity_precision": {
+              "mean": 0.25,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.4,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "4": {
+            "root_cause_entity_precision": {
+              "mean": 0.1,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.18181818181818182,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "5": {
+            "root_cause_entity_precision": {
+              "mean": 0.07142857142857142,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.13333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "6": {
+            "root_cause_entity_precision": {
+              "mean": 0.14285714285714285,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.25,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "7": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "8": {
+            "root_cause_entity_precision": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.6666666666666666,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.6666666666666666,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "9": {
+            "root_cause_entity_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            }
+          }
+        },
+        "overall": {
+          "root_cause_entity_precision": {
+            "mean": 0.16476190476190475,
+            "stderr": 0.05272111769438147,
+            "n_incidents": 10
+          },
+          "root_cause_entity_recall": {
+            "mean": 0.7,
+            "stderr": 0.15275252316519464,
+            "n_incidents": 10
+          },
+          "root_cause_entity_f1": {
+            "mean": 0.2813131313131313,
+            "stderr": 0.07597024022777128,
+            "n_incidents": 9
+          },
+          "root_cause_entity_k_precision": {
+            "mean": 0.21666666666666665,
+            "stderr": 0.061111111111111095,
+            "n_incidents": 10
+          },
+          "root_cause_entity_k_recall": {
+            "mean": 0.6,
+            "stderr": 0.16329931618554522,
+            "n_incidents": 10
+          },
+          "root_cause_entity_k_f1": {
+            "mean": 0.31666666666666665,
+            "stderr": 0.08766518798921945,
+            "n_incidents": 10
+          },
+          "root_cause_reasoning": {
+            "mean": 0.4,
+            "stderr": 0.12472191289246472,
+            "n_incidents": 10
+          },
+          "total_bad_runs": 0
+        }
+      },
+      "raw_score_count": 10,
+      "sha256": "79ed094f68510171d628b551f8f4875eaace672720c1f1158783157c269bbf97",
+      "path": "itbench-baseline-official-scores.json"
+    },
+    "itbench-holdout-agent": {
+      "zero_inclusive_entity_f1": 0.13333333333333333,
+      "upstream_statistics": {
+        "per_incident": {
+          "13": {
+            "root_cause_entity_precision": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.6666666666666666,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.6666666666666666,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "14": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "15": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "16": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "17": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          }
+        },
+        "overall": {
+          "root_cause_entity_precision": {
+            "mean": 0.1,
+            "stderr": 0.10000000000000002,
+            "n_incidents": 5
+          },
+          "root_cause_entity_recall": {
+            "mean": 0.2,
+            "stderr": 0.20000000000000004,
+            "n_incidents": 5
+          },
+          "root_cause_entity_f1": {
+            "mean": 0.13333333333333333,
+            "stderr": 0.13333333333333333,
+            "n_incidents": 5
+          },
+          "root_cause_entity_k_precision": {
+            "mean": 0.1,
+            "stderr": 0.10000000000000002,
+            "n_incidents": 5
+          },
+          "root_cause_entity_k_recall": {
+            "mean": 0.2,
+            "stderr": 0.20000000000000004,
+            "n_incidents": 5
+          },
+          "root_cause_entity_k_f1": {
+            "mean": 0.13333333333333333,
+            "stderr": 0.13333333333333333,
+            "n_incidents": 5
+          },
+          "root_cause_reasoning": {
+            "mean": 0.2,
+            "stderr": 0.20000000000000004,
+            "n_incidents": 5
+          },
+          "total_bad_runs": 0
+        }
+      },
+      "raw_score_count": 5,
+      "sha256": "6f44a3427a200b7ab6ff5fce472d107d75f1fd8e1cd1af669aee31e786fbc669",
+      "path": "itbench-holdout-agent-scores.json"
+    },
+    "itbench-holdout-baseline": {
+      "zero_inclusive_entity_f1": 0.3466666666666667,
+      "upstream_statistics": {
+        "per_incident": {
+          "13": {
+            "root_cause_entity_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "14": {
+            "root_cause_entity_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "15": {
+            "root_cause_entity_precision": {
+              "mean": 0.25,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.4,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.3333333333333333,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.5,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "16": {
+            "root_cause_entity_precision": {
+              "mean": 0.2,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 1.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.33333333333333337,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          },
+          "17": {
+            "root_cause_entity_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_precision": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_recall": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_entity_k_f1": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            },
+            "root_cause_reasoning": {
+              "mean": 0.0,
+              "stderr": 0.0,
+              "n": 1
+            }
+          }
+        },
+        "overall": {
+          "root_cause_entity_precision": {
+            "mean": 0.22333333333333333,
+            "stderr": 0.06137317546507323,
+            "n_incidents": 5
+          },
+          "root_cause_entity_recall": {
+            "mean": 0.8,
+            "stderr": 0.19999999999999998,
+            "n_incidents": 5
+          },
+          "root_cause_entity_f1": {
+            "mean": 0.3466666666666667,
+            "stderr": 0.09225568335398698,
+            "n_incidents": 5
+          },
+          "root_cause_entity_k_precision": {
+            "mean": 0.2,
+            "stderr": 0.0816496580927726,
+            "n_incidents": 5
+          },
+          "root_cause_entity_k_recall": {
+            "mean": 0.6,
+            "stderr": 0.24494897427831783,
+            "n_incidents": 5
+          },
+          "root_cause_entity_k_f1": {
+            "mean": 0.3,
+            "stderr": 0.12247448713915891,
+            "n_incidents": 5
+          },
+          "root_cause_reasoning": {
+            "mean": 0.5,
+            "stderr": 0.22360679774997896,
+            "n_incidents": 5
+          },
+          "total_bad_runs": 0
+        }
+      },
+      "raw_score_count": 5,
+      "sha256": "08e2eb3a83303052c8384cea99b414e10bb85d5b48f58b06b613b43e132d94ef",
+      "path": "itbench-holdout-baseline-scores.json"
+    }
+  },
+  "regressions": {
+    "scenarios-delivery-tests": {
+      "pass": 82,
+      "fail": 0,
+      "skip": 3
+    },
+    "scenarios-final-tests": {
+      "pass": 82,
+      "fail": 0,
+      "skip": 2
+    },
+    "scenarios-stage1-tests": {
+      "pass": 65,
+      "fail": 0,
+      "skip": 1
+    },
+    "scenarios-stage2-tests": {
+      "pass": 69,
+      "fail": 0,
+      "skip": 1
+    },
+    "scenarios-stage3-tests": {
+      "pass": 75,
+      "fail": 0,
+      "skip": 1
+    },
+    "scenarios-stage4-fixed-tests": {
+      "pass": 79,
+      "fail": 0,
+      "skip": 2
+    },
+    "scenarios-stage4-tests": {
+      "pass": 77,
+      "fail": 0,
+      "skip": 2
+    },
+    "scenarios-final-race": {
+      "pass": 82,
+      "fail": 0,
+      "skip": 2
+    }
+  },
+  "limits": [
+    "development cases used to fix runtime problems; held-out scenarios only five",
+    "single-shot baseline receives first 24000 characters; Agent can access more through tools",
+    "model self-reported confidence is not calibrated",
+    "provider-reported total tokens include cached input; monetary cost not computed",
+    "process-local governor is not distributed tenancy/quota",
+    "parser/aggregation remain mocks; no production SLA or customer scale claim"
+  ],
+  "guided_reversal": {
+    "passed": 3,
+    "total": 3,
+    "limitations": "Guided synthetic demonstrations with explicit physical bench observations; not an estimate of production diagnostic accuracy."
+  },
+  "controlled_load": [
+    {
+      "clients": 32,
+      "elapsed_ms": 2979,
+      "logical_requests_per_second": 335.5814634699232,
+      "p50_ms": 93.794,
+      "p95_ms": 99.74,
+      "p99_ms": 127.416,
+      "policy": {
+        "Concurrency": 2,
+        "QueueCapacity": 128,
+        "Attempts": 1,
+        "Backoff": 2000000
+      },
+      "profile": "no_retry_c2",
+      "provider": "local HTTP fixture, 5ms per attempt, every seventh attempt returns 429; token usage synthetic, not billable",
+      "requests": 1000,
+      "stats": {
+        "Active": 0,
+        "Queued": 0,
+        "PeakActive": 2,
+        "PeakQueued": 32,
+        "Attempts": 1000,
+        "Retries": 0,
+        "Rejected": 0,
+        "Canceled": 0,
+        "Completed": 858,
+        "Tokens": 85800,
+        "QueueMillis": 87508
+      },
+      "success": 858
+    },
+    {
+      "clients": 32,
+      "elapsed_ms": 3470,
+      "logical_requests_per_second": 288.17715745623553,
+      "p50_ms": 109.849,
+      "p95_ms": 119.43,
+      "p99_ms": 125.781,
+      "policy": {
+        "Concurrency": 2,
+        "QueueCapacity": 128,
+        "Attempts": 3,
+        "Backoff": 2000000
+      },
+      "profile": "retry_c2",
+      "provider": "local HTTP fixture, 5ms per attempt, every seventh attempt returns 429; token usage synthetic, not billable",
+      "requests": 1000,
+      "stats": {
+        "Active": 0,
+        "Queued": 0,
+        "PeakActive": 2,
+        "PeakQueued": 32,
+        "Attempts": 1166,
+        "Retries": 166,
+        "Rejected": 0,
+        "Canceled": 0,
+        "Completed": 1000,
+        "Tokens": 100000,
+        "QueueMillis": 101855
+      },
+      "success": 1000
+    },
+    {
+      "clients": 32,
+      "elapsed_ms": 861,
+      "logical_requests_per_second": 1160.5445608387854,
+      "p50_ms": 26.589,
+      "p95_ms": 35.153,
+      "p99_ms": 45.074,
+      "policy": {
+        "Concurrency": 8,
+        "QueueCapacity": 128,
+        "Attempts": 3,
+        "Backoff": 2000000
+      },
+      "profile": "retry_c8",
+      "provider": "local HTTP fixture, 5ms per attempt, every seventh attempt returns 429; token usage synthetic, not billable",
+      "requests": 1000,
+      "stats": {
+        "Active": 0,
+        "Queued": 0,
+        "PeakActive": 8,
+        "PeakQueued": 27,
+        "Attempts": 1166,
+        "Retries": 166,
+        "Rejected": 0,
+        "Canceled": 0,
+        "Completed": 1000,
+        "Tokens": 100000,
+        "QueueMillis": 19719
+      },
+      "success": 1000
+    }
+  ]
+}

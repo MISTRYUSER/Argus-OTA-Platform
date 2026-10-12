@@ -13,6 +13,7 @@ import (
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm"
 	"os"
 	"sort"
+ "strconv"
 	"time"
 )
 
@@ -32,10 +33,12 @@ func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.Vect
 	case "supervisor":
 		runner, err = supervisor.NewSupervisorGraph(repo, retriever, cfg)
 	case "", "investigation":
+		reservationBudget := 1000000
+ if raw := os.Getenv("AI_MODEL_RESERVATION_BUDGET"); raw != "" { reservationBudget, err = strconv.Atoi(raw); if err != nil || reservationBudget < 1 { return nil, fmt.Errorf("AI_MODEL_RESERVATION_BUDGET must be positive") } }
 		var chat model.ChatModel
 		chat, err = llm.NewGLM4ChatModel(cfg)
 		if err == nil {
-			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{MaxSteps: 8, ModelName: cfg.Model})
+			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{MaxSteps: 8, ModelName: cfg.Model, MaxReservedTokens:reservationBudget})
 		}
 	default:
 		return nil, fmt.Errorf("unsupported AI_RUNNER")
@@ -98,7 +101,7 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 		if result.Model == "" {
 			result.Model = "configured-model"
 		}
-		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
+		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"model_steps": result.ModelSteps, "reserved_token_units": result.ReservedTokens, "context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
 	}
 	if leased, ok := s.diagnosisRepo.(domain.LeasedDiagnosisRepository); ok {
 		_, err = leased.ExecuteOnce(ctx, id, generate)
@@ -147,6 +150,7 @@ func (s *MultiAgentService) FailBatch(ctx context.Context, id string, cause erro
 }
 
 func classifyDiagnosisError(err error) error {
+ if errors.Is(err, domain.ErrModelQueueFull) { return &core.DeferredTaskError{Reason:"model admission full; retry after capacity becomes available"} }
 	if errors.Is(err, domain.ErrInvalidDiagnosis) || errors.Is(err, domain.ErrInvestigationBudget) || llm.IsPermanentError(err) {
 		return &core.PermanentTaskError{Err: err}
 	}
