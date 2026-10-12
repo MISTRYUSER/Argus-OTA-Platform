@@ -16,9 +16,9 @@ const maxMessageSize = 1024 * 1024 // 1MB
 
 // kafkaEventProducer - Kafka 事件发布器实现（小写，包私有）
 type kafkaEventProducer struct {
-	producer 	sarama.SyncProducer
+	producer    sarama.SyncProducer
 	dlqProducer sarama.SyncProducer
-	topic    	string
+	topic       string
 	dlqTopic    string
 }
 
@@ -26,6 +26,8 @@ type kafkaEventProducer struct {
 // 返回接口类型,而不是具体实现
 func NewKafkaEventProducer(brokers []string, topic string, dlqTopic string) (messaging.KafkaEventPublisher, error) {
 	config := sarama.NewConfig()
+	config.Version = sarama.V2_8_0_0
+	config.Net.MaxOpenRequests = 1
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Retry.Max = 5
 	config.Producer.Return.Successes = true
@@ -51,49 +53,31 @@ func NewKafkaEventProducer(brokers []string, topic string, dlqTopic string) (mes
 	log.Printf("[Kafka] Producer created successfully. Brokers: %v, Topic: %s, DLQ Topic: %s", brokers, topic, dlqTopic)
 
 	return &kafkaEventProducer{
-		producer:   producer,
+		producer:    producer,
 		dlqProducer: dlqProducer,
-		topic:      topic,
-		dlqTopic:   dlqTopic,
+		topic:       topic,
+		dlqTopic:    dlqTopic,
 	}, nil
 }
 
 // PublishEvents - 批量发布领域事件（实现 messaging.KafkaEventPublisher 接口）
 func (k *kafkaEventProducer) PublishEvents(ctx context.Context, events []domain.DomainEvent) error {
-	if len(events) == 0 {
-		return nil
-	}
-
-	log.Printf("[Kafka] Publishing %d events to topic: %s", len(events), k.topic)
-
-	for i, event := range events {
-		switch e := event.(type) {
-		case domain.BatchCreated:
-			if err := k.publishBatchCreated(ctx, e); err != nil {
-				return fmt.Errorf("failed to publish event %d: %w", i, err)
-			}
-		case domain.BatchStatusChanged:
-			if err := k.publishStatusChanged(ctx, e); err != nil {
-				return fmt.Errorf("failed to publish event %d: %w", i, err)
-			}
-		case domain.FileParsed:
-			if err := k.publishFileParsed(ctx, e); err != nil {
-				return fmt.Errorf("failed to publish event %d: %w", i, err)
-			}
-		case domain.GatheringCompleted:
-			if err := k.publishGatheringCompleted(ctx, e); err != nil {
-				return fmt.Errorf("failed to publish event %d: %w", i, err)
-			}
-		case domain.DiagnosisCompleted:
-			if err := k.publishDiagnosisCompleted(ctx, e); err != nil {
-				return fmt.Errorf("failed to publish event %d: %w", i, err)
-			}
-		default:
-			log.Printf("[Kafka] Unknown event type: %T", event)
+	for _, event := range events {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		body, err := domain.MarshalEvent(event)
+		if err != nil {
+			return err
+		}
+		if len(body) > maxMessageSize {
+			return fmt.Errorf("event exceeds 1MB")
+		}
+		_, _, err = k.producer.SendMessage(&sarama.ProducerMessage{Topic: k.topic, Key: sarama.StringEncoder(event.AggregateID().String()), Value: sarama.ByteEncoder(body)})
+		if err != nil {
+			return err
 		}
 	}
-
-	log.Printf("[Kafka] Successfully published %d events", len(events))
 	return nil
 }
 func (k *kafkaEventProducer) PublishEventsWithRetry(ctx context.Context, events []domain.DomainEvent) error {
@@ -106,6 +90,7 @@ func (k *kafkaEventProducer) PublishEventsWithRetry(ctx context.Context, events 
 	}
 	return nil
 }
+
 // 单个事件发布（带重试逻辑）
 func (k *kafkaEventProducer) publishWithRetry(ctx context.Context, event domain.DomainEvent, attempt int) error {
 	if attempt >= 5 {
@@ -197,6 +182,7 @@ func isTemporaryError(err error) bool {
 	// 这里可以根据具体需要细化判断
 	return true
 }
+
 // sendToDLQ 将失败的事件发送到死信队列
 func (k *kafkaEventProducer) sendToDLQ(ctx context.Context, event domain.DomainEvent, originalErr error) {
 	if k.dlqProducer == nil {
@@ -206,9 +192,9 @@ func (k *kafkaEventProducer) sendToDLQ(ctx context.Context, event domain.DomainE
 
 	// 序列化事件
 	data, err := json.Marshal(map[string]interface{}{
-		"event":      event,
-		"error":      originalErr.Error(),
-		"timestamp":  time.Now().Format("2006-01-02T15:04:05Z07:00"),
+		"event":     event,
+		"error":     originalErr.Error(),
+		"timestamp": time.Now().Format("2006-01-02T15:04:05Z07:00"),
 	})
 	if err != nil {
 		log.Printf("[DLQ] Failed to marshal event: %v", err)
@@ -228,6 +214,7 @@ func (k *kafkaEventProducer) sendToDLQ(ctx context.Context, event domain.DomainE
 
 	log.Printf("[DLQ] Event sent to DLQ successfully: %T", event)
 }
+
 // publishBatchCreated - 发布 BatchCreated 事件（小写，私有方法）
 func (k *kafkaEventProducer) publishBatchCreated(ctx context.Context, event domain.BatchCreated) error {
 	message := fmt.Sprintf(`{"event_type":"BatchCreated","batch_id":"%s","vehicle_id":"%s","vin":"%s","timestamp":"%s"}`,
@@ -298,6 +285,7 @@ func (k *kafkaEventProducer) publishFileParsed(ctx context.Context, event domain
 	log.Printf("[Kafka] FileParsed sent successfully. Partition: %d, Offset: %d", partition, offset)
 	return nil
 }
+
 // publishGatheringCompleted - 发布 GatheringCompleted 事件（Python Worker 调用）
 func (k *kafkaEventProducer) publishGatheringCompleted(ctx context.Context, event domain.GatheringCompleted) error {
 	// 定义 JSON 序列化结构（使用结构体 + json tag，性能更好）
@@ -350,14 +338,14 @@ func (k *kafkaEventProducer) publishGatheringCompleted(ctx context.Context, even
 func (k *kafkaEventProducer) publishDiagnosisCompleted(ctx context.Context, event domain.DiagnosisCompleted) error {
 	// 定义 JSON 序列化结构
 	type DiagnosisCompletedEvent struct {
-		EventType          string                       `json:"event_type"`
-		Version            string                       `json:"version"`
-		BatchID            string                       `json:"batch_id"`
-		DiagnosisID        string                       `json:"diagnosis_id"`
-		DiagnosisSummary   string                       `json:"diagnosis_summary"`
-		TopErrorCodes      []domain.ErrorCodeSummary    `json:"top_error_codes"`
-		TokenUsage         domain.TokenUsageInfo        `json:"token_usage"`
-		Timestamp          string                       `json:"timestamp"`
+		EventType        string                    `json:"event_type"`
+		Version          string                    `json:"version"`
+		BatchID          string                    `json:"batch_id"`
+		DiagnosisID      string                    `json:"diagnosis_id"`
+		DiagnosisSummary string                    `json:"diagnosis_summary"`
+		TopErrorCodes    []domain.ErrorCodeSummary `json:"top_error_codes"`
+		TokenUsage       domain.TokenUsageInfo     `json:"token_usage"`
+		Timestamp        string                    `json:"timestamp"`
 	}
 
 	kafkaEvent := DiagnosisCompletedEvent{
@@ -398,6 +386,7 @@ func (k *kafkaEventProducer) publishDiagnosisCompleted(ctx context.Context, even
 		event.TokenUsage.EstimatedCost, partition, offset)
 	return nil
 }
+
 // Close - 关闭 Kafka Producer
 // P2-2: 同时关闭主 producer 和 DLQ producer，避免连接泄漏
 func (k *kafkaEventProducer) Close() error {

@@ -127,32 +127,33 @@ func (r *PostgresReportRepository) FindByID(ctx context.Context, id uuid.UUID) (
 	return &report, nil
 }
 
-func (r *PostgresReportRepository) FindByBatchID(ctx context.Context, batchID uuid.UUID) (*domain.Report, error) {
-	query := `
-		SELECT id, report_data
-		FROM reports
-		WHERE batch_id = $1
-		ORDER BY updated_at DESC
-		LIMIT 1
-	`
-
-	var id uuid.UUID
-	var raw []byte
-	err := r.db.QueryRowContext(ctx, query, batchID).Scan(&id, &raw)
+// Read current batch state and its durable diagnosis, never an old report snapshot.
+func (r *PostgresReportRepository) FindByBatchID(ctx context.Context, id uuid.UUID) (*domain.Report, error) {
+	report := &domain.Report{BatchID: id, ID: batchReportID(id)}
+	var diagnosisID uuid.NullUUID
+	var summary sql.NullString
+	var investigation []byte
+	err := r.db.QueryRowContext(ctx, `SELECT b.vehicle_id,b.vin,b.status,b.total_files,b.processed_files,b.created_at,b.updated_at,d.id,d.diagnosis_summary,COALESCE(d.aggregated_data,'{}') FROM batches b LEFT JOIN ai_diagnoses d ON d.batch_id=b.id AND d.status='completed' WHERE b.id=$1`, id).Scan(&report.VehicleID, &report.VIN, &report.Status, &report.TotalFiles, &report.ProcessedFiles, &report.CreatedAt, &report.UpdatedAt, &diagnosisID, &summary, &investigation)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to query report by batch_id: %w", err)
+		return nil, err
 	}
-
-	var report domain.Report
-	if err := json.Unmarshal(raw, &report); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal report_data: %w", err)
+	var structured struct {
+		Trace       json.RawMessage `json:"tool_trace"`
+		Evidence    json.RawMessage `json:"evidence"`
+		Limitations json.RawMessage `json:"limitations"`
 	}
-	if report.ID == uuid.Nil {
-		report.ID = id
+	if err = json.Unmarshal(investigation, &structured); err != nil {
+		return nil, err
 	}
-
-	return &report, nil
+	report.InvestigationTrace = structured.Trace
+	report.Evidence = structured.Evidence
+	report.DiagnosisLimitations = structured.Limitations
+	report.DiagnosisResult = summary.String
+	if diagnosisID.Valid {
+		report.DiagnosisID = &diagnosisID.UUID
+	}
+	return report, nil
 }

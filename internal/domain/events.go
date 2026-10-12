@@ -1,4 +1,5 @@
 package domain
+
 import (
 	"github.com/google/uuid"
 	"time"
@@ -11,24 +12,24 @@ type DomainEvent interface {
 }
 
 type BatchCreated struct {
-	BatchID     uuid.UUID
-	VehicleID   string
-	VIN         string
-	OccurredAt  time.Time
+	BatchID    uuid.UUID
+	VehicleID  string
+	VIN        string
+	OccurredAt time.Time
 }
 
 type BatchStatusChanged struct {
-	BatchID     uuid.UUID
-	OldStatus   BatchStatus
-	NewStatus   BatchStatus
-	OccurredAt  time.Time
+	BatchID    uuid.UUID
+	OldStatus  BatchStatus
+	NewStatus  BatchStatus
+	OccurredAt time.Time
 }
 
 // FileParsed - 文件解析完成事件（C++ Worker 发布）
 type FileParsed struct {
-	BatchID     uuid.UUID
-	FileID      uuid.UUID
-	OccurredAt  time.Time
+	BatchID    uuid.UUID
+	FileID     uuid.UUID
+	OccurredAt time.Time
 }
 
 // ErrorCodeSummary - Top-K 异常码摘要
@@ -50,22 +51,22 @@ type TokenUsageInfo struct {
 // 注意：假设每个 Batch 平均 < 50 个文件，ChartFiles 总大小 < 1MB
 // 如果文件数过多，考虑分批发送事件
 type GatheringCompleted struct {
-	Version     string    // 事件版本 "v1.0"
-	BatchID     uuid.UUID
-	TotalFiles  int
-	ChartFiles  []string // MinIO object paths (PNG/JPG)
-	OccurredAt  time.Time
+	Version    string // 事件版本 "v1.0"
+	BatchID    uuid.UUID
+	TotalFiles int
+	ChartFiles []string // MinIO object paths (PNG/JPG)
+	OccurredAt time.Time
 }
 
 // DiagnosisCompleted - AI 诊断完成事件（AI Agent Worker 发布）
 type DiagnosisCompleted struct {
-	Version           string             // 事件版本 "v1.0"
-	BatchID           uuid.UUID
-	DiagnosisID       uuid.UUID
-	DiagnosisSummary  string             // 诊断摘要（可能很长）
-	TopErrorCodes     []ErrorCodeSummary // ✅ Top-K 异常码
-	TokenUsage        TokenUsageInfo     // ✅ Token 使用统计
-	OccurredAt        time.Time
+	Version          string // 事件版本 "v1.0"
+	BatchID          uuid.UUID
+	DiagnosisID      uuid.UUID
+	DiagnosisSummary string             // 诊断摘要（可能很长）
+	TopErrorCodes    []ErrorCodeSummary // ✅ Top-K 异常码
+	TokenUsage       TokenUsageInfo     // ✅ Token 使用统计
+	OccurredAt       time.Time
 }
 
 // ============================================================================

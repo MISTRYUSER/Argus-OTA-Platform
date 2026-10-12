@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,7 +21,8 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	// 1. 初始化 PostgreSQL
 	db := initDB()
@@ -30,15 +32,6 @@ func main() {
 
 	// 3. 初始化 Kafka Producer（发布事件）
 	kafkaProducer := initKafkaProducer()
-
-	// 4. 初始化 Kafka Consumer（消费事件）
-	kafkaConsumer, err := kafka.NewKafkaEventConsumer(
-		[]string{"localhost:9092"},
-		"orchestrator-group", // Consumer Group ID
-	)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka consumer: %v", err)
-	}
 
 	// 5. 初始化 Repository
 	batchRepo := postgres.NewPostgresBatchRepository(db)
@@ -50,8 +43,17 @@ func main() {
 		kafkaProducer,
 	)
 
+	// 4. 初始化 Kafka Consumer（消费事件）
+	kafkaConsumer, err := kafka.NewKafkaEventConsumer(
+		strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
+		"orchestrator-group", kafka.WithFailureHandler(orchestrateService.HandleFailure), kafka.WithDeadLetterStore(postgres.DeadLetterStore(db)), // Consumer Group ID
+	)
+	if err != nil {
+		log.Fatalf("Failed to create Kafka consumer: %v", err)
+	}
+
 	// 7. 启动 Kafka Consumer
-	topics := []string{"batch-events"}
+	topics := []string{getEnv("KAFKA_TOPIC", "batch-events")}
 
 	log.Println("========================================")
 	log.Println("🚀 Orchestrator started successfully!")
@@ -114,6 +116,9 @@ func initDB() *sql.DB {
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
 	// 连接数据库
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		dsn = databaseURL
+	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
@@ -171,12 +176,19 @@ func getEnv(key, defaultValue string) string {
 	}
 	return defaultValue
 }
+
 // compensationJob 补偿任务：定期检查并处理卡住的批次
 func compensationJob(ctx context.Context, s *application.OrchestrateService, repo domain.BatchRepository) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
 		log.Printf("[Compensation] Checking for stuck batches...")
 
 		// 1. 查询状态卡住的 Batch（通过 Repository）

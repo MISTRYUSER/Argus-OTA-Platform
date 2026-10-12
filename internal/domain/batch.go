@@ -6,62 +6,63 @@ import (
 
 	"github.com/google/uuid"
 )
+
 type Batch struct {
-	ID                  uuid.UUID
-	VehicleID           string
-	VIN                 string
-	Status              BatchStatus
-	UploadTime          time.Time
-	TotalFiles          int
-	ProcessedFiles      int
-	ExpectedWorkerCount int
+	ID                   uuid.UUID
+	VehicleID            string
+	VIN                  string
+	Status               BatchStatus
+	UploadTime           time.Time
+	TotalFiles           int
+	ProcessedFiles       int
+	ExpectedWorkerCount  int
 	CompletedWorkerCount int
-	MinIOBucket         string
-	MiniIOPrefix        string
-	ErrorMessage        string
-	CompletedAt         *time.Time
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	eventlog            []DomainEvent
+	MinIOBucket          string
+	MiniIOPrefix         string
+	ErrorMessage         string
+	CompletedAt          *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	eventlog             []DomainEvent
 }
+
 func NewBatch(vehicleID, vin string, expectedWorkers int) (*Batch, error) {
 	if vehicleID == "" {
-		return nil,errors.New("vehicleId is empty")
+		return nil, errors.New("vehicleId is empty")
 	}
 	if vin == "" {
-		return nil,errors.New("vin is empty")
+		return nil, errors.New("vin is empty")
 	}
 	if expectedWorkers <= 0 {
-		return nil,errors.New("exceptedWorkers is <= 0")
+		return nil, errors.New("exceptedWorkers is <= 0")
 	}
-	id  := uuid.New()
+	id := uuid.New()
 	now := time.Now()
 
-	event := BatchCreated {
-		BatchID: 	id,
-		VehicleID: 	vehicleID,
-		VIN: 		vin,
+	event := BatchCreated{
+		BatchID:    id,
+		VehicleID:  vehicleID,
+		VIN:        vin,
 		OccurredAt: now,
 	}
 	return &Batch{
-		ID:                  id,
-		VehicleID:           vehicleID,
-		VIN:                 vin,
-		Status:              BatchStatusPending,
-		UploadTime:          now,
-		TotalFiles:          0,
-		ProcessedFiles:      0,
-		ExpectedWorkerCount: expectedWorkers,
+		ID:                   id,
+		VehicleID:            vehicleID,
+		VIN:                  vin,
+		Status:               BatchStatusPending,
+		UploadTime:           now,
+		TotalFiles:           0,
+		ProcessedFiles:       0,
+		ExpectedWorkerCount:  expectedWorkers,
 		CompletedWorkerCount: 0,
-		MinIOBucket:         "",
-		MiniIOPrefix:        "",
-		ErrorMessage:        "",
-		CompletedAt:         nil,
-		CreatedAt:           now,
-		UpdatedAt:           now,
-		eventlog:            []DomainEvent{event},
+		MinIOBucket:          "",
+		MiniIOPrefix:         "",
+		ErrorMessage:         "",
+		CompletedAt:          nil,
+		CreatedAt:            now,
+		UpdatedAt:            now,
+		eventlog:             []DomainEvent{event},
 	}, nil
-
 
 }
 func (b *Batch) TransitionTo(status BatchStatus) error {
@@ -105,7 +106,7 @@ func (b *Batch) IncrementWorkerCount() error {
 	return nil
 }
 func (b *Batch) AddFile(fileID uuid.UUID) error {
-	//check 
+	//check
 	if fileID == uuid.Nil {
 		return errors.New("fileID is nil")
 	}
@@ -120,23 +121,24 @@ func (b *Batch) AddFile(fileID uuid.UUID) error {
 }
 
 func (b *Batch) MakeFileProcessed() error {
-	 	if b.ProcessedFiles >= b.TotalFiles {
-			return errors.New("all files are already processed")
-		}
-		b.ProcessedFiles++
-		b.UpdatedAt = time.Now()
+	if b.ProcessedFiles >= b.TotalFiles {
+		return errors.New("all files are already processed")
+	}
+	b.ProcessedFiles++
+	b.UpdatedAt = time.Now()
 
-		return nil
+	return nil
 }
 func (b *Batch) GetEvents() []DomainEvent {
 	if len(b.eventlog) == 0 {
 		return []DomainEvent{}
 	}
-	events := make([]DomainEvent,len(b.eventlog))
-	copy(events,b.eventlog)
+	events := make([]DomainEvent, len(b.eventlog))
+	copy(events, b.eventlog)
 	return events
 }
 func (b *Batch) ClearEvents() {
 	b.eventlog = []DomainEvent{}
 }
 
+func (b *Batch) AddEvent(e DomainEvent) { b.eventlog = append(b.eventlog, e) }

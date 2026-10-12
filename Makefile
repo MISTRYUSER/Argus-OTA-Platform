@@ -46,7 +46,7 @@ help:
 
 infra-up:
 	@echo "🚀 Starting infrastructure services..."
-	docker-compose -f deployments/docker-compose.yml up -d
+	docker compose -f deployments/docker-compose.yml up -d
 	@echo "⏳ Waiting for services to be ready..."
 	@sleep 5
 	@echo "✅ Infrastructure services started!"
@@ -62,15 +62,15 @@ infra-up:
 
 infra-down:
 	@echo "🛑 Stopping infrastructure services..."
-	docker-compose -f deployments/docker-compose.yml down
+	docker compose -f deployments/docker-compose.yml down
 	@echo "✅ Infrastructure services stopped!"
 
 infra-logs:
-	docker-compose -f deployments/docker-compose.yml logs -f
+	docker compose -f deployments/docker-compose.yml logs -f
 
 infra-ps:
 	@echo "📦 Running infrastructure containers:"
-	docker-compose -f deployments/docker-compose.yml ps
+	docker compose -f deployments/docker-compose.yml ps
 
 infra-restart: infra-down infra-up
 
@@ -80,35 +80,31 @@ infra-restart: infra-down infra-up
 
 db-migrate:
 	@echo "📝 Running database migrations..."
-	@# TODO: Add migration tool here
-	@echo "✅ Migrations completed!"
+	@for migration in deployments/init-scripts/*.sql; do docker compose -f deployments/docker-compose.yml exec -T postgres psql -U argus -d argus_ota -v ON_ERROR_STOP=1 < $$migration || exit 1; done
 
 db-reset:
 	@echo "⚠️  Resetting database..."
-	docker-compose -f deployments/docker-compose.yml exec postgres psql -U argus -d argus_ota -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	docker compose -f deployments/docker-compose.yml exec postgres psql -U argus -d argus_ota -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	@echo "✅ Database reset completed!"
 
 db-connect:
-	docker-compose -f deployments/docker-compose.yml exec postgres psql -U argus -d argus_ota
+	docker compose -f deployments/docker-compose.yml exec postgres psql -U argus -d argus_ota
 
 db-dump:
-	docker-compose -f deployments/docker-compose.yml exec postgres pg_dump -U argus -d argus_ota --schema-only
+	docker compose -f deployments/docker-compose.yml exec postgres pg_dump -U argus -d argus_ota --schema-only
 
 # ============================================================================
 # Application Commands
 # ============================================================================
 
 build:
-	@echo "🔨 Building all services..."
-	@echo "Building ingestor..."
-	@cd cmd/ingestor && go build -o ../../build/ingestor main.go
-	@echo "Building orchestrator..."
-	@cd cmd/orchestrator && go build -o ../../build/orchestrator main.go
-	@echo "Building query service..."
-	@cd cmd/query-service && go build -o ../../build/query-service main.go
-	@echo "✅ Build completed!"
+	@mkdir -p build
+	@for service in ingestor orchestrator query-service mock-cpp-worker mock-python-worker event-relay; do go build -o build/$$service ./cmd/$$service || exit 1; done
+	go build -o build/ai-worker ./workers/ai-agent/cmd/ai-worker
+	go build -o build/progress-sse ./workers/ai-agent/cmd/progress-sse
 
-run: run-ingestor run-orchestrator run-query
+run: build
+	./scripts/run-local.sh
 
 run-ingestor:
 	@echo "🚀 Starting ingestor service..."
@@ -160,10 +156,13 @@ worker-python:
 	pip install -r requirements.txt
 
 worker-ai:
-	@echo "🤖 Setting up AI agent worker..."
-	@cd workers/ai-agent && python -m venv venv && \
-	. venv/bin/activate && \
-	pip install -r requirements.txt
+	go build -o build/ai-worker ./workers/ai-agent/cmd/ai-worker
+
+run-ai:
+	go run ./workers/ai-agent/cmd/ai-worker
+
+run-sse:
+	go run ./workers/ai-agent/cmd/progress-sse
 
 # ============================================================================
 # Utility Commands
@@ -183,7 +182,7 @@ deps:
 
 docker-clean:
 	@echo "🧹 Cleaning Docker containers and volumes..."
-	docker-compose -f deployments/docker-compose.yml down -v
+	docker compose -f deployments/docker-compose.yml down -v
 	docker system prune -f
 	@echo "✅ Docker cleanup completed!"
 

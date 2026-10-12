@@ -5,17 +5,18 @@ import (
 
 	"github.com/google/uuid"
 )
+
 type ListOptions struct {
 	//page
-	Limit      int
-	Offset     int
+	Limit  int
+	Offset int
 
-	SortBy     string
-	SortOrder  string
+	SortBy    string
+	SortOrder string
 
-	VehicleID  *string
-	VIN        *string
-	Status     *string
+	VehicleID *string
+	VIN       *string
+	Status    *string
 }
 type BatchRepository interface {
 	Save(ctx context.Context, batch *Batch) error
@@ -35,4 +36,10 @@ type FileRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*File, error)
 	FindByBatchID(ctx context.Context, batchID uuid.UUID) ([]*File, error)
 	UpdateProcessingStatus(ctx context.Context, id uuid.UUID, status ProcessingStatus) error
+}
+
+// TransactionalBatchRepository serializes mutations and records emitted events atomically.
+type TransactionalBatchRepository interface {
+	UpdateBatch(context.Context, uuid.UUID, func(*Batch) error) error
+	RecordFileCompletion(context.Context, uuid.UUID, uuid.UUID, func(*Batch) error) error
 }

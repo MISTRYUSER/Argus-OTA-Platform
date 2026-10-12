@@ -2,119 +2,140 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"time"
-
+	"github.com/cloudwego/eino/components/model"
 	"github.com/google/uuid"
+	core "github.com/xuewentao/argus-ota-platform/internal/domain"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/investigation"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/supervisor"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm"
+	"os"
+	"sort"
+	"time"
 )
 
-// MultiAgentService AI多智能体服务（Application层）
-// 职责：编排AI Agent的诊断流程，协调各个组件
 type MultiAgentService struct {
-	diagnosisRepo   domain.DiagnosisRepository
-	vectorRetriever domain.VectorRetriever
-	eventPublisher  domain.EventPublisher
-	diagnosisGraph  *DiagnosisGraph
+	diagnosisRepo  domain.DiagnosisRepository
+	runner         domain.DiagnosisRunner
+	eventPublisher domain.EventPublisher
+	semaphore      chan struct{}
 }
 
-// NewMultiAgentService 创建MultiAgentService
-func NewMultiAgentService(
-	diagnosisRepo domain.DiagnosisRepository,
-	vectorRetriever domain.VectorRetriever,
-	eventPublisher domain.EventPublisher,
-	llmConfig *llm.GLM4Config,
-) (*MultiAgentService, error) {
-	// 创建 Diagnosis Graph
-	graph, err := NewDiagnosisGraph(diagnosisRepo, vectorRetriever, llmConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create diagnosis graph: %w", err)
+func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.VectorRetriever, publisher domain.EventPublisher, cfg *llm.GLM4Config, options ...ServiceOption) (*MultiAgentService, error) {
+	var runner domain.DiagnosisRunner
+	var err error
+	switch os.Getenv("AI_RUNNER") {
+	case "conditional":
+		runner, err = NewDiagnosisGraph(repo, retriever, cfg)
+	case "supervisor":
+		runner, err = supervisor.NewSupervisorGraph(repo, retriever, cfg)
+	case "", "investigation":
+		var chat model.ChatModel
+		chat, err = llm.NewGLM4ChatModel(cfg)
+		if err == nil {
+			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{MaxSteps: 8, ModelName: cfg.Model})
+		}
+	default:
+		return nil, fmt.Errorf("unsupported AI_RUNNER")
 	}
-
-	return &MultiAgentService{
-		diagnosisRepo:   diagnosisRepo,
-		vectorRetriever: vectorRetriever,
-		eventPublisher:  eventPublisher,
-		diagnosisGraph:  graph,
-	}, nil
-}
-
-// DiagnoseBatch 诊断一批文件（供 Kafka Consumer 调用）
-func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, batchIDStr string) error {
-	return s.handleAllFilesScattered(ctx, batchIDStr)
-}
-
-// handleAllFilesScattered 处理所有文件解析完成事件
-func (s *MultiAgentService) handleAllFilesScattered(ctx context.Context, batchIDStr string) error {
-	// 1. 发布进度事件
-	_ = s.eventPublisher.PublishProgress(ctx, batchIDStr, domain.StreamEvent{
-		EventType: "diagnosis_started",
-		BatchID:   batchIDStr,
-		Status:    string(domain.DiagnosisStatusProcessing),
-		Message:   "AI诊断开始",
-		Progress:  0.0,
-		Timestamp: time.Now(),
-	})
-
-	// 2. 运行诊断流程（使用 DiagnosisGraph）
-	result, err := s.diagnosisGraph.Run(ctx, batchIDStr)
 	if err != nil {
-		// 发布失败事件
-		_ = s.eventPublisher.PublishProgress(ctx, batchIDStr, domain.StreamEvent{
-			EventType: "diagnosis_failed",
-			BatchID:   batchIDStr,
-			Status:    string(domain.DiagnosisStatusFailed),
-			Message:   fmt.Sprintf("AI诊断失败: %v", err),
-			Progress:  0.0,
-			Timestamp: time.Now(),
-		})
-		return fmt.Errorf("diagnosis graph execution failed: %w", err)
+		return nil, err
 	}
+	concurrency := 20
+	for _, option := range options {
+		option(&concurrency)
+	}
+	return NewServiceWithRunner(repo, runner, publisher, concurrency), nil
+}
 
-	// 3. 保存诊断结果到数据库
-	batchID, err := uuid.Parse(batchIDStr)
+func NewServiceWithRunner(repo domain.DiagnosisRepository, runner domain.DiagnosisRunner, publisher domain.EventPublisher, concurrency int) *MultiAgentService {
+	if concurrency < 1 {
+		concurrency = 1
+	}
+	return &MultiAgentService{repo, runner, publisher, make(chan struct{}, concurrency)}
+}
+func (s *MultiAgentService) publish(ctx context.Context, id string, typ string, progress float64, message string) {
+	if s.eventPublisher != nil {
+		_ = s.eventPublisher.PublishProgress(ctx, id, domain.StreamEvent{BatchID: id, EventType: typ, Progress: progress, Message: message, Timestamp: time.Now()})
+	}
+}
+func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error {
+	batchID, err := uuid.Parse(id)
 	if err != nil {
 		return fmt.Errorf("invalid batch id: %w", err)
 	}
-	now := time.Now()
-	diagnosis := &domain.Diagnosis{
-		ID:               uuid.New(),
-		BatchID:          batchID,
-		Status:           domain.DiagnosisStatusCompleted,
-		DiagnosisSummary: result.RootCause,
-		Recommendations:  result.Suggestions,
-		Confidence:       result.Confidence,
-		DiagnosedAt:      &now,
-		Model:            "glm-4",
-		CreatedAt:        now,
-		UpdatedAt:        now,
+	id = batchID.String()
+	select {
+	case s.semaphore <- struct{}{}:
+		defer func() { <-s.semaphore }()
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	if err := s.diagnosisRepo.Save(ctx, diagnosis); err != nil {
-		_ = s.eventPublisher.PublishProgress(ctx, batchIDStr, domain.StreamEvent{
-			EventType: "diagnosis_failed",
-			BatchID:   batchIDStr,
-			Status:    string(domain.DiagnosisStatusFailed),
-			Message:   fmt.Sprintf("AI诊断回写失败: %v", err),
-			Progress:  0.95,
-			Timestamp: time.Now(),
-		})
-		return fmt.Errorf("save diagnosis failed: %w", err)
+	generate := func() (*domain.Diagnosis, error) {
+		s.publish(ctx, id, "diagnosis_started", 0, "AI诊断开始")
+		result, err := s.runner.Run(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if result == nil {
+			return nil, fmt.Errorf("empty diagnosis result")
+		}
+		data, err := s.diagnosisRepo.GetAggregatedData(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if data == nil {
+			return nil, fmt.Errorf("aggregated data missing")
+		}
+		now := time.Now()
+		codes := make([]string, 0, len(data.ErrorCodeStats))
+		for code := range data.ErrorCodeStats {
+			codes = append(codes, code)
+		}
+		sort.Strings(codes)
+		if result.Model == "" {
+			result.Model = "configured-model"
+		}
+		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
 	}
-
-	_ = s.eventPublisher.PublishProgress(ctx, batchIDStr, domain.StreamEvent{
-		EventType: "diagnosis_completed",
-		BatchID:   batchIDStr,
-		Status:    string(domain.DiagnosisStatusCompleted),
-		Message:   fmt.Sprintf("AI诊断完成，置信度: %.2f", result.Confidence),
-		Progress:  1.0,
-		Timestamp: time.Now(),
-		Metadata: map[string]interface{}{
-			"diagnosis_id": diagnosis.ID.String(),
-			"batch_id":     batchIDStr,
-			"confidence":   result.Confidence,
-		},
-	})
-
+	if atomic, ok := s.diagnosisRepo.(domain.IdempotentDiagnosisRepository); ok {
+		_, err = atomic.GetOrCreate(ctx, id, generate)
+	} else {
+		var old *domain.Diagnosis
+		old, err = s.diagnosisRepo.FindByBatchID(ctx, id)
+		if errors.Is(err, domain.ErrDiagnosisNotFound) {
+			err = nil
+		}
+		if err == nil && (old == nil || old.Status != domain.DiagnosisStatusCompleted) {
+			var d *domain.Diagnosis
+			d, err = generate()
+			if err == nil {
+				err = s.diagnosisRepo.Save(ctx, d)
+			}
+		}
+	}
+	if err != nil {
+		s.publish(ctx, id, "diagnosis_failed", 0, err.Error())
+		if errors.Is(err, domain.ErrInvalidDiagnosis) || errors.Is(err, domain.ErrInvestigationBudget) || llm.IsPermanentError(err) {
+			return &core.PermanentTaskError{Err: err}
+		}
+		return err
+	}
+	s.publish(ctx, id, "diagnosis_completed", 1, "AI诊断已保存")
 	return nil
+}
+
+type ServiceOption func(*int)
+
+func WithConcurrency(n int) ServiceOption { return func(value *int) { *value = n } }
+
+func (s *MultiAgentService) FailBatch(ctx context.Context, id string, cause error) error {
+	if recorder, ok := s.diagnosisRepo.(interface {
+		RecordFailure(context.Context, string, error) error
+	}); ok {
+		return recorder.RecordFailure(ctx, id, cause)
+	}
+	return fmt.Errorf("durable failure recorder required")
 }

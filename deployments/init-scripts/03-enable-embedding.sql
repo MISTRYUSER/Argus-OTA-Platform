@@ -9,7 +9,7 @@ DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'ai_diagnoses' AND column_name = 'embedding'
+        WHERE table_schema = current_schema() AND table_name = 'ai_diagnoses' AND column_name = 'embedding'
     ) THEN
         ALTER TABLE ai_diagnoses
         ADD COLUMN embedding VECTOR(1536);
@@ -43,7 +43,7 @@ SELECT
     'embedding column' AS check_item,
     column_name AS status
 FROM information_schema.columns
-WHERE table_name = 'ai_diagnoses' AND column_name = 'embedding'
+WHERE table_schema = current_schema() AND table_name = 'ai_diagnoses' AND column_name = 'embedding'
 
 UNION ALL
 

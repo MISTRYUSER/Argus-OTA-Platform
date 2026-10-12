@@ -2,31 +2,33 @@ package domain
 
 import (
 	"context"
-    "time"
-    "github.com/google/uuid"
+	"encoding/json"
+	"github.com/google/uuid"
+	"time"
 )
 
 type Report struct {
-	ID 				uuid.UUID
-	BatchID 		uuid.UUID
-	VehicleID		string
-	VIN				string
-	Status      	BatchStatus
-	TotalFiles		int
-	ProcessedFiles	int
+	ID             uuid.UUID
+	BatchID        uuid.UUID
+	VehicleID      string
+	VIN            string
+	Status         BatchStatus
+	TotalFiles     int
+	ProcessedFiles int
 
 	//statics FIles
-	
-	CPUStats        *CPUStats
-	RAMStats        *RAMStats
 
+	CPUStats *CPUStats
+	RAMStats *RAMStats
 
-	DiagnosisResult	string
-	DiagnosisID		*uuid.UUID
+	InvestigationTrace   json.RawMessage `json:"tool_trace,omitempty"`
+	Evidence             json.RawMessage `json:"evidence,omitempty"`
+	DiagnosisLimitations json.RawMessage `json:"limitations,omitempty"`
+	DiagnosisResult      string
+	DiagnosisID          *uuid.UUID
 
-	CreatedAt		time.Time
-	UpdatedAt		time.Time
-	
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 type CPUStats struct {
 	AvgUtilization float64
@@ -36,12 +38,11 @@ type CPUStats struct {
 }
 
 type RAMStats struct {
-	AvgUsageMB     float64
-	P95UsageMB     float64
-	P99UsageMB     float64
-	MaxUsageMB     float64
+	AvgUsageMB float64
+	P95UsageMB float64
+	P99UsageMB float64
+	MaxUsageMB float64
 }
-
 
 func NewReport(batch *Batch) *Report {
 	now := time.Now()
@@ -59,9 +60,9 @@ func NewReport(batch *Batch) *Report {
 		UpdatedAt:      now,
 	}
 }
+
 type ReportRepository interface {
 	Save(ctx context.Context, report *Report) error
 	FindByID(ctx context.Context, id uuid.UUID) (*Report, error)
 	FindByBatchID(ctx context.Context, batchID uuid.UUID) (*Report, error)
 }
-

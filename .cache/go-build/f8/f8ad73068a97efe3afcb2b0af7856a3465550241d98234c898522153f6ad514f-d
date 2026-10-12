@@ -1,5 +1,0 @@
-./diagnosis.go
-./event.go
-./repository.go
-./state.go
-./vector_retriever.go

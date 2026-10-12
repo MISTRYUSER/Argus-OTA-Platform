@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 
 	"github.com/xuewentao/argus-ota-platform/internal/application"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
@@ -83,6 +83,9 @@ func initDB() *sql.DB {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		dsn = databaseURL
+	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)

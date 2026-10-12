@@ -23,27 +23,27 @@ type DiagnosisContext struct {
 	ProcessingStatus StatusEnum
 	ErrorMessage     string
 	Confidence       float64 // 📌 P1 改进：用于动态决策（v2.0）
-	NextStep         string // 📌 Supervisor 决策的下一步
+	NextStep         string  // 📌 Supervisor 决策的下一步
 
 	// ============================================================
 	// 📌 Supervisor 模式专用字段 (v2.0)
 	// ============================================================
 
 	// 6. Supervisor 决策状态
-	CurrentWorker    string        // 当前正在执行的 Worker
-	LastWorker       string        // 上一个执行的 Worker
-	WorkerHistory    []string      // 执行历史（用于防止无限循环）
-	MaxIterations    int           // 最大迭代次数（防止死循环）
-	CurrentIteration int           // 当前迭代次数
+	CurrentWorker    string   // 当前正在执行的 Worker
+	LastWorker       string   // 上一个执行的 Worker
+	WorkerHistory    []string // 执行历史（用于防止无限循环）
+	MaxIterations    int      // 最大迭代次数（防止死循环）
+	CurrentIteration int      // 当前迭代次数
 
 	// 7. Supervisor 指令
-	Instruction      string        // Supervisor 给 Worker 的指令
-	WorkerResult     string        // Worker 返回给 Supervisor 的结果
-	FeedbackRequired bool          // 是否需要 Supervisor 反馈
+	Instruction      string // Supervisor 给 Worker 的指令
+	WorkerResult     string // Worker 返回给 Supervisor 的结果
+	FeedbackRequired bool   // 是否需要 Supervisor 反馈
 
 	// 8. 性能监控
-	StartTime        time.Time     // 流程开始时间
-	WorkerTimings    map[string]time.Duration // 每个 Worker 的执行时间
+	StartTime     time.Time                // 流程开始时间
+	WorkerTimings map[string]time.Duration // 每个 Worker 的执行时间
 }
 
 // NewDiagnosisContext 创建初始上下文
@@ -87,7 +87,7 @@ func (c *DiagnosisContext) ShouldTerminate() bool {
 
 // RecordWorker 记录 Worker 执行
 func (c *DiagnosisContext) RecordWorker(workerName string) {
-	c.LastWorker = c.CurrentWorker
+	c.LastWorker = workerName
 	c.CurrentWorker = workerName
 	c.WorkerHistory = append(c.WorkerHistory, workerName)
 	c.CurrentIteration++

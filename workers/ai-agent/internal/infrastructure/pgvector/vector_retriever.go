@@ -40,7 +40,7 @@ func (r *PgvectorRetriever) Search(ctx context.Context, params domain.SearchPara
 		return nil, fmt.Errorf("db is nil")
 	}
 	if r.embedModel == nil {
-		return nil, fmt.Errorf("embedding model is nil")
+		return r.searchText(ctx, params)
 	}
 
 	queryEmbeddings, err := r.embedModel.EmbedStrings(ctx, []string{params.EmbeddingText})
@@ -68,7 +68,7 @@ func (r *PgvectorRetriever) Search(ctx context.Context, params domain.SearchPara
 			1 - (embedding <=> $1::vector) AS similarity
 		FROM ai_diagnoses
 		WHERE embedding IS NOT NULL
-			AND ($2::text[] IS NULL OR top_error_codes && $2::text[])
+			AND ($2::text[] IS NULL OR top_error_codes ?| $2::text[])
 		ORDER BY embedding <=> $1::vector
 		LIMIT $3;
 	`

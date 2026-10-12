@@ -2,18 +2,22 @@ package llm
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	sdk "github.com/meguminnnnnnnnn/go-openai"
 	"os"
+	"strings"
+	"time"
 
-	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/components/model"
 )
 
 // GLM4Config GLM-4 配置
 type GLM4Config struct {
-	APIKey string
+	APIKey  string
 	BaseURL string
-	Model  string
+	Model   string
 }
 
 // NewGLM4ChatModel 创建 GLM-4 Chat Model（使用 Eino Model 接口）
@@ -46,22 +50,26 @@ func NewGLM4ChatModel(conf *GLM4Config) (model.ChatModel, error) {
 	// - 自动获得统一重试和熔断（高可用）
 	//
 	// GLM-4 兼容 OpenAI API，使用 eino-ext 的 OpenAI 适配器
-	maxTokens := 4000
-	temperature := float32(0.7)
+	maxTokens := 1600
+	temperature := float32(0.2)
 	topP := float32(0.9)
 
 	config := &openai.ChatModelConfig{
-		APIKey:       conf.APIKey,
-		BaseURL:      conf.BaseURL,
-		Model:        conf.Model,
-		MaxTokens:    &maxTokens,
-		Temperature:  &temperature,
-		TopP:         &topP,
+		Timeout:     60 * time.Second,
+		APIKey:      conf.APIKey,
+		BaseURL:     conf.BaseURL,
+		Model:       conf.Model,
+		MaxTokens:   &maxTokens,
+		Temperature: &temperature,
+		TopP:        &topP,
 		ResponseFormat: &openai.ChatCompletionResponseFormat{
 			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
 		}, // P1: 显式开启 JSON Mode
 	}
 
+	if strings.Contains(conf.BaseURL, "api.deepseek.com") {
+		config.ExtraFields = map[string]interface{}{"thinking": map[string]string{"type": "disabled"}}
+	}
 	chatModel, err := openai.NewChatModel(context.Background(), config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GLM-4 chat model: %w", err)
@@ -122,9 +130,21 @@ func GeneratePrompt(ctx *DiagnosisInput) string {
 
 // DiagnosisInput 诊断输入（用于 Prompt 生成）
 type DiagnosisInput struct {
-	BatchID      string
-	ErrorCodes   string
-	LogsSummary  string
-	CasesText    string
+	BatchID        string
+	ErrorCodes     string
+	LogsSummary    string
+	CasesText      string
 	RAGUnavailable bool
+}
+
+// IsPermanentError identifies API/configuration failures that automatic retries cannot repair.
+func IsPermanentError(err error) bool {
+	var api *sdk.APIError
+	if errors.As(err, &api) {
+		switch api.HTTPStatusCode {
+		case 400, 401, 402, 403, 404, 422:
+			return true
+		}
+	}
+	return false
 }

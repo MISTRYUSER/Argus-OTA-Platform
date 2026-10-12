@@ -3,33 +3,14 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
-	"time"
-
 	"github.com/google/uuid"
 	"github.com/xuewentao/argus-ota-platform/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/redis"
 	"github.com/xuewentao/argus-ota-platform/internal/messaging"
+	"time"
 )
-
-// P1-4: 安全的类型断言辅助函数，避免 panic
-func getString(event map[string]interface{}, key string) (string, bool) {
-	val, ok := event[key]
-	if !ok {
-		return "", false
-	}
-	str, ok := val.(string)
-	return str, ok
-}
-
-func getUUID(event map[string]interface{}, key string) (uuid.UUID, error) {
-	str, ok := getString(event, key)
-	if !ok {
-		return uuid.Nil, fmt.Errorf("missing or invalid %s", key)
-	}
-	return uuid.Parse(str)
-}
 
 type OrchestrateService struct {
 	batchRepo domain.BatchRepository
@@ -37,369 +18,202 @@ type OrchestrateService struct {
 	kafka     messaging.KafkaEventPublisher
 }
 
-func NewOrchestrateService(
-	batchRepo domain.BatchRepository,
-	redis *redis.RedisClient,
-	kafka messaging.KafkaEventPublisher,
-) *OrchestrateService {
-	return &OrchestrateService{
-		batchRepo: batchRepo,
-		redis:     redis,
-		kafka:     kafka,
-	}
+func NewOrchestrateService(repo domain.BatchRepository, r *redis.RedisClient, k messaging.KafkaEventPublisher) *OrchestrateService {
+	return &OrchestrateService{repo, r, k}
 }
-
+func updateBatch(ctx context.Context, repo domain.BatchRepository, publisher messaging.KafkaEventPublisher, id uuid.UUID, mutate func(*domain.Batch) error) error {
+	if atomic, ok := repo.(domain.TransactionalBatchRepository); ok {
+		return atomic.UpdateBatch(ctx, id, mutate)
+	}
+	b, err := repo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if b == nil {
+		return fmt.Errorf("batch not found: %s", id)
+	}
+	if err = mutate(b); err != nil {
+		return err
+	}
+	if err = repo.Save(ctx, b); err != nil {
+		return err
+	}
+	if events := b.GetEvents(); len(events) > 0 {
+		if publisher == nil {
+			return fmt.Errorf("publisher is nil")
+		}
+		if err = publisher.PublishEvents(ctx, events); err != nil {
+			return err
+		}
+	}
+	b.ClearEvents()
+	return nil
+}
 func (s *OrchestrateService) HandleMessage(ctx context.Context, data []byte) error {
-	var event map[string]interface{}
-	if err := json.Unmarshal(data, &event); err != nil {
-		return err
+	var e struct {
+		Type        string `json:"event_type"`
+		BatchID     string `json:"batch_id"`
+		FileID      string `json:"file_id"`
+		DiagnosisID string `json:"diagnosis_id"`
 	}
-
-	// P1-4: 安全获取 event_type
-	eventType, ok := getString(event, "event_type")
-	if !ok {
-		return fmt.Errorf("missing or invalid event_type in event")
+	if err := json.Unmarshal(data, &e); err != nil {
+		return &domain.InvalidEventError{Err: err}
 	}
-
-	switch eventType {
-	case "BatchCreated":
-		return s.handleBatchCreated(ctx, event)
-
-	case "FileParsed":
-		return s.handleFileParsed(ctx, event)
-
-	case "GatheringCompleted":
-		return s.handleGatheringCompleted(ctx, event)
-
-	case "DiagnosisCompleted":
-		return s.handleDiagnosisCompleted(ctx, event)
-
-	case "StatusChanged":
-		return s.handleStatusChanged(ctx, event)
-
-	default:
-		log.Printf("Unknown event type: %s", eventType)
+	if e.Type == "" {
+		return &domain.InvalidEventError{Err: fmt.Errorf("missing event_type")}
 	}
-
-	return nil
-}
-
-func (s *OrchestrateService) handleBatchCreated(ctx context.Context, event map[string]interface{}) error {
-	// P1-4: 安全获取 batch_id
-	batchID, err := getUUID(event, "batch_id")
+	if e.Type != "BatchCreated" && e.Type != "FileParsed" && e.Type != "GatheringCompleted" && e.Type != "DiagnosisCompleted" && e.Type != "DiagnosisFailed" {
+		return nil
+	}
+	id, err := uuid.Parse(e.BatchID)
 	if err != nil {
-		return fmt.Errorf("invalid batch_id: %w", err)
+		return &domain.InvalidEventError{Err: fmt.Errorf("invalid batch_id: %w", err)}
 	}
-
-	batch, err := s.batchRepo.FindByID(ctx, batchID)
-	if err != nil {
-		return err
-	}
-	if batch == nil {
-		return fmt.Errorf("batch not found: %s", batchID)
-	}
-
-	// P2 修复：检查状态迁移错误，并对异常状态返回错误
-	switch batch.Status {
-	case domain.BatchStatusPending:
-		// pending → uploaded → scattering
-		if err := batch.TransitionTo(domain.BatchStatusUploaded); err != nil {
-			return fmt.Errorf("failed to transition to uploaded: %w", err)
+	if e.Type == "FileParsed" {
+		fileID, err := uuid.Parse(e.FileID)
+		if err != nil {
+			return &domain.InvalidEventError{Err: err}
 		}
-		if err := batch.TransitionTo(domain.BatchStatusScattering); err != nil {
-			return fmt.Errorf("failed to transition to scattering: %w", err)
-		}
-	case domain.BatchStatusUploaded:
-		// uploaded → scattering
-		if err := batch.TransitionTo(domain.BatchStatusScattering); err != nil {
-			return fmt.Errorf("failed to transition to scattering: %w", err)
-		}
-	default:
-		// P2 修复：异常状态返回错误
-		return fmt.Errorf("unexpected batch status: %s, expected pending or uploaded", batch.Status)
-	}
-
-	// 保存状态
-	if err := s.batchRepo.Save(ctx, batch); err != nil {
-		return err
-	}
-
-	events := batch.GetEvents()
-	if len(events) > 0 {
-		if err := s.kafka.PublishEvents(ctx, events); err != nil {
-			log.Printf("Failed to publish events: %v", err)
-		}
-		batch.ClearEvents()
-	}
-	log.Printf("[Orchestrator] Batch %s transitioned to scattering", batchID)
-	return nil
-}
-
-func (s *OrchestrateService) handleFileParsed(ctx context.Context, event map[string]interface{}) error {
-	// P1-4: 安全获取 batch_id 和 file_id
-	batchID, err := getUUID(event, "batch_id")
-	if err != nil {
-		return fmt.Errorf("invalid batch_id: %w", err)
-	}
-
-	fileIDStr, ok := getString(event, "file_id")
-	if !ok {
-		return fmt.Errorf("missing or invalid file_id in event")
-	}
-	fileID, err := uuid.Parse(fileIDStr)
-	if err != nil {
-		return fmt.Errorf("invalid file_id: %w", err)
-	}
-
-	// Redis Barrier 计数（使用 Set，天然幂等）
-	key := fmt.Sprintf("batch:%s:processed_files", batchID)
-	added, err := s.redis.SADD(ctx, key, fileID.String())
-	if err != nil {
-		return fmt.Errorf("failed to add to Redis set: %w", err)
-	}
-
-	// 设置过期时间（只在新添加时设置，避免重复操作）
-	if added > 0 {
-		s.redis.EXPIRE(ctx, key, 24*time.Hour)
-	}
-
-	// 获取已处理文件数
-	count, err := s.redis.SCARD(ctx, key)
-	if err != nil {
-		return fmt.Errorf("failed to get Redis set size: %w", err)
-	}
-
-	// 查询 Batch 信息
-	batch, err := s.batchRepo.FindByID(ctx, batchID)
-	if err != nil {
-		return err
-	}
-	if batch == nil {
-		return fmt.Errorf("batch not found: %s", batchID)
-	}
-
-	// P1-6: 更新处理进度并持久化到数据库（补偿任务需要此数据）
-	batch.ProcessedFiles = int(count)
-	if err := s.batchRepo.Save(ctx, batch); err != nil {
-		log.Printf("[Orchestrator] Failed to save batch progress: %v", err)
-		// 继续执行，不阻塞流程
-	}
-	log.Printf("[Orchestrator] Progress: %d/%d files processed", count, batch.TotalFiles)
-
-	// 检查是否所有文件都已处理
-	if count == int64(batch.TotalFiles) {
-		log.Printf("[Orchestrator] All files processed for batch %s, waiting for GatheringCompleted event", batchID)
-		// ✅ 修改：不再立即转换状态，等待 GatheringCompleted 事件
-		// 清理 Redis Barrier（避免内存泄漏）
-		s.redis.DEL(ctx, key)
-	} else {
-		log.Printf("[Orchestrator] Waiting for more files (%d/%d)", count, batch.TotalFiles)
-	}
-
-	return nil
-}
-
-func (s *OrchestrateService) handleStatusChanged(ctx context.Context, event map[string]interface{}) error {
-	// StatusChanged 事件处理（日志记录即可，不触发额外逻辑）
-	batchIDStr, ok := event["batch_id"].(string)
-	if !ok {
-		return fmt.Errorf("invalid batch_id in event")
-	}
-
-	oldStatus, _ := event["old_status"].(string)
-	newStatus, _ := event["new_status"].(string)
-
-	log.Printf("[Orchestrator] StatusChanged: Batch %s, %s -> %s", batchIDStr, oldStatus, newStatus)
-	return nil
-}
-
-// handleGatheringCompleted - 处理 Python Worker 完成数据聚合事件
-func (s *OrchestrateService) handleGatheringCompleted(ctx context.Context, event map[string]interface{}) error {
-	// P1-4: 安全获取 batch_id
-	batchID, err := getUUID(event, "batch_id")
-	if err != nil {
-		return fmt.Errorf("invalid batch_id: %w", err)
-	}
-
-	// 查询 Batch
-	batch, err := s.batchRepo.FindByID(ctx, batchID)
-	if err != nil {
-		return err
-	}
-	if batch == nil {
-		return fmt.Errorf("batch not found: %s", batchID)
-	}
-
-	log.Printf("[Orchestrator] GatheringCompleted received for batch %s, current status: %s",
-		batchID, batch.Status)
-
-	// 状态转换：scattering → gathered → diagnosing
-	// 注意：可能状态已经是 scattered（Mock Worker 模拟），需要检查当前状态
-	switch batch.Status {
-	case domain.BatchStatusScattering:
-		// scattering → gathered
-		if err := batch.TransitionTo(domain.BatchStatusGathered); err != nil {
-			return fmt.Errorf("failed to transition to gathered: %w", err)
-		}
-		log.Printf("[Orchestrator] Status: scattering → gathered")
-
-		// gathered → diagnosing
-		if err := batch.TransitionTo(domain.BatchStatusDiagnosing); err != nil {
-			return fmt.Errorf("failed to transition to diagnosing: %w", err)
-		}
-		log.Printf("[Orchestrator] Status: gathered → diagnosing")
-
-	case domain.BatchStatusScattered:
-		// scattered → diagnosing（兼容 Mock Worker 的状态）
-		if err := batch.TransitionTo(domain.BatchStatusDiagnosing); err != nil {
-			return fmt.Errorf("failed to transition to diagnosing: %w", err)
-		}
-		log.Printf("[Orchestrator] Status: scattered → diagnosing")
-
-	default:
-		return fmt.Errorf("unexpected batch status: %s, expected scattering or scattered", batch.Status)
-	}
-
-	// 保存到数据库
-	if err := s.batchRepo.Save(ctx, batch); err != nil {
-		return fmt.Errorf("failed to save batch: %w", err)
-	}
-
-	// 发布状态变更事件
-	events := batch.GetEvents()
-	if len(events) > 0 {
-		if err := s.kafka.PublishEvents(ctx, events); err != nil {
-			log.Printf("Failed to publish events: %v", err)
-		}
-		batch.ClearEvents()
-	}
-
-	log.Printf("[Orchestrator] Batch %s is now in diagnosing status", batchID)
-	return nil
-}
-
-// handleDiagnosisCompleted - 处理 AI Agent 完成诊断事件
-func (s *OrchestrateService) handleDiagnosisCompleted(ctx context.Context, event map[string]interface{}) error {
-	// P1-4: 安全获取 batch_id 和 diagnosis_id
-	batchID, err := getUUID(event, "batch_id")
-	if err != nil {
-		return fmt.Errorf("invalid batch_id: %w", err)
-	}
-
-	diagnosisID, err := getUUID(event, "diagnosis_id")
-	if err != nil {
-		return fmt.Errorf("invalid diagnosis_id: %w", err)
-	}
-
-	// 查询 Batch
-	batch, err := s.batchRepo.FindByID(ctx, batchID)
-	if err != nil {
-		return err
-	}
-	if batch == nil {
-		return fmt.Errorf("batch not found: %s", batchID)
-	}
-
-	log.Printf("[Orchestrator] DiagnosisCompleted received for batch %s, diagnosis %s",
-		batchID, diagnosisID)
-
-	// 状态转换：diagnosing → completed
-	if batch.Status != domain.BatchStatusDiagnosing {
-		return fmt.Errorf("unexpected batch status: %s, expected diagnosing", batch.Status)
-	}
-
-	if err := batch.TransitionTo(domain.BatchStatusCompleted); err != nil {
-		return fmt.Errorf("failed to transition to completed: %w", err)
-	}
-	log.Printf("[Orchestrator] Status: diagnosing → completed")
-
-	// 设置完成时间
-	now := time.Now()
-	batch.CompletedAt = &now
-
-	// 保存到数据库
-	if err := s.batchRepo.Save(ctx, batch); err != nil {
-		return fmt.Errorf("failed to save batch: %w", err)
-	}
-
-	// 发布状态变更事件
-	events := batch.GetEvents()
-	if len(events) > 0 {
-		if err := s.kafka.PublishEvents(ctx, events); err != nil {
-			log.Printf("Failed to publish events: %v", err)
-		}
-		batch.ClearEvents()
-	}
-
-	log.Printf("[Orchestrator] ✅ Batch %s processing completed! Final status: %s",
-		batchID, batch.Status)
-	return nil
-}
-
-// HandleStuckBatch 处理卡住的批次（补偿任务）
-func (s *OrchestrateService) HandleStuckBatch(ctx context.Context, batch *domain.Batch) error {
-	log.Printf("[Compensation] Handling stuck batch: id=%s, status=%s, updated_at=%s",
-		batch.ID, batch.Status, batch.UpdatedAt)
-
-	switch batch.Status {
-	case domain.BatchStatusScattering:
-		// ✅ 所有文件已处理，但未收到 GatheringCompleted 事件
-		// 检查是否所有文件都已处理
-		if batch.ProcessedFiles >= batch.TotalFiles {
-			// 模拟发布 GatheringCompleted 事件（重新触发 Python Worker）
-			log.Printf("[Compensation] Re-triggering GatheringCompleted for batch %s", batch.ID)
-
-			// 构造事件数据
-			event := map[string]interface{}{
-				"event_type":  "GatheringCompleted",
-				"version":     "1.0",
-				"batch_id":    batch.ID.String(),
-				"total_files": batch.TotalFiles,
-				"chart_files": []string{}, // 空列表，让 Python Worker 重新聚合
-				"timestamp":   time.Now().Format(time.RFC3339),
+		mutate := func(b *domain.Batch) error {
+			if b.Status == domain.BatchStatusUploaded {
+				if err := b.TransitionTo(domain.BatchStatusScattering); err != nil {
+					return err
+				}
 			}
-
-			// 直接调用 handleGatheringCompleted
-			if err := s.handleGatheringCompleted(ctx, event); err != nil {
-				log.Printf("[Compensation] Failed to handle GatheringCompleted: %v", err)
-				return fmt.Errorf("failed to handle gathering completed: %w", err)
+			if b.TotalFiles > 0 && b.ProcessedFiles >= b.TotalFiles && b.Status == domain.BatchStatusScattering {
+				if err := b.TransitionTo(domain.BatchStatusScattered); err != nil {
+					return err
+				}
+				if err := b.TransitionTo(domain.BatchStatusGathering); err != nil {
+					return err
+				}
+				b.AddEvent(domain.WireEvent{Type: "AllFilesScattered", BatchID: id, Timestamp: time.Now()})
 			}
-
-			log.Printf("[Compensation] Successfully re-triggered GatheringCompleted for batch %s", batch.ID)
-		} else {
-			log.Printf("[Compensation] Batch %s still waiting for files (%d/%d), skipping compensation",
-				batch.ID, batch.ProcessedFiles, batch.TotalFiles)
+			return nil
 		}
-
-	case domain.BatchStatusDiagnosing:
-		// ✅ 诊断超时，标记为失败
-		log.Printf("[Compensation] Diagnosis timeout for batch %s, marking as failed", batch.ID)
-
-		if err := batch.TransitionTo(domain.BatchStatusFailed); err != nil {
-			return fmt.Errorf("failed to transition to failed: %w", err)
+		atomic, ok := s.batchRepo.(domain.TransactionalBatchRepository)
+		if !ok {
+			return fmt.Errorf("durable file completion repository required")
 		}
-
-		batch.ErrorMessage = "Diagnosis timeout after 10 minutes"
-
-		// 保存到数据库
-		if err := s.batchRepo.Save(ctx, batch); err != nil {
-			return fmt.Errorf("failed to save batch: %w", err)
+		if err = atomic.RecordFileCompletion(ctx, id, fileID, mutate); err != nil {
+			return err
 		}
-
-		// 发布状态变更事件
-		events := batch.GetEvents()
-		if len(events) > 0 {
-			if err := s.kafka.PublishEvents(ctx, events); err != nil {
-				log.Printf("Failed to publish events: %v", err)
-			}
-			batch.ClearEvents()
+		// Redis is a best-effort progress projection; durable file IDs remain authoritative.
+		if s.redis != nil {
+			_ = s.redis.SADDWithTTL(ctx, "batch:"+id.String()+":processed_files", 24*time.Hour, fileID.String())
 		}
-
-		log.Printf("[Compensation] Batch %s marked as failed", batch.ID)
-
-	default:
-		log.Printf("[Compensation] Unexpected batch status %s for batch %s, skipping", batch.Status, batch.ID)
+		return nil
 	}
+	mutate := func(b *domain.Batch) error {
+		if b.Status == domain.BatchStatusCompleted {
+			return nil
+		}
+		if b.Status != domain.BatchStatusDiagnosing {
+			return &domain.InvalidEventError{Err: fmt.Errorf("diagnosis arrived before diagnosing")}
+		}
+		if err := b.TransitionTo(domain.BatchStatusCompleted); err != nil {
+			return err
+		}
+		now := time.Now()
+		b.CompletedAt = &now
+		return nil
+	}
+	if e.Type == "DiagnosisCompleted" {
+		diagnosisID, err := uuid.Parse(e.DiagnosisID)
+		if err != nil {
+			return &domain.InvalidEventError{Err: fmt.Errorf("invalid diagnosis_id: %w", err)}
+		}
+		verifier, ok := s.batchRepo.(interface {
+			CompleteDiagnosis(context.Context, uuid.UUID, uuid.UUID, func(*domain.Batch) error) error
+		})
+		if !ok {
+			return fmt.Errorf("durable completion verifier required")
+		}
+		return verifier.CompleteDiagnosis(ctx, id, diagnosisID, mutate)
+	}
+	if e.Type == "DiagnosisFailed" {
+		return s.FailBatch(ctx, id, fmt.Errorf("investigation failed; inspect durable diagnosis and DLQ"))
+	}
+	return updateBatch(ctx, s.batchRepo, s.kafka, id, func(b *domain.Batch) error {
+		switch e.Type {
+		case "BatchCreated":
+			if b.Status == domain.BatchStatusUploaded {
+				return b.TransitionTo(domain.BatchStatusScattering)
+			}
+			if b.Status == domain.BatchStatusPending {
+				return fmt.Errorf("upload not completed")
+			}
+		case "GatheringCompleted":
+			if b.Status == domain.BatchStatusDiagnosing || b.Status == domain.BatchStatusCompleted {
+				return nil
+			}
+			if b.Status != domain.BatchStatusGathering {
+				return fmt.Errorf("aggregation arrived before gathering: %s", b.Status)
+			}
+			if err := b.TransitionTo(domain.BatchStatusGathered); err != nil {
+				return err
+			}
+			if err := b.TransitionTo(domain.BatchStatusDiagnosing); err != nil {
+				return err
+			}
+			b.AddEvent(domain.WireEvent{Type: "DiagnosisRequested", BatchID: id, Timestamp: time.Now()})
 
-	return nil
+		}
+		return nil
+	})
+}
+func (s *OrchestrateService) HandleStuckBatch(ctx context.Context, b *domain.Batch) error {
+	return updateBatch(ctx, s.batchRepo, s.kafka, b.ID, func(current *domain.Batch) error {
+		switch current.Status {
+		case domain.BatchStatusScattering:
+			if current.TotalFiles > 0 && current.ProcessedFiles >= current.TotalFiles {
+				if err := current.TransitionTo(domain.BatchStatusScattered); err != nil {
+					return err
+				}
+				if err := current.TransitionTo(domain.BatchStatusGathering); err != nil {
+					return err
+				}
+				current.AddEvent(domain.WireEvent{Type: "AllFilesScattered", BatchID: current.ID, Timestamp: time.Now(), Data: map[string]interface{}{"retry": true}})
+			}
+		case domain.BatchStatusGathering:
+			current.AddEvent(domain.WireEvent{Type: "AllFilesScattered", BatchID: current.ID, Timestamp: time.Now(), Data: map[string]interface{}{"retry": true}})
+		case domain.BatchStatusDiagnosing:
+			current.AddEvent(domain.WireEvent{Type: "DiagnosisRequested", BatchID: current.ID, Timestamp: time.Now(), Data: map[string]interface{}{"retry": true}})
+		}
+		return nil
+	})
+}
+
+func (s *OrchestrateService) FailBatch(ctx context.Context, id uuid.UUID, cause error) error {
+	return updateBatch(ctx, s.batchRepo, s.kafka, id, func(b *domain.Batch) error {
+		if b.Status == domain.BatchStatusCompleted || b.Status == domain.BatchStatusFailed {
+			return nil
+		}
+		b.ErrorMessage = domain.SafeText(cause.Error(), 1500)
+		return b.TransitionTo(domain.BatchStatusFailed)
+	})
+}
+func (s *OrchestrateService) HandleFailure(ctx context.Context, body []byte, cause error) error {
+	var malformed *domain.InvalidEventError
+	if errors.As(cause, &malformed) {
+		return nil
+	}
+	var e struct {
+		ID string `json:"batch_id"`
+	}
+	if json.Unmarshal(body, &e) != nil {
+		return nil
+	}
+	id, err := uuid.Parse(e.ID)
+	if err != nil {
+		return nil
+	}
+	b, err := s.batchRepo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if b == nil {
+		return nil
+	}
+	return s.FailBatch(ctx, id, cause)
 }
