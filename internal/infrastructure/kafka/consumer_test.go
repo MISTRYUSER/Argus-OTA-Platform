@@ -182,3 +182,25 @@ func (d *sizeCheckingDLQ) PublishEvents(_ context.Context, events []domain.Domai
 	return nil
 }
 func (d *sizeCheckingDLQ) Close() error { return nil }
+
+func TestBusyExecutionDoesNotExhaustBusinessRetryBudget(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	session := &sessionFixture{ctx: ctx}
+	claim := &claimFixture{make(chan *sarama.ConsumerMessage, 1)}
+	claim.messages <- &sarama.ConsumerMessage{Offset: 0}
+	close(claim.messages)
+	calls := 0
+	dlq := &dlqFixture{}
+	handler := &consumerGroupHandler{dlq: dlq, messageHandler: func(context.Context, []byte) error {
+		calls++
+		if calls < 7 {
+			return &domain.DeferredTaskError{Reason: "other worker"}
+		}
+		return nil
+	}}
+	handler.ConsumeClaim(session, claim)
+	if calls != 7 || len(dlq.events) != 0 || !reflect.DeepEqual(session.marked, []int64{0}) {
+		t.Fatalf("calls=%d dlq=%d marked=%v", calls, len(dlq.events), session.marked)
+	}
+}

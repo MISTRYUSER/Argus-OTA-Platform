@@ -11,3 +11,8 @@ type PermanentTaskError struct{ Err error }
 
 func (e *PermanentTaskError) Error() string { return e.Err.Error() }
 func (e *PermanentTaskError) Unwrap() error { return e.Err }
+
+// DeferredTaskError waits for an active owner without consuming paid business retry attempts.
+type DeferredTaskError struct{ Reason string }
+
+func (e *DeferredTaskError) Error() string { return e.Reason }

@@ -185,3 +185,36 @@ func TestFailurePersistenceAcceptsUnicodeAndNUL(t *testing.T) {
 		}
 	}
 }
+
+func TestPostgresCheckpointAndArtifactIsolation(t *testing.T) {
+	db := testutil.OpenDB(t)
+	ctx := context.Background()
+	repo := corepg.NewPostgresBatchRepository(db)
+	a, _ := core.NewBatch("fixture", "VIN", 1)
+	a.ClearEvents()
+	b, _ := core.NewBatch("other", "VIN2", 1)
+	b.ClearEvents()
+	if err := repo.Save(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Save(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	r := pg.NewPostgresDiagnoseRepository(db)
+	check := r.(domain.InvestigationCheckpointStore)
+	if err := check.SaveInvestigationCheckpoint(ctx, a.ID.String(), []byte(`{"phase":"plan"}`)); err != nil {
+		t.Fatal(err)
+	}
+	data, err := check.LoadInvestigationCheckpoint(ctx, a.ID.String())
+	if err != nil || string(data) != `{"phase":"plan"}` {
+		t.Fatalf("snapshot=%s err=%v", data, err)
+	}
+	store := r.(domain.InvestigationArtifactStore)
+	id, err := store.PutInvestigationArtifact(ctx, a.ID.String(), []byte(`{"evidence":"full"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = store.GetInvestigationArtifact(ctx, b.ID.String(), id); err == nil {
+		t.Fatal("artifact crossed batch scope")
+	}
+}

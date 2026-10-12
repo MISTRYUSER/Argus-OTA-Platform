@@ -145,6 +145,14 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 					session.MarkMessage(msg, "")
 					break
 				}
+				var deferred *domain.DeferredTaskError
+				if errors.As(err, &deferred) {
+					attempts--
+					if waitRetry(ctx) != nil {
+						return nil
+					}
+					continue
+				}
 				var malformed *domain.InvalidEventError
 				var terminal *domain.PermanentTaskError
 				if errors.As(err, &malformed) || errors.As(err, &terminal) || attempts >= 5 {

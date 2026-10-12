@@ -1,0 +1,11 @@
+# Agent harness upgrade
+
+User scope: research strong open-source Agent designs and implement meaningful Agent/backend capabilities in Argus. Retain previous per-stage regression requirement and explicit quality-evaluation PENDING. Existing DeepSeek key authorization permits a bounded synthetic live functional smoke test; never commit keys or use private company logs.
+
+Primary references: Deep Agents graph/middleware architecture (planning and context management), LangGraph persistence/interrupt semantics (checkpointed prefix continuation), and Eino compose checkpoint documentation (keep the existing Go graph runtime). Adapt concepts, do not claim use of Python frameworks or native Eino checkpoint API when implementing application-level checkpoints.
+
+Task 1: Add a model-callable investigation-plan tool with bounded hypotheses, status, support/refutation evidence references and next-check fields. Validate all evidence IDs against gathered evidence. Include plan in final persisted reports. Existing three tools stay batch scoped.
+Task 2: Save schema/version/model/batch-bound checkpoints before model reservations and after model responses and each successful tool result. Resume exact next phase/pending tool index, reuse completed results and preserve budgets. Tool outputs can be archived under immutable batch-scoped artifact IDs; compact old tool messages with evidence summaries and retrieval references while preserving tool-call protocol pairs. Preserve full evidence and trace outside model context. Application checkpoints do not guarantee exactly-once model calls across an API-response/checkpoint crash gap.
+Task 3: Replace long transaction around model generation with short claim/finalize transactions, expiring leases, heartbeat and generation fencing. Propagate ownership into checkpoint saves. Concurrent workers wait without re-invoking the model or exhausting business retries; stale workers cannot checkpoint or commit. Keep result and outbox commit atomic. Failed state/recorders respect active execution leases.
+
+Validation: failing tests before new behavior; full fresh regression, vet/build after each task; PostgreSQL/Redis/Kafka integration and race suite; an opt-in synthetic real DeepSeek test. Quality scores and performance improvement percentages remain unclaimed.

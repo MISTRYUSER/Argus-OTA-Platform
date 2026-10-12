@@ -32,6 +32,7 @@ func OpenDB(t *testing.T) *sql.DB {
 		t.Fatal(err)
 	}
 	q := u.Query()
+	q.Set("application_name", schema)
 	q.Set("options", "-c search_path="+schema+",public")
 	u.RawQuery = q.Encode()
 	db, err := sql.Open("postgres", u.String())

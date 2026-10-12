@@ -73,11 +73,11 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-	generate := func() (*domain.Diagnosis, error) {
+	generate := func(ctx context.Context) (*domain.Diagnosis, error) {
 		s.publish(ctx, id, "diagnosis_started", 0, "AI诊断开始")
 		result, err := s.runner.Run(ctx, id)
 		if err != nil {
-			return nil, err
+			return nil, classifyDiagnosisError(err)
 		}
 		if result == nil {
 			return nil, fmt.Errorf("empty diagnosis result")
@@ -98,10 +98,12 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 		if result.Model == "" {
 			result.Model = "configured-model"
 		}
-		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
+		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
 	}
-	if atomic, ok := s.diagnosisRepo.(domain.IdempotentDiagnosisRepository); ok {
-		_, err = atomic.GetOrCreate(ctx, id, generate)
+	if leased, ok := s.diagnosisRepo.(domain.LeasedDiagnosisRepository); ok {
+		_, err = leased.ExecuteOnce(ctx, id, generate)
+	} else if atomic, ok := s.diagnosisRepo.(domain.IdempotentDiagnosisRepository); ok {
+		_, err = atomic.GetOrCreate(ctx, id, func() (*domain.Diagnosis, error) { return generate(ctx) })
 	} else {
 		var old *domain.Diagnosis
 		old, err = s.diagnosisRepo.FindByBatchID(ctx, id)
@@ -110,13 +112,17 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 		}
 		if err == nil && (old == nil || old.Status != domain.DiagnosisStatusCompleted) {
 			var d *domain.Diagnosis
-			d, err = generate()
+			d, err = generate(ctx)
 			if err == nil {
 				err = s.diagnosisRepo.Save(ctx, d)
 			}
 		}
 	}
 	if err != nil {
+		var deferred *core.DeferredTaskError
+		if errors.As(err, &deferred) {
+			return err
+		}
 		s.publish(ctx, id, "diagnosis_failed", 0, err.Error())
 		if errors.Is(err, domain.ErrInvalidDiagnosis) || errors.Is(err, domain.ErrInvestigationBudget) || llm.IsPermanentError(err) {
 			return &core.PermanentTaskError{Err: err}
@@ -138,4 +144,11 @@ func (s *MultiAgentService) FailBatch(ctx context.Context, id string, cause erro
 		return recorder.RecordFailure(ctx, id, cause)
 	}
 	return fmt.Errorf("durable failure recorder required")
+}
+
+func classifyDiagnosisError(err error) error {
+	if errors.Is(err, domain.ErrInvalidDiagnosis) || errors.Is(err, domain.ErrInvestigationBudget) || llm.IsPermanentError(err) {
+		return &core.PermanentTaskError{Err: err}
+	}
+	return err
 }

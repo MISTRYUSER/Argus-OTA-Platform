@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -129,46 +130,6 @@ func (r *PostgresDiagnosisRepository) Save(ctx context.Context, d *domain.Diagno
 	return save(ctx, r.db, d)
 }
 
-// GetOrCreate serializes same-batch diagnoses across processes and commits result + event together.
-func (r *PostgresDiagnosisRepository) GetOrCreate(ctx context.Context, id string, generate func() (*domain.Diagnosis, error)) (*domain.Diagnosis, error) {
-	parsedID, err := uuid.Parse(id)
-	if err != nil {
-		return nil, err
-	}
-	id = parsedID.String()
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, id); err != nil {
-		return nil, err
-	}
-	d, err := find(ctx, tx, "batch_id", id)
-	if err != nil {
-		return nil, err
-	}
-	if d != nil && d.Status == domain.DiagnosisStatusFailed {
-		return nil, &core.PermanentTaskError{Err: fmt.Errorf("diagnosis is terminally failed; explicit reset required")}
-	}
-	if d == nil || d.Status != domain.DiagnosisStatusCompleted {
-		d, err = generate()
-		if err != nil {
-			return nil, err
-		}
-		if err = save(ctx, tx, d); err != nil {
-			return nil, err
-		}
-	}
-	event := core.DiagnosisCompleted{Version: "v1.0", BatchID: d.BatchID, DiagnosisID: d.ID, DiagnosisSummary: d.DiagnosisSummary, OccurredAt: time.Now()}
-	if err = corepg.EnqueueEvent(ctx, tx, event); err != nil {
-		return nil, err
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-	return d, nil
-}
 func (r *PostgresDiagnosisRepository) FindSimilar(ctx context.Context, v []float32, limit int) ([]*domain.Diagnosis, error) {
 	if limit <= 0 {
 		limit = 5
@@ -224,6 +185,21 @@ func (r *PostgresDiagnosisRepository) RecordFailure(ctx context.Context, id stri
 	if !exists {
 		return nil
 	}
+	// A quarantined failure from an older generation must not overwrite a newer run.
+	var originating *domain.ExecutionFailure
+	if errors.As(cause, &originating) {
+		var generation int64
+		e := tx.QueryRowContext(ctx, `SELECT generation FROM investigation_executions WHERE batch_id=$1 FOR UPDATE`, batchID).Scan(&generation)
+		if e != nil {
+			return e
+		}
+		if generation != originating.Lease.Generation {
+			return nil
+		}
+	}
+	if err = validateExecution(ctx, tx, ctx, id); err != nil {
+		return err
+	}
 	old, err := find(ctx, tx, "batch_id", id)
 	if err != nil {
 		return err
@@ -231,6 +207,13 @@ func (r *PostgresDiagnosisRepository) RecordFailure(ctx context.Context, id stri
 	if old != nil && old.Status == domain.DiagnosisStatusCompleted {
 		return nil
 	}
+	if err = persistFailure(ctx, tx, batchID, id, old, cause); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+func persistFailure(ctx context.Context, tx *sql.Tx, batchID uuid.UUID, id string, old *domain.Diagnosis, cause error) error {
+	var err error
 	now := time.Now()
 	message := core.SafeText(cause.Error(), 1500)
 	d := &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusFailed, DiagnosisSummary: "Investigation failed: " + message, AggregatedData: map[string]interface{}{"failure": message}, Model: "failed-investigation", CreatedAt: now, UpdatedAt: now}
@@ -244,5 +227,5 @@ func (r *PostgresDiagnosisRepository) RecordFailure(ctx context.Context, id stri
 	if err = corepg.EnqueueEvent(ctx, tx, core.WireEvent{Type: "DiagnosisFailed", BatchID: batchID, Timestamp: now, Data: map[string]interface{}{"reason": message}}); err != nil {
 		return err
 	}
-	return tx.Commit()
+	return nil
 }
