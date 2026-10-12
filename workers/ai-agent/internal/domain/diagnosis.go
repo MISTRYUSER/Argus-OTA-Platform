@@ -25,17 +25,20 @@ type ErrorCodeSummary struct {
 
 // DiagnosisResult 诊断结果（由 LLM 生成）
 type DiagnosisResult struct {
-	RootCause    string
-	Suggestions  []string
-	Severity     string
-	Confidence   float64
-	RawLLMOutput string            // 原始 LLM 输出（用于调试）
-	EvidenceIDs  []string          `json:"evidence_ids,omitempty"`
-	Evidence     []EvidenceItem    `json:"evidence,omitempty"`
-	ToolTrace    []ToolObservation `json:"tool_trace,omitempty"`
-	Limitations  []string          `json:"limitations,omitempty"`
-	TokensUsed   int               `json:"tokens_used,omitempty"`
-	Model        string            `json:"model,omitempty"`
+	ContextCompactions int          `json:"context_compactions,omitempty"`
+	Hypotheses         []Hypothesis `json:"hypotheses,omitempty"`
+	HypothesisID       string       `json:"hypothesis_id,omitempty"`
+	RootCause          string
+	Suggestions        []string
+	Severity           string
+	Confidence         float64
+	RawLLMOutput       string            // 原始 LLM 输出（用于调试）
+	EvidenceIDs        []string          `json:"evidence_ids,omitempty"`
+	Evidence           []EvidenceItem    `json:"evidence,omitempty"`
+	ToolTrace          []ToolObservation `json:"tool_trace,omitempty"`
+	Limitations        []string          `json:"limitations,omitempty"`
+	TokensUsed         int               `json:"tokens_used,omitempty"`
+	Model              string            `json:"model,omitempty"`
 }
 
 // DiagnosisStatus 诊断状态
@@ -164,3 +167,12 @@ type ToolObservation struct {
 
 var ErrInvalidDiagnosis = errors.New("invalid diagnosis")
 var ErrInvestigationBudget = errors.New("investigation budget exhausted")
+
+type Hypothesis struct {
+	ID          string   `json:"id"`
+	Description string   `json:"description"`
+	Status      string   `json:"status"`
+	Supports    []string `json:"supports,omitempty"`
+	Refutes     []string `json:"refutes,omitempty"`
+	NextCheck   string   `json:"next_check"`
+}

@@ -33,3 +33,12 @@ type DiagnosisRunner interface {
 type IdempotentDiagnosisRepository interface {
 	GetOrCreate(context.Context, string, func() (*Diagnosis, error)) (*Diagnosis, error)
 }
+
+type InvestigationCheckpointStore interface {
+	LoadInvestigationCheckpoint(context.Context, string) ([]byte, error)
+	SaveInvestigationCheckpoint(context.Context, string, []byte) error
+}
+type InvestigationArtifactStore interface {
+	PutInvestigationArtifact(context.Context, string, []byte) (string, error)
+	GetInvestigationArtifact(context.Context, string, string) ([]byte, error)
+}

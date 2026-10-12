@@ -31,6 +31,9 @@ func makeAgent(t *testing.T, final string, max int, history ...bool) (*Agent, *i
 		if calls == 1 && len(history) > 0 && history[0] {
 			message["tool_calls"] = append(message["tool_calls"].([]interface{}), map[string]interface{}{"id": "history", "type": "function", "function": map[string]string{"name": "search_history", "arguments": "{}"}})
 		}
+		if calls == 1 {
+			message["tool_calls"] = append(message["tool_calls"].([]interface{}), map[string]interface{}{"id": "plan", "type": "function", "function": map[string]string{"name": "update_investigation_plan", "arguments": `{"hypotheses":[{"id":"H1","description":"Connector loose","status":"supported","supports":["log:1"],"next_check":"Inspect connector"}]}`}})
+		}
 		json.NewEncoder(w).Encode(map[string]interface{}{"id": "fixture", "choices": []interface{}{map[string]interface{}{"index": 0, "message": message, "finish_reason": "stop"}}})
 	}))
 	t.Cleanup(server.Close)
@@ -45,12 +48,12 @@ func makeAgent(t *testing.T, final string, max int, history ...bool) (*Agent, *i
 	return agent, &calls
 }
 func TestAgentUsesModelSelectedToolsAndEvidence(t *testing.T) {
-	agent, calls := makeAgent(t, `{"root_cause":"Connector loose","suggestions":["Inspect connector"],"severity":"high","confidence":0.85,"evidence_ids":["log:1"],"limitations":["Synthetic fixture"]}`, 4)
+	agent, calls := makeAgent(t, `{"hypothesis_id":"H1","root_cause":"Connector loose","suggestions":["Inspect connector"],"severity":"high","confidence":0.85,"evidence_ids":["log:1"],"limitations":["Synthetic fixture"]}`, 4)
 	result, err := agent.Run(context.Background(), uuid.NewString())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.RootCause != "Connector loose" || len(result.ToolTrace) != 2 || len(result.Evidence) != 1 || result.Evidence[0].ID != "log:1" {
+	if result.RootCause != "Connector loose" || len(result.ToolTrace) != 3 || len(result.Evidence) != 1 || result.Evidence[0].ID != "log:1" {
 		t.Fatalf("result=%+v", result)
 	}
 	if *calls != 2 {
@@ -58,13 +61,13 @@ func TestAgentUsesModelSelectedToolsAndEvidence(t *testing.T) {
 	}
 }
 func TestAgentRejectsInventedEvidence(t *testing.T) {
-	agent, _ := makeAgent(t, `{"root_cause":"Connector loose","suggestions":[],"severity":"high","confidence":0.8,"evidence_ids":["invented"]}`, 4)
+	agent, _ := makeAgent(t, `{"hypothesis_id":"H1","root_cause":"Connector loose","suggestions":[],"severity":"high","confidence":0.8,"evidence_ids":["invented"]}`, 4)
 	if _, err := agent.Run(context.Background(), uuid.NewString()); err == nil || !strings.Contains(err.Error(), "evidence") {
 		t.Fatalf("expected evidence rejection, got %v", err)
 	}
 }
 func TestAgentRejectsMalformedDiagnosis(t *testing.T) {
-	agent, _ := makeAgent(t, `{"root_cause":"Connector loose","severity":"high","evidence_ids":["log:1"]}`, 4)
+	agent, _ := makeAgent(t, `{"hypothesis_id":"H1","root_cause":"Connector loose","severity":"high","evidence_ids":["log:1"]}`, 4)
 	if _, err := agent.Run(context.Background(), uuid.NewString()); err == nil {
 		t.Fatal("missing confidence was accepted")
 	}
@@ -94,7 +97,7 @@ func TestAgentStopsAtStepBudget(t *testing.T) {
 }
 
 func TestRetrievalFailureCannotDisappearFromReport(t *testing.T) {
-	agent, _ := makeAgent(t, `{"root_cause":"Connector loose","suggestions":[],"severity":"high","confidence":0.8,"evidence_ids":["log:1"]}`, 4, true)
+	agent, _ := makeAgent(t, `{"hypothesis_id":"H1","root_cause":"Connector loose","suggestions":[],"severity":"high","confidence":0.8,"evidence_ids":["log:1"]}`, 4, true)
 	result, err := agent.Run(context.Background(), uuid.NewString())
 	if err != nil {
 		t.Fatal(err)

@@ -29,3 +29,15 @@ Transient handler attempts cap at five; invalid task/model output and authentica
 Paid real DeepSeek smoke test is separate and opt-in: set `ARGUS_LIVE_DEEPSEEK=1`, `DEEPSEEK_API_KEY_FILE`, and the test database URL, then `go test -count=1 -run TestDeepSeekInvestigationLive -v ./workers/ai-agent/internal/application`.
 
 **Diagnosis quality evaluation remains PENDING by user instruction.** No accuracy, latency improvement or production-readiness claims are inferred from functional tests.
+
+## Agent harness upgrade
+
+Research references: [Deep Agents graph architecture](https://github.com/langchain-ai/deepagents/blob/main/libs/deepagents/deepagents/graph.py), [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence), and [Eino checkpoint/interrupt guide](https://www.cloudwego.io/docs/eino/core_modules/chain_and_graph_orchestration/checkpoint_interrupt/). Concepts are adapted in Go/Eino; Python frameworks were not added. Recovery uses application-level model/tool-boundary checkpoints, not a claim of native Eino checkpoint integration.
+
+The model can call `update_investigation_plan` to track up to five hypotheses with gathered support/refutation evidence and next checks. Reports select a plan hypothesis; refuted selections and unknown evidence are rejected. Planning/reference validation does not prove causal correctness; diagnosis quality evaluation remains PENDING.
+
+Application checkpoints preserve model-call reservations, pending tool index, evidence, hypotheses, message state and completed report. A resumed run skips committed tool results and preserves its original step budget. A crash between an external API response and checkpoint commit may still repeat that call; exactly-once external model execution is not claimed.
+
+Full tool outputs are retained in batch-scoped immutable artifacts. Older tool messages can compact to evidence summaries and artifact references; `read_evidence_artifact` reads bounded pages. Context has an explicit character budget while full trace/evidence remains available in durable storage.
+
+Model execution runs outside long PostgreSQL transactions. Short claim/finalize transactions use renewable execution leases and generation fencing. Old owners cannot checkpoint, commit, or terminally fail a newer generation. Ownership contention does not consume model retry budget or publish false failure progress. Terminal failures commit before releasing ownership. Existing databases require migration `06-investigation-runtime.sql`.

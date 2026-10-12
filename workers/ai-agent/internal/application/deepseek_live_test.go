@@ -91,13 +91,13 @@ func TestDeepSeekInvestigationLive(t *testing.T) {
 	for _, step := range trace {
 		tools[step.Tool] = true
 	}
-	if !tools["read_logs"] || !tools["error_statistics"] {
+	if !tools["read_logs"] || !tools["error_statistics"] || !tools["update_investigation_plan"] {
 		t.Fatal("model did not investigate via required tools")
 	}
 	if err = service.DiagnoseBatch(ctx, b.ID.String()); err != nil {
 		t.Fatal(err)
 	} // durable replay, no further model generation
-	artifact := map[string]interface{}{"kind": "live_functional_test", "model": saved.Model, "batch_id": b.ID, "tokens_used": saved.TokensUsed, "diagnosis": saved.DiagnosisSummary, "tool_trace": trace, "evidence": json.RawMessage(report.Evidence), "limitations": json.RawMessage(report.DiagnosisLimitations), "quality_evaluation": "PENDING", "fixture": "synthetic CPU/fan fault; no private vehicle logs"}
+	artifact := map[string]interface{}{"kind": "live_functional_test", "model": saved.Model, "batch_id": b.ID, "tokens_used": saved.TokensUsed, "diagnosis": saved.DiagnosisSummary, "hypotheses": json.RawMessage(report.Hypotheses), "tool_trace": trace, "evidence": json.RawMessage(report.Evidence), "limitations": json.RawMessage(report.DiagnosisLimitations), "quality_evaluation": "PENDING", "fixture": "synthetic CPU/fan fault; no private vehicle logs"}
 	if path := os.Getenv("ARGUS_LIVE_REPORT_PATH"); path != "" {
 		if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			t.Fatal(err)

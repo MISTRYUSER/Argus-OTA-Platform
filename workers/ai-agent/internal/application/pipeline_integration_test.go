@@ -63,9 +63,12 @@ func TestFullPipelineRealKafka(t *testing.T) {
 	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		call := modelCalls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		message := map[string]interface{}{"role": "assistant", "content": `{"root_cause":"Connector loose","suggestions":["Inspect connector"],"severity":"high","confidence":0.85,"evidence_ids":["log:1"],"limitations":["Mock parser fixture"]}`}
+		message := map[string]interface{}{"role": "assistant", "content": `{"hypothesis_id":"H1","root_cause":"Connector loose","suggestions":["Inspect connector"],"severity":"high","confidence":0.85,"evidence_ids":["log:1"],"limitations":["Mock parser fixture"]}`}
 		if call == 1 {
 			message = map[string]interface{}{"role": "assistant", "content": "", "tool_calls": []interface{}{map[string]interface{}{"id": "stats", "type": "function", "function": map[string]string{"name": "error_statistics", "arguments": "{}"}}, map[string]interface{}{"id": "logs", "type": "function", "function": map[string]string{"name": "read_logs", "arguments": "{}"}}}}
+		}
+		if call == 1 {
+			message["tool_calls"] = append(message["tool_calls"].([]interface{}), map[string]interface{}{"id": "plan", "type": "function", "function": map[string]string{"name": "update_investigation_plan", "arguments": `{"hypotheses":[{"id":"H1","description":"Connector loose","status":"supported","supports":["log:1"],"next_check":"Inspect connector"}]}`}})
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{"id": "fixture", "choices": []interface{}{map[string]interface{}{"index": 0, "message": message, "finish_reason": "stop"}}})
 	}))
