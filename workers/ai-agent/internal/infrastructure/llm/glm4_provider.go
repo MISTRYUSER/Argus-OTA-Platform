@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	sdk "github.com/meguminnnnnnnnn/go-openai"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -15,17 +16,19 @@ import (
 
 // GLM4Config GLM-4 配置
 type GLM4Config struct {
-	APIKey  string
-	BaseURL string
-	Model   string
+	APIKey     string
+	BaseURL    string
+	Model      string
+	Governor   *GovernorOptions
+	HTTPClient *http.Client
 }
 
 // NewGLM4ChatModel 创建 GLM-4 Chat Model（使用 Eino Model 接口）
 //
 // 📌 P0 改进：使用 Eino 的 Model 接口，而不是裸 HTTP 调用
-// - 自动获得 Token 统计（成本控制）
+// - 记录供应商返回的 Token 用量
 // - 自动获得链路追踪（性能监控）
-// - 自动获得统一重试和熔断（高可用）
+// - 由显式 Governor 实现有界并发、等待队列和 429 重试
 func NewGLM4ChatModel(conf *GLM4Config) (model.ChatModel, error) {
 	if conf == nil {
 		return nil, fmt.Errorf("config is nil")
@@ -45,9 +48,9 @@ func NewGLM4ChatModel(conf *GLM4Config) (model.ChatModel, error) {
 	}
 
 	// 📌 P0 改进：使用 Eino 的 ChatModel 接口（而不是裸 HTTP）
-	// - 自动获得 Token 统计（成本控制）
+	// - 记录供应商返回的 Token 用量
 	// - 自动获得链路追踪（性能监控）
-	// - 自动获得统一重试和熔断（高可用）
+	// - 由显式 Governor 实现有界并发、等待队列和 429 重试
 	//
 	// GLM-4 兼容 OpenAI API，使用 eino-ext 的 OpenAI 适配器
 	maxTokens := 1600
@@ -55,6 +58,7 @@ func NewGLM4ChatModel(conf *GLM4Config) (model.ChatModel, error) {
 	topP := float32(0.9)
 
 	config := &openai.ChatModelConfig{
+		HTTPClient:  conf.HTTPClient,
 		Timeout:     60 * time.Second,
 		APIKey:      conf.APIKey,
 		BaseURL:     conf.BaseURL,
@@ -75,7 +79,11 @@ func NewGLM4ChatModel(conf *GLM4Config) (model.ChatModel, error) {
 		return nil, fmt.Errorf("failed to create GLM-4 chat model: %w", err)
 	}
 
-	return chatModel, nil
+	policy := GovernorOptions{Concurrency: 4, QueueCapacity: 32, Attempts: 3, Backoff: 200 * time.Millisecond}
+	if conf.Governor != nil {
+		policy = *conf.Governor
+	}
+	return NewGovernedModel(chatModel, policy)
 }
 
 // GeneratePrompt 生成诊断 Prompt（带思维链）
@@ -138,13 +146,21 @@ type DiagnosisInput struct {
 }
 
 // IsPermanentError identifies API/configuration failures that automatic retries cannot repair.
+func apiStatus(err error) int {
+	var adapted *openai.APIError
+	if errors.As(err, &adapted) {
+		return adapted.HTTPStatusCode
+	}
+	var original *sdk.APIError
+	if errors.As(err, &original) {
+		return original.HTTPStatusCode
+	}
+	return 0
+}
 func IsPermanentError(err error) bool {
-	var api *sdk.APIError
-	if errors.As(err, &api) {
-		switch api.HTTPStatusCode {
-		case 400, 401, 402, 403, 404, 422:
-			return true
-		}
+	switch apiStatus(err) {
+	case 400, 401, 402, 403, 404, 422:
+		return true
 	}
 	return false
 }

@@ -32,3 +32,4 @@ func TestHealthyOwnerDoesNotPublishFailure(t *testing.T) {
 		t.Fatalf("healthy owner emitted %d failure events", p.failures)
 	}
 }
+func TestModelAdmissionIsDeferred(t *testing.T){err:=classifyDiagnosisError(domain.ErrModelQueueFull);if _,ok:=err.(*core.DeferredTaskError);!ok{t.Fatalf("admission should not consume terminal retries: %v",err)}}

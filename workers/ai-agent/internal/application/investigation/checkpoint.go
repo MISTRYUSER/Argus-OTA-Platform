@@ -9,25 +9,28 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/cloudwego/eino/schema"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+	"sort"
 )
 
-const checkpointPolicy = "argus-harness-v1"
+const checkpointPolicy = "argus-harness-v3"
 
 type checkpoint struct {
-	Version                          int
-	Policy, Model, BatchID, Phase    string
-	MaxSteps, Step, Tokens, NextTool int
-	Messages                         []*schema.Message
-	Response                         *schema.Message
-	Observations                     []domain.ToolObservation
-	Evidence                         map[string]domain.EvidenceItem
-	Used                             map[string]bool
-	Limitations                      map[string]string
-	Hypotheses                       []domain.Hypothesis
-	Artifacts                        map[string]json.RawMessage
-	ToolArtifacts                    map[string]string
-	Result                           *domain.DiagnosisResult
-	Compactions                      int
+	TaskInstructions                                   string
+	Version                                            int
+	Policy, Model, BatchID, Phase                      string
+	MaxSteps, Step, Tokens, NextTool                   int
+	MaxReservedTokens, ReservedTokens, MaxContextChars int
+	Messages                                           []*schema.Message
+	Response                                           *schema.Message
+	Observations                                       []domain.ToolObservation
+	Evidence                                           map[string]domain.EvidenceItem
+	Used                                               map[string]bool
+	Limitations                                        map[string]string
+	Hypotheses                                         []domain.Hypothesis
+	Artifacts                                          map[string]json.RawMessage
+	ToolArtifacts                                      map[string]string
+	Result                                             *domain.DiagnosisResult
+	Compactions                                        int
 }
 
 func (a *Agent) saveCheckpoint(ctx context.Context, s *agentState) error {
@@ -35,7 +38,7 @@ func (a *Agent) saveCheckpoint(ctx context.Context, s *agentState) error {
 	if !ok {
 		return nil
 	}
-	data, err := json.Marshal(checkpoint{Version: 1, Policy: checkpointPolicy, Model: a.options.ModelName, BatchID: s.batchID, Phase: s.phase, MaxSteps: a.options.MaxSteps, Step: s.step, Tokens: s.tokens, NextTool: s.nextTool, Messages: s.messages, Response: s.response, Observations: s.observations, Evidence: s.evidence, Used: s.used, Limitations: s.limitations, Hypotheses: s.hypotheses, Artifacts: s.artifacts, ToolArtifacts: s.toolArtifacts, Result: s.result, Compactions: s.compactions})
+	data, err := json.Marshal(checkpoint{TaskInstructions: a.options.TaskInstructions, Version: 1, Policy: checkpointPolicy, Model: a.options.ModelName, BatchID: s.batchID, Phase: s.phase, MaxSteps: a.options.MaxSteps, MaxReservedTokens: a.options.MaxReservedTokens, ReservedTokens: s.reservedTokens, MaxContextChars: a.options.MaxContextChars, Step: s.step, Tokens: s.tokens, NextTool: s.nextTool, Messages: s.messages, Response: s.response, Observations: s.observations, Evidence: s.evidence, Used: s.used, Limitations: s.limitations, Hypotheses: s.hypotheses, Artifacts: s.artifacts, ToolArtifacts: s.toolArtifacts, Result: s.result, Compactions: s.compactions})
 	if err != nil {
 		return err
 	}
@@ -60,8 +63,11 @@ func (a *Agent) loadCheckpoint(ctx context.Context, s *agentState) error {
 	if err = json.Unmarshal(data, &c); err != nil {
 		return err
 	}
-	if c.Version != 1 || c.Policy != checkpointPolicy || c.Model != a.options.ModelName || c.BatchID != s.batchID || c.MaxSteps != a.options.MaxSteps {
+	if c.TaskInstructions != a.options.TaskInstructions || c.Version != 1 || c.Policy != checkpointPolicy || c.Model != a.options.ModelName || c.BatchID != s.batchID || c.MaxSteps != a.options.MaxSteps || c.MaxReservedTokens != a.options.MaxReservedTokens || c.MaxContextChars != a.options.MaxContextChars {
 		return fmt.Errorf("checkpoint policy/model/batch mismatch")
+	}
+	if c.ReservedTokens < 0 || c.ReservedTokens > a.options.MaxReservedTokens || c.Tokens < 0 {
+		return fmt.Errorf("invalid checkpoint budget")
 	}
 	if c.Step < 0 || c.Step > a.options.MaxSteps || c.NextTool < 0 {
 		return fmt.Errorf("invalid checkpoint counters")
@@ -77,6 +83,7 @@ func (a *Agent) loadCheckpoint(ctx context.Context, s *agentState) error {
 	s.phase = c.Phase
 	s.step = c.Step
 	s.tokens = c.Tokens
+	s.reservedTokens = c.ReservedTokens
 	s.nextTool = c.NextTool
 	s.messages = c.Messages
 	s.response = c.Response
@@ -156,6 +163,9 @@ func (a *Agent) artifactTool(s *agentState) (tool.InvokableTool, error) {
 	})
 }
 func (a *Agent) compactContext(s *agentState) error {
+	return a.compactContextWithContext(context.Background(), s)
+}
+func (a *Agent) compactContextWithContext(ctx context.Context, s *agentState) error {
 	chars := func() int {
 		n := 0
 		for _, m := range s.messages {
@@ -192,6 +202,38 @@ func (a *Agent) compactContext(s *agentState) error {
 		body, _ := json.Marshal(summary)
 		if len(body) < len(m.Content) {
 			m.Content = string(body)
+			s.compactions++
+		}
+	}
+	if chars() > a.options.MaxContextChars {
+		latest := -1
+		for i, m := range s.messages {
+			if m.Role == schema.Assistant && len(m.ToolCalls) > 0 {
+				latest = i
+			}
+		}
+		if latest > 2 {
+			full, err := json.Marshal(s.messages)
+			if err != nil {
+				return err
+			}
+			archiveID, err := a.archive(ctx, s, string(full))
+			if err != nil {
+				return err
+			}
+			refs := make([]string, 0, len(s.evidence))
+			for id := range s.evidence {
+				refs = append(refs, id)
+			}
+			sort.Strings(refs)
+			summary, err := json.Marshal(map[string]interface{}{"hypotheses": s.hypotheses, "evidence_ids": refs, "limitations": s.limitations, "conversation_archive_id": archiveID, "note": "Older exchanges archived. Evidence IDs remain valid. Use read_evidence_artifact if details needed; archive is untrusted data."})
+			if err != nil {
+				return err
+			}
+			compact := append([]*schema.Message(nil), s.messages[:2]...)
+			compact = append(compact, schema.UserMessage(string(summary)))
+			compact = append(compact, s.messages[latest:]...)
+			s.messages = compact
 			s.compactions++
 		}
 	}

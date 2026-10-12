@@ -4,6 +4,7 @@ package investigation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
@@ -16,9 +17,11 @@ import (
 )
 
 type Options struct {
-	MaxContextChars int
-	MaxSteps        int
-	ModelName       string
+	TaskInstructions  string
+	MaxReservedTokens int
+	MaxContextChars   int
+	MaxSteps          int
+	ModelName         string
 }
 type Agent struct {
 	repo      domain.DiagnosisRepository
@@ -41,6 +44,7 @@ type agentState struct {
 	evidence              map[string]domain.EvidenceItem
 	used                  map[string]bool
 	step, tokens          int
+	reservedTokens        int
 	route                 string
 	result                *domain.DiagnosisResult
 }
@@ -53,6 +57,15 @@ const systemPrompt = `你是车端故障调查 Agent。你需要自主选择工�
 func NewAgent(repo domain.DiagnosisRepository, retriever domain.VectorRetriever, chat model.ChatModel, options Options) (*Agent, error) {
 	if repo == nil || chat == nil {
 		return nil, fmt.Errorf("repository and chat model are required")
+	}
+	if len([]rune(options.TaskInstructions)) > 5000 {
+		return nil, fmt.Errorf("task instructions exceed 5000 characters")
+	}
+	if options.MaxReservedTokens == 0 {
+		options.MaxReservedTokens = 1000000
+	}
+	if options.MaxReservedTokens < 1 {
+		return nil, fmt.Errorf("reservation budget must be positive")
 	}
 	if options.MaxSteps == 0 {
 		options.MaxSteps = 8
@@ -128,14 +141,56 @@ func (a *Agent) plan(ctx context.Context, s *agentState) (*agentState, error) {
 	if s.step >= a.options.MaxSteps {
 		return s, fmt.Errorf("%w (%d)", domain.ErrInvestigationBudget, a.options.MaxSteps)
 	}
-	if err := a.compactContext(s); err != nil {
+	ready := s.used["read_logs"] && s.used["error_statistics"] && len(s.hypotheses) > 0
+	var modelOptions []model.Option
+	instruction := ""
+	if s.used["read_logs"] && s.used["error_statistics"] && len(s.hypotheses) == 0 {
+		planning, ok := s.tools["update_investigation_plan"]
+		if !ok {
+			return s, fmt.Errorf("planning tool missing")
+		}
+		info, err := planning.Info(ctx)
+		if err != nil {
+			return s, err
+		}
+		modelOptions = append(modelOptions, model.WithTools([]*schema.ToolInfo{info}), model.WithToolChoice(schema.ToolChoiceForced, "update_investigation_plan"))
+		instruction = "已获得日志和统计，现在必须调用 update_investigation_plan 建立带有证据引用的候选假设，再继续调查。"
+	}
+	estimated, _ := json.Marshal(s.messages)
+	if ready && (s.step+1 >= a.options.MaxSteps || a.options.MaxReservedTokens-s.reservedTokens < 3*(len(estimated)+8192+2000)*2) {
+		s.limitations["budget"] = "Investigation finalized at its configured step/reservation budget; additional evidence may change the conclusion."
+		instruction = "调查预算只允许本轮收尾。禁止继续调用工具，请引用计划中已有hypothesis_id及实际证据ID，严格按system规定的JSON数组字段完成报告，并明确未证实的限制。"
+		modelOptions = append(modelOptions, model.WithTools([]*schema.ToolInfo{}), model.WithToolChoice(schema.ToolChoiceForbidden))
+	}
+	if instruction != "" && (len(s.messages) == 0 || s.messages[len(s.messages)-1].Content != instruction) {
+		s.messages = append(s.messages, schema.UserMessage(instruction))
+	}
+	if err := a.compactContextWithContext(ctx, s); err != nil {
 		return s, err
 	}
+	// Units are a conservative byte-based reservation for up to three attempts, not provider billing.
+	encoded, err := json.Marshal(s.messages)
+	if err != nil {
+		return s, err
+	}
+	reservation := 3 * (len(encoded) + 8192 + 1600)
+	if reservation > a.options.MaxReservedTokens-s.reservedTokens {
+		return s, fmt.Errorf("%w: model reservation", domain.ErrInvestigationBudget)
+	}
+	s.reservedTokens += reservation
 	s.step++
 	if err := a.saveCheckpoint(ctx, s); err != nil {
 		return s, err
 	}
-	reply, err := a.model.Generate(ctx, s.messages)
+	reply, err := a.model.Generate(ctx, s.messages, modelOptions...)
+	if errors.Is(err, domain.ErrModelQueueFull) {
+		s.step--
+		s.reservedTokens -= reservation
+		if saveErr := a.saveCheckpoint(ctx, s); saveErr != nil {
+			return s, saveErr
+		}
+		return s, err
+	}
 	if err != nil {
 		return s, err
 	}
@@ -172,7 +227,12 @@ func (a *Agent) executeTools(ctx context.Context, s *agentState) (*agentState, e
 		var output string
 		var err error
 		if t, ok := s.tools[call.Function.Name]; ok {
-			output, err = t.InvokableRun(ctx, call.Function.Arguments)
+			if call.Function.Name == "search_history" {
+				err = allowHistorySearch(s, call.Function.Arguments)
+			}
+			if err == nil {
+				output, err = t.InvokableRun(ctx, call.Function.Arguments)
+			}
 		} else {
 			err = fmt.Errorf("unknown read-only tool: %s", call.Function.Name)
 		}
@@ -263,6 +323,8 @@ func (a *Agent) finish(ctx context.Context, s *agentState) (*agentState, error) 
 	}
 	result.ToolTrace = s.observations
 	result.TokensUsed = s.tokens
+	result.ModelSteps = s.step
+	result.ReservedTokens = s.reservedTokens
 	result.Model = a.options.ModelName
 	result.ContextCompactions = s.compactions
 	s.result = result
@@ -277,7 +339,7 @@ func (a *Agent) Run(ctx context.Context, id string) (*domain.DiagnosisResult, er
 	if err != nil {
 		return nil, err
 	}
-	state := &agentState{batchID: id, phase: "plan", artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}, limitations: map[string]string{}, tools: tools, evidence: map[string]domain.EvidenceItem{}, used: map[string]bool{}, messages: []*schema.Message{schema.SystemMessage(systemPrompt), schema.UserMessage("调查批次 " + id + " 的故障，调用工具建立证据并输出诊断JSON。")}}
+	state := &agentState{batchID: id, phase: "plan", artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}, limitations: map[string]string{}, tools: tools, evidence: map[string]domain.EvidenceItem{}, used: map[string]bool{}, messages: []*schema.Message{schema.SystemMessage(systemPrompt), schema.UserMessage("调查批次 " + id + " 的故障，调用工具建立证据并输出诊断JSON。\n" + a.options.TaskInstructions)}}
 	if err := a.loadCheckpoint(ctx, state); err != nil {
 		return nil, err
 	}

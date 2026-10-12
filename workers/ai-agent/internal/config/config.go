@@ -68,7 +68,15 @@ func Load() (*Config, error) {
 	if err != nil || timeout <= 0 {
 		return nil, fmt.Errorf("AI_TASK_TIMEOUT must be positive")
 	}
-	cfg := &Config{Mode: getenv("MODE", "kafka"), BatchID: os.Getenv("BATCH_ID"), DatabaseURL: getenv("DATABASE_URL", "postgres://argus:argus_password@localhost:5432/argus_ota?sslmode=disable"), Topic: getenv("KAFKA_TOPIC", "batch-events"), Group: getenv("KAFKA_GROUP", "ai-agent-group"), Brokers: strings.Split(getenv("KAFKA_BROKERS", "localhost:9092"), ","), Concurrency: n, TaskTimeout: timeout, LLM: &llm.GLM4Config{APIKey: key, BaseURL: getenv("LLM_BASE_URL", base), Model: getenv("LLM_MODEL", getenv("GLM_MODEL", model))}, Embedding: &llm.EmbeddingConfig{APIKey: os.Getenv("EMBEDDING_API_KEY"), BaseURL: getenv("EMBEDDING_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/"), Model: getenv("EMBEDDING_MODEL", "embedding-2")}}
+	llmConcurrency, e := strconv.Atoi(getenv("LLM_CONCURRENCY", "4"))
+	if e != nil || llmConcurrency < 1 || llmConcurrency > 128 {
+		return nil, fmt.Errorf("LLM_CONCURRENCY must be 1..128")
+	}
+	queue, e := strconv.Atoi(getenv("LLM_QUEUE_CAPACITY", "32"))
+	if e != nil || queue < 0 || queue > 4096 {
+		return nil, fmt.Errorf("LLM_QUEUE_CAPACITY must be 0..4096")
+	}
+	cfg := &Config{Mode: getenv("MODE", "kafka"), BatchID: os.Getenv("BATCH_ID"), DatabaseURL: getenv("DATABASE_URL", "postgres://argus:argus_password@localhost:5432/argus_ota?sslmode=disable"), Topic: getenv("KAFKA_TOPIC", "batch-events"), Group: getenv("KAFKA_GROUP", "ai-agent-group"), Brokers: strings.Split(getenv("KAFKA_BROKERS", "localhost:9092"), ","), Concurrency: n, TaskTimeout: timeout, LLM: &llm.GLM4Config{Governor: &llm.GovernorOptions{Concurrency: llmConcurrency, QueueCapacity: queue, Attempts: 3, Backoff: 200 * time.Millisecond}, APIKey: key, BaseURL: getenv("LLM_BASE_URL", base), Model: getenv("LLM_MODEL", getenv("GLM_MODEL", model))}, Embedding: &llm.EmbeddingConfig{APIKey: os.Getenv("EMBEDDING_API_KEY"), BaseURL: getenv("EMBEDDING_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/"), Model: getenv("EMBEDDING_MODEL", "embedding-2")}}
 	if cfg.Mode != "kafka" && cfg.Mode != "once" {
 		return nil, fmt.Errorf("MODE must be kafka or once")
 	}

@@ -99,3 +99,20 @@ func TestCompactionPreservesFullArtifactAndEvidence(t *testing.T) {
 		t.Fatal("unbounded artifact page")
 	}
 }
+func TestCompactionArchivesOldAssistantToolGroups(t *testing.T) {
+	s := &agentState{batchID: uuid.NewString(), artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}, evidence: map[string]domain.EvidenceItem{"log:1": {ID: "log:1", Content: "evidence"}}, hypotheses: []domain.Hypothesis{{ID: "H1", Description: "fault", Status: "open"}}}
+	s.messages = []*schema.Message{schema.SystemMessage("system"), schema.UserMessage("task")}
+	for i := 0; i < 8; i++ {
+		s.messages = append(s.messages, &schema.Message{Role: schema.Assistant, Content: strings.Repeat("past reasoning ", 300), ToolCalls: []schema.ToolCall{{ID: fmt.Sprint(i), Function: schema.FunctionCall{Name: "read_logs", Arguments: `{}`}}}}, schema.ToolMessage(`{"evidence":[]}`, fmt.Sprint(i), schema.WithToolName("read_logs")))
+	}
+	a := &Agent{repo: repositoryFixture{}, options: Options{MaxContextChars: 24000}}
+	if e := a.compactContext(s); e != nil {
+		t.Fatal(e)
+	}
+	if len(s.messages) >= 10 || len(s.artifacts) == 0 {
+		t.Fatal("old model history not archived")
+	}
+	if s.messages[len(s.messages)-2].ToolCalls[0].ID != "7" {
+		t.Fatal("latest tool group lost")
+	}
+}
