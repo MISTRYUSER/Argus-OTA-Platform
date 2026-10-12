@@ -36,11 +36,11 @@ func NewLLMNode(chatModel model.ChatModel) *LLMNode {
 func (n *LLMNode) Transform(ctx context.Context, input *domain.DiagnosisContext) (*domain.DiagnosisContext, error) {
 	// 1. 构造诊断输入
 	diagnosisInput := &llm.DiagnosisInput{
-		BatchID:         input.BatchID,
-		ErrorCodes:      formatErrorCodes(input.AggregatedData),
-		LogsSummary:     input.AggregatedData.LogsSummary,
-		CasesText:       formatRAGCases(input.RAGCases, input.RAGUnavailable),
-		RAGUnavailable:  input.RAGUnavailable,
+		BatchID:        input.BatchID,
+		ErrorCodes:     formatErrorCodes(input.AggregatedData),
+		LogsSummary:    input.AggregatedData.LogsSummary,
+		CasesText:      formatRAGCases(input.RAGCases, input.RAGUnavailable),
+		RAGUnavailable: input.RAGUnavailable,
 	}
 
 	// 2. 生成 Prompt（带思维链）
@@ -66,28 +66,12 @@ func (n *LLMNode) Transform(ctx context.Context, input *domain.DiagnosisContext)
 		return input, err
 	}
 
-	// 4. 解析 JSON 结果（用正则提取 JSON）
-	rawJSON := cleanJSON(resp.Content)
-
-	// 5. 解析诊断结果
-	result := &domain.DiagnosisResult{
-		RawLLMOutput: rawJSON,
-	}
-
-	// 使用 gjson 提取字段
-	result.RootCause = gjson.Get(rawJSON, "root_cause").String()
-	result.Suggestions = parseSuggestions(gjson.Get(rawJSON, "suggestions"))
-	result.Severity = gjson.Get(rawJSON, "severity").String()
-	result.Confidence = gjson.Get(rawJSON, "confidence").Float()
-
-	// 6. P1-2: 验证 LLM 输出有效性
-	if !isValidDiagnosisResult(result) {
+	result, err := ParseDiagnosisResult(resp.Content)
+	if err != nil {
 		input.ProcessingStatus = domain.StatusFailed
-		input.ErrorMessage = fmt.Sprintf("LLM output validation failed: root_cause=%s, severity=%s, confidence=%.2f",
-			result.RootCause, result.Severity, result.Confidence)
-		return input, fmt.Errorf("invalid LLM output: %s", input.ErrorMessage)
+		input.ErrorMessage = err.Error()
+		return input, err
 	}
-
 	// 7. 更新状态
 	input.DiagnosisResult = result
 	input.ProcessingStatus = domain.StatusSuccess

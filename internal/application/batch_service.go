@@ -28,56 +28,40 @@ func NewBatchService(
 	}
 }
 
-func (s *BatchService) CreateBatch (
+func (s *BatchService) CreateBatch(
 	ctx context.Context,
 	vehicleID, vin string,
 	expectedWorkers int,
-) (*domain.Batch,error) {
-	batch, err := domain.NewBatch(vehicleID,vin,expectedWorkers)
+) (*domain.Batch, error) {
+	batch, err := domain.NewBatch(vehicleID, vin, expectedWorkers)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	if err := s.batchRepo.Save(ctx,batch); err != nil {
-		return nil,err
+	batch.ClearEvents()
+	if err := s.batchRepo.Save(ctx, batch); err != nil {
+		return nil, err
 	}
 
 	// 两阶段上传设计：创建 Batch 时不发布 Kafka 事件
 	// BatchCreated 事件将在所有文件上传完成后（CompleteUpload）发布
 
-	return batch,nil
+	return batch, nil
 }
 
-func (s *BatchService)TransitionBatchStatus(
+func (s *BatchService) TransitionBatchStatus(
 	ctx context.Context,
 	batchID uuid.UUID,
 	newStatus domain.BatchStatus,
 ) error {
-	batch,err := s.batchRepo.FindByID(ctx,batchID) 
-	if err != nil {
-		return err
-	}
-	if batch == nil {
-		return fmt.Errorf("batch not found %s",batchID)
-	}
-
-	if err := batch.TransitionTo(newStatus); err != nil {
-		return err
-	}
-
-	// P1 修复：先发布 Kafka 事件，确保事件发布成功后再持久化状态
-	// 这样可以避免"状态已前进但下游未感知"的分叉问题
-	events := batch.GetEvents()
-	if len(events) > 0 {
-		if err := s.kafka.PublishEvents(ctx, events); err != nil {
-			// 发布失败，状态不应持久化
-			return fmt.Errorf("failed to publish events: %w", err)
+	return updateBatch(ctx, s.batchRepo, s.kafka, batchID, func(b *domain.Batch) error {
+		if b.Status == newStatus {
+			return nil
 		}
-	}
-
-	// 事件发布成功后，清除事件日志并保存状态
-	batch.ClearEvents()
-	return s.batchRepo.Save(ctx, batch)
-
+		if newStatus == domain.BatchStatusUploaded && b.TotalFiles <= 0 {
+			return fmt.Errorf("cannot complete an empty upload")
+		}
+		return b.TransitionTo(newStatus)
+	})
 }
 
 func (s *BatchService) AddFile(
@@ -122,6 +106,11 @@ func (s *BatchService) AddFile(
 		UpdatedAt:        now,
 	}
 
+	if saver, ok := s.batchRepo.(interface {
+		SaveBatchAndFile(context.Context, *domain.Batch, *domain.File) error
+	}); ok {
+		return saver.SaveBatchAndFile(ctx, batch, file)
+	}
 	// 4. 保存 File 到数据库（状态已校验，不会产生脏数据）
 	if err := s.fileRepo.Save(ctx, file); err != nil {
 		// 回滚：减少 TotalFiles 计数

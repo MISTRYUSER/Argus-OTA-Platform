@@ -6,8 +6,9 @@
 //   - 通过循环边（Loop Edge）实现 Supervisor 到 Worker 到 Supervisor 的决策循环
 //
 // 数据流向：
-//   START -> Supervisor -> Worker -> Supervisor -> Decision -> ...
-//                                         (控制权回收)
+//
+//	START -> Supervisor -> Worker -> Supervisor -> Decision -> ...
+//	                                      (控制权回收)
 package supervisor
 
 import (
@@ -22,10 +23,10 @@ import (
 // SupervisorGraph Supervisor-Worker 编排图
 //
 // 这是整个系统的"大脑"，负责：
-//   1. 维护全局状态 (DiagnosisContext)
-//   2. 动态调度 Workers
-//   3. 防止无限循环
-//   4. 决定何时结束流程
+//  1. 维护全局状态 (DiagnosisContext)
+//  2. 动态调度 Workers
+//  3. 防止无限循环
+//  4. 决定何时结束流程
 type SupervisorGraph struct {
 	supervisor *SupervisorAgent
 	workers    map[string]Worker
@@ -141,7 +142,7 @@ func NewSupervisorGraph(
 	// ============================================================
 	// 9. 编译 Graph
 	// ============================================================
-	runnable, err := graph.Compile(context.Background())
+	runnable, err := graph.Compile(context.Background(), compose.WithMaxRunSteps(32))
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile graph: %w", err)
 	}
@@ -170,6 +171,9 @@ func (g *SupervisorGraph) Run(ctx context.Context, batchID string) (*domain.Diag
 		return nil, fmt.Errorf("graph execution failed: %w", err)
 	}
 
+	if output.ProcessingStatus == domain.StatusFailed {
+		return nil, fmt.Errorf("diagnosis failed: %s", output.ErrorMessage)
+	}
 	// 返回结果
 	if output.DiagnosisResult != nil {
 		return output.DiagnosisResult, nil

@@ -1,7 +1,6 @@
 package domain
 
-import (
-)
+import ()
 
 type BatchStatus string
 
@@ -69,6 +68,9 @@ func (s BatchStatus) CanTransitionTo(newStatus BatchStatus) bool {
 		BatchStatusCompleted: {
 			BatchStatusPending,
 		},
+	}
+	if newStatus == BatchStatusFailed && s.IsValid() && s != BatchStatusCompleted {
+		return true
 	}
 	if !s.IsValid() || !newStatus.IsValid() {
 		return false

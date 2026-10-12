@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/google/uuid"
@@ -38,44 +41,19 @@ func TestDiagnosisGraph_Basic(t *testing.T) {
 	t.Log("Graph structure compiled successfully")
 }
 
-// TestDiagnosisGraph_WithMockData tests with mock data (requires API key for full test)
+// Exercise the real Eino adapter against a local HTTP fixture, never a paid API.
 func TestDiagnosisGraph_WithMockData(t *testing.T) {
-	// Skip if no API key configured
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	mockRepo := &MockDiagnosisRepository{}
-	mockRetriever := &MockVectorRetriever{}
-
-	llmConfig := &llm.GLM4Config{
-		APIKey: "",
-		Model:  "glm-4",
-	}
-
-	graph, err := application.NewDiagnosisGraph(
-		mockRepo,
-		mockRetriever,
-		llmConfig,
-	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id":"fixture","object":"chat.completion","model":"test","choices":[{"index":0,"message":{"role":"assistant","content":"{\"root_cause\":\"CAN connector loose\",\"suggestions\":[\"Inspect connector\"],\"severity\":\"high\",\"confidence\":0.85}"},"finish_reason":"stop"}]}`)
+	}))
+	defer server.Close()
+	graph, err := application.NewDiagnosisGraph(&MockDiagnosisRepository{}, &MockVectorRetriever{}, &llm.GLM4Config{APIKey: "fixture", Model: "test", BaseURL: server.URL + "/"})
 	require.NoError(t, err)
-
-	ctx := context.Background()
-	batchID := "test-batch-001"
-
-	// 由于没有真实 API key，这个测试预期会失败
-	// 但至少验证 Graph 结构正确
-	result, err := graph.Run(ctx, batchID)
-
-	if err != nil {
-		t.Logf("Graph execution failed (expected without API key): %v", err)
-	} else {
-		assert.NotNil(t, result, "Result should not be nil")
-		assert.NotEmpty(t, result.RootCause, "Root cause should not be empty")
-		t.Logf("Root Cause: %s", result.RootCause)
-		t.Logf("Severity: %s", result.Severity)
-		t.Logf("Confidence: %.2f", result.Confidence)
-	}
+	result, err := graph.Run(context.Background(), uuid.NewString())
+	require.NoError(t, err)
+	assert.Equal(t, "CAN connector loose", result.RootCause)
+	assert.Equal(t, []string{"Inspect connector"}, result.Suggestions)
 }
 
 // MockDiagnosisRepository Mock Repository

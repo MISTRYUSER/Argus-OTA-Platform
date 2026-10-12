@@ -6,7 +6,8 @@
 //   - 实现"控制权回收"机制，避免 Worker 之间"踢皮球"
 //
 // 数据流向：Kafka Event -> Supervisor -> Worker -> Supervisor -> Decision -> ...
-//                                            (控制权回收)
+//
+//	(控制权回收)
 package supervisor
 
 import (
@@ -22,10 +23,10 @@ import (
 // SupervisorAgent 中央调度器
 //
 // 职责：
-//   1. 维护全局状态 (DiagnosisContext)
-//   2. 根据状态动态决策调用哪个 Worker
-//   3. 接收 Worker 返回结果，决定下一步
-//   4. 防止无限循环和死锁
+//  1. 维护全局状态 (DiagnosisContext)
+//  2. 根据状态动态决策调用哪个 Worker
+//  3. 接收 Worker 返回结果，决定下一步
+//  4. 防止无限循环和死锁
 type SupervisorAgent struct {
 	// 决策阈值
 	HighConfidenceThreshold float64 // 高置信度阈值（直接输出）
@@ -56,10 +57,10 @@ func NewSupervisorAgent() *SupervisorAgent {
 
 // Decision Supervisor 的决策结果
 type Decision struct {
-	NextWorker   string                   // 下一步调用的 Worker
-	Instruction  string                   // 给 Worker 的指令
-	ShouldEnd    bool                     // 是否结束流程
-	EndReason    string                   // 结束原因
+	NextWorker  string                         // 下一步调用的 Worker
+	Instruction string                         // 给 Worker 的指令
+	ShouldEnd   bool                           // 是否结束流程
+	EndReason   string                         // 结束原因
 	UpdateState func(*domain.DiagnosisContext) // 状态更新函数
 }
 
@@ -69,9 +70,10 @@ type Decision struct {
 func (s *SupervisorAgent) Decide(ctx context.Context, state *domain.DiagnosisContext) *Decision {
 	// 1. 检查是否应该终止（防止无限循环）
 	if state.ShouldTerminate() {
+		state.ProcessingStatus = domain.StatusFailed
 		return &Decision{
-			ShouldEnd: true,
-			EndReason: fmt.Sprintf("Terminated: %s", state.ErrorMessage),
+			ShouldEnd:  true,
+			EndReason:  fmt.Sprintf("Terminated: %s", state.ErrorMessage),
 			NextWorker: "terminal",
 		}
 	}
@@ -90,8 +92,8 @@ func (s *SupervisorAgent) Decide(ctx context.Context, state *domain.DiagnosisCon
 		if state.ProcessingStatus == domain.StatusFailed {
 			// Guard 失败，直接终止
 			return &Decision{
-				ShouldEnd: true,
-				EndReason: fmt.Sprintf("Guard failed: %s", state.ErrorMessage),
+				ShouldEnd:  true,
+				EndReason:  fmt.Sprintf("Guard failed: %s", state.ErrorMessage),
 				NextWorker: "terminal",
 			}
 		}
@@ -105,8 +107,8 @@ func (s *SupervisorAgent) Decide(ctx context.Context, state *domain.DiagnosisCon
 		// ========== 数据加载完成 ==========
 		if state.ProcessingStatus == domain.StatusFailed {
 			return &Decision{
-				ShouldEnd: true,
-				EndReason: fmt.Sprintf("Data loading failed: %s", state.ErrorMessage),
+				ShouldEnd:  true,
+				EndReason:  fmt.Sprintf("Data loading failed: %s", state.ErrorMessage),
 				NextWorker: "terminal",
 			}
 		}
@@ -168,8 +170,8 @@ func (s *SupervisorAgent) Decide(ctx context.Context, state *domain.DiagnosisCon
 				}
 			}
 			return &Decision{
-				ShouldEnd: true,
-				EndReason: fmt.Sprintf("Reasoning failed after retries: %s", state.ErrorMessage),
+				ShouldEnd:  true,
+				EndReason:  fmt.Sprintf("Reasoning failed after retries: %s", state.ErrorMessage),
 				NextWorker: "terminal",
 			}
 		}
@@ -177,11 +179,11 @@ func (s *SupervisorAgent) Decide(ctx context.Context, state *domain.DiagnosisCon
 		// 推理成功，检查置信度
 		if state.DiagnosisResult != nil && state.DiagnosisResult.Confidence < 0.5 {
 			// 置信度仍然很低，可能需要重新 RAG 或结束
-			if state.LastWorker == "rag" {
+			if containsWorker(state.WorkerHistory, "rag") || state.RAGUnavailable {
 				// 已经做过 RAG，置信度还是低，只能接受
 				return &Decision{
-					ShouldEnd: true,
-					EndReason: "Low confidence diagnosis (accepted after RAG)",
+					ShouldEnd:  true,
+					EndReason:  "Low confidence diagnosis (accepted after RAG)",
 					NextWorker: "terminal",
 				}
 			}
@@ -194,16 +196,16 @@ func (s *SupervisorAgent) Decide(ctx context.Context, state *domain.DiagnosisCon
 
 		// 推理成功且置信度可接受，结束
 		return &Decision{
-			ShouldEnd: true,
-			EndReason: "Diagnosis completed successfully",
+			ShouldEnd:  true,
+			EndReason:  "Diagnosis completed successfully",
 			NextWorker: "terminal",
 		}
 
 	default:
 		// ========== 未知状态 ==========
 		return &Decision{
-			ShouldEnd: true,
-			EndReason: fmt.Sprintf("Unknown worker: %s", state.LastWorker),
+			ShouldEnd:  true,
+			EndReason:  fmt.Sprintf("Unknown worker: %s", state.LastWorker),
 			NextWorker: "terminal",
 		}
 	}
@@ -251,9 +253,9 @@ func (s *SupervisorAgent) GeneratePrompt(state *domain.DiagnosisContext) string 
 // NewSupervisorRunnable 创建 Supervisor 的 Lambda
 //
 // 这是 Supervisor 的核心执行逻辑：
-//   1. 接收 State
-//   2. 调用 Decide() 决策
-//   3. 返回更新后的 State（包含 NextWorker 信息）
+//  1. 接收 State
+//  2. 调用 Decide() 决策
+//  3. 返回更新后的 State（包含 NextWorker 信息）
 func NewSupervisorRunnable(supervisor *SupervisorAgent) *compose.Lambda {
 	return compose.InvokableLambda(func(ctx context.Context, state *domain.DiagnosisContext) (*domain.DiagnosisContext, error) {
 		// 记录决策时间
@@ -272,7 +274,14 @@ func NewSupervisorRunnable(supervisor *SupervisorAgent) *compose.Lambda {
 		state.Instruction = decision.Instruction
 
 		if decision.ShouldEnd {
-			state.ProcessingStatus = domain.StatusSuccess
+			if state.ProcessingStatus != domain.StatusFailed {
+				if state.DiagnosisResult != nil {
+					state.ProcessingStatus = domain.StatusSuccess
+				} else {
+					state.ProcessingStatus = domain.StatusFailed
+					state.ErrorMessage = decision.EndReason
+				}
+			}
 			state.NextStep = compose.END
 		}
 
@@ -302,4 +311,13 @@ func (s *SupervisorAgent) LLMDecide(
 ) (*Decision, error) {
 	// 简化实现，直接使用规则决策
 	return s.Decide(ctx, state), nil
+}
+
+func containsWorker(history []string, name string) bool {
+	for _, worker := range history {
+		if worker == name {
+			return true
+		}
+	}
+	return false
 }

@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,7 +29,13 @@ type DiagnosisResult struct {
 	Suggestions  []string
 	Severity     string
 	Confidence   float64
-	RawLLMOutput string // 原始 LLM 输出（用于调试）
+	RawLLMOutput string            // 原始 LLM 输出（用于调试）
+	EvidenceIDs  []string          `json:"evidence_ids,omitempty"`
+	Evidence     []EvidenceItem    `json:"evidence,omitempty"`
+	ToolTrace    []ToolObservation `json:"tool_trace,omitempty"`
+	Limitations  []string          `json:"limitations,omitempty"`
+	TokensUsed   int               `json:"tokens_used,omitempty"`
+	Model        string            `json:"model,omitempty"`
 }
 
 // DiagnosisStatus 诊断状态
@@ -70,13 +78,13 @@ type SimilarCase struct {
 
 // StreamEvent 流式事件（用于 SSE）
 type StreamEvent struct {
-	EventType   string                 `json:"event_type"`
-	BatchID     string                 `json:"batch_id"`
-	Status      string                 `json:"status"`
-	Message     string                 `json:"message"`
-	Progress    float64                `json:"progress"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	EventType string                 `json:"event_type"`
+	BatchID   string                 `json:"batch_id"`
+	Status    string                 `json:"status"`
+	Message   string                 `json:"message"`
+	Progress  float64                `json:"progress"`
+	Timestamp time.Time              `json:"timestamp"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // NewDiagnosis 创建新的诊断
@@ -139,3 +147,20 @@ type DomainError struct {
 func (e *DomainError) Error() string {
 	return e.Message
 }
+
+type EvidenceItem struct {
+	ID      string `json:"id"`
+	Source  string `json:"source"`
+	Content string `json:"content"`
+}
+type ToolObservation struct {
+	Step           int             `json:"step"`
+	Tool           string          `json:"tool"`
+	Arguments      json.RawMessage `json:"arguments"`
+	Output         json.RawMessage `json:"output"`
+	Error          string          `json:"error,omitempty"`
+	DurationMillis int64           `json:"duration_ms"`
+}
+
+var ErrInvalidDiagnosis = errors.New("invalid diagnosis")
+var ErrInvestigationBudget = errors.New("investigation budget exhausted")

@@ -3,153 +3,92 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"log"
-	"time"
-
+	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
-
-	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application"
-	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+	core "github.com/xuewentao/argus-ota-platform/internal/domain"
+	"time"
 )
 
+type BatchDiagnoser interface {
+	DiagnoseBatch(context.Context, string) error
+}
+type MessageReader interface {
+	FetchMessage(context.Context) (kafka.Message, error)
+	CommitMessages(context.Context, ...kafka.Message) error
+	Close() error
+}
 type Consumer struct {
-	reader           *kafka.Reader
-	graph          *application.DiagnosisGraph
-	completionWriter *kafka.Writer
-	completionTopic  string
+	reader  MessageReader
+	service BatchDiagnoser
 }
 
-func NewConsumer(reader *kafka.Reader, graph *application.DiagnosisGraph, completionWriter *kafka.Writer, completionTopic string) *Consumer {
-	return &Consumer{
-		reader:           reader,
-		graph:            graph,
-		completionWriter: completionWriter,
-		completionTopic:  completionTopic,
+func NewConsumer(reader MessageReader, service BatchDiagnoser) *Consumer {
+	return &Consumer{reader, service}
+}
+func (c *Consumer) HandleMessage(ctx context.Context, data []byte) error {
+	var e struct {
+		Type    string `json:"event_type"`
+		BatchID string `json:"batch_id"`
 	}
-}
-
-func (c *Consumer) Consume(ctx context.Context) error {
-	for {
-		// 检查 context 有没有取消
-		select {
-		case <-ctx.Done():
-			log.Println("[Kafka] Consumer stopped")
-			return ctx.Err()
-		default:
-		}
-
-		msg, err := c.reader.ReadMessage(ctx)
-		if err != nil {
-			log.Printf("[Kafka] Failed to read message: %v", err)
-			continue
-		}
-
-		var event GatheringCompletedEvent
-		if err := json.Unmarshal(msg.Value, &event); err != nil {
-			log.Printf("[Kafka] Failed to unmarshal event: %v", err)
-			// P1-2: 即使 unmarshal 失败也不 commit，让 Kafka 重试
-			continue
-		}
-
-		log.Printf("[Kafka] Received event: type=%s, batchID=%s", event.EventType, event.BatchID)
-
-		// 调用 DiagnosisGraph 进行诊断
-		result, err := c.graph.Run(ctx, event.BatchID)
-		if err != nil {
-			log.Printf("[Kafka] Failed to diagnose batch %s: %v", event.BatchID, err)
-			// P1-2: 诊断失败不 commit，允许 Kafka 重试
-			continue
-		}
-
-		// 记录诊断结果
-		log.Printf("[Diagnosis] RootCause: %s, Severity: %s, Confidence: %.2f",
-			result.RootCause, result.Severity, result.Confidence)
-
-		if err := c.publishDiagnosisCompleted(ctx, event.BatchID, result); err != nil {
-			log.Printf("[Kafka] Failed to publish DiagnosisCompleted for batch %s: %v", event.BatchID, err)
-			// P1-2: 发布失败不 commit，允许 Kafka 重试
-			continue
-		}
-
-		// P1-2: 只在全部成功后才 commit 消息
-		if err := c.reader.CommitMessages(ctx, msg); err != nil {
-			log.Printf("[Kafka] Failed to commit message for batch %s: %v", event.BatchID, err)
-			// commit 失败也可能导致重复处理，但幂等性可以处理
-			continue
-		}
-
-		log.Printf("[Kafka] Successfully diagnosed and committed batch %s", event.BatchID)
+	if err := json.Unmarshal(data, &e); err != nil {
+		return &core.InvalidEventError{Err: fmt.Errorf("invalid JSON: %w", err)}
 	}
-}
-
-// Close 关闭消费者
-func (c *Consumer) Close() error {
-	if c.completionWriter != nil {
-		_ = c.completionWriter.Close()
-	}
-	return c.reader.Close()
-}
-
-// GatheringCompletedEvent 聚合完成事件
-//
-// 由 Python Worker 发布，表示数据聚合完成，可以进行 AI 诊断
-type GatheringCompletedEvent struct {
-	EventType string    `json:"event_type"` // "gathering-completed"
-	BatchID   string    `json:"batch_id"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-type DiagnosisCompletedEvent struct {
-	Version          string                       `json:"version"`
-	EventType        string                       `json:"event_type"`
-	BatchID          string                       `json:"batch_id"`
-	DiagnosisID      string                       `json:"diagnosis_id"` // P0: 缺失字段，已补充
-	DiagnosisSummary string                       `json:"diagnosis_summary"`
-	TopErrorCodes    []domain.ErrorCodeSummary    `json:"top_error_codes,omitempty"`
-	RootCause        string                       `json:"root_cause"`
-	Severity         string                       `json:"severity"`
-	Confidence       float64                      `json:"confidence"`
-	Suggestions      []string                     `json:"suggestions,omitempty"`
-	Status           string                       `json:"status"`
-	OccurredAt       time.Time                    `json:"occurred_at"`
-}
-
-func (c *Consumer) publishDiagnosisCompleted(ctx context.Context, batchID string, result *domain.DiagnosisResult) error {
-	if c.completionWriter == nil || c.completionTopic == "" {
+	if e.Type != "DiagnosisRequested" {
 		return nil
 	}
-
-	// 生成新的 DiagnosisID
-	diagnosisID := uuid.New().String()
-
-	// 构建 ErrorCodeSummary (从 AggregatedData 转换)
-	topErrorCodes := make([]domain.ErrorCodeSummary, 0)
-	// TODO: 从 result 中提取 Top-K 错误码
-
-	event := DiagnosisCompletedEvent{
-		Version:          "v1.0",
-		EventType:        "DiagnosisCompleted",
-		BatchID:          batchID,
-		DiagnosisID:      diagnosisID,
-		DiagnosisSummary: result.RootCause, // 使用 RootCause 作为摘要
-		TopErrorCodes:    topErrorCodes,
-		RootCause:        result.RootCause,
-		Severity:         result.Severity,
-		Confidence:       result.Confidence,
-		Suggestions:      result.Suggestions,
-		Status:           "completed",
-		OccurredAt:       time.Now(),
+	if _, err := uuid.Parse(e.BatchID); err != nil {
+		return &core.InvalidEventError{Err: fmt.Errorf("invalid batch_id: %w", err)}
 	}
-	data, err := json.Marshal(event)
+	return c.service.DiagnoseBatch(ctx, e.BatchID)
+}
+func (c *Consumer) Consume(ctx context.Context) error {
+	for {
+		msg, err := c.reader.FetchMessage(ctx)
+		if err != nil {
+			return err
+		}
+		for {
+			if err = c.HandleMessage(ctx, msg.Value); err == nil {
+				break
+			}
+			timer := time.NewTimer(100 * time.Millisecond)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return ctx.Err()
+			case <-timer.C:
+			}
+		}
+		if err = c.reader.CommitMessages(ctx, msg); err != nil {
+			return err
+		}
+	}
+}
+func (c *Consumer) Close() error { return c.reader.Close() }
+
+func (c *Consumer) HandleFailure(ctx context.Context, body []byte, cause error) error {
+	var malformed *core.InvalidEventError
+	if errors.As(cause, &malformed) {
+		return nil
+	}
+	var e struct {
+		Type string `json:"event_type"`
+		ID   string `json:"batch_id"`
+	}
+	if json.Unmarshal(body, &e) != nil || e.Type != "DiagnosisRequested" {
+		return nil
+	}
+	id, err := uuid.Parse(e.ID)
 	if err != nil {
-		return err
+		return nil
 	}
-
-	return c.completionWriter.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(batchID),
-		Value: data,
-		Time:  time.Now(),
-		Topic: c.completionTopic,
+	recorder, ok := c.service.(interface {
+		FailBatch(context.Context, string, error) error
 	})
+	if !ok {
+		return fmt.Errorf("failure recorder unavailable")
+	}
+	return recorder.FailBatch(ctx, id.String(), cause)
 }

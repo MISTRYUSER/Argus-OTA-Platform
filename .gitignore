@@ -144,10 +144,7 @@ $RECYCLE.BIN/
 .Trash-*
 .nfs*
 
-# Package Manager
-go.sum
-# Uncomment if you don't want to commit go.sum
-# go.sum
+# Commit go.sum for reproducible dependency verification.
 
 # Profiling and profiling tools
 *.prof
@@ -163,3 +160,13 @@ mem.prof
 
 # Docker
 .dockerignore
+
+.cache/
+.worktrees/
+.superpowers/
+.regression-results/
+/ai-worker
+/ingestor
+/orchestrator
+/query-service
+/mock-cpp-worker

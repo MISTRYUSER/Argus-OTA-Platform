@@ -25,3 +25,11 @@ type EventPublisher interface {
 	// PublishProgress 推送实时进度
 	PublishProgress(ctx context.Context, batchID string, event StreamEvent) error
 }
+
+// DiagnosisRunner is the shared execution contract for conditional and Supervisor graphs.
+type DiagnosisRunner interface {
+	Run(context.Context, string) (*DiagnosisResult, error)
+}
+type IdempotentDiagnosisRepository interface {
+	GetOrCreate(context.Context, string, func() (*Diagnosis, error)) (*Diagnosis, error)
+}

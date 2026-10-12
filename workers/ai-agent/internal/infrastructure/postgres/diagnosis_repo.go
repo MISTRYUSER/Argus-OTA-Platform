@@ -1,241 +1,248 @@
 package postgres
 
-  import (
-  	"context"
-  	"database/sql"
-  	"encoding/json"
-  	"fmt"
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"github.com/google/uuid"
+	"github.com/lib/pq"
+	core "github.com/xuewentao/argus-ota-platform/internal/domain"
+	corepg "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+	"time"
+)
 
-  	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+type PostgresDiagnosisRepository struct{ db *sql.DB }
 
-  	"github.com/lib/pq"
-  )
-
-  type PostgresDiagnosisRepository struct {
-  	db *sql.DB
-  }
-
-  // NewDiagnosisRepository 创建 PostgreSQL Diagnosis Repository
-  func NewDiagnosisRepository(db *sql.DB) domain.DiagnosisRepository {
-  	return &PostgresDiagnosisRepository{db: db}
-  }
-
-  func NewPostgresDiagnoseRepository(db *sql.DB) domain.DiagnosisRepository {
-  	return &PostgresDiagnosisRepository{db: db}
-  }
-
-  func (r *PostgresDiagnosisRepository) GetAggregatedData(ctx context.Context, batchID string) (*domain.AggregatedData, error) {
-  	// 1. 查询批次基础信息
-  	batchQuery := `
-  		SELECT id, status, total_files, processed_files
-  		FROM batches
-  		WHERE id = $1
-  	`
-  	var batchID2 string
-  	var status string
-  	var totalFiles, processedFiles int
-  	err := r.db.QueryRowContext(ctx, batchQuery, batchID).Scan(&batchID2, &status, &totalFiles, &processedFiles)
-  	if err != nil {
-  		if err == sql.ErrNoRows {
-  			return nil, fmt.Errorf("batch not found: %s", batchID)
-  		}
-  		return nil, fmt.Errorf("failed to query batch: %w", err)
-  	}
-
-  	// 2. 聚合错误码统计
-  	errorCodeQuery := `
-  		SELECT error_code, COUNT(*) as count
-  		FROM files
-  		WHERE batch_id = $1
-  		GROUP BY error_code
-  		ORDER BY count DESC
-  	`
-  	rows, err := r.db.QueryContext(ctx, errorCodeQuery, batchID)
-  	if err != nil {
-  		return nil, fmt.Errorf("failed to query error codes: %w", err)
-  	}
-  	defer rows.Close()
-
-  	errorCodeStats := make(map[string]int)
-  	for rows.Next() {
-  		var errorCode string
-  		var count int
-  		if err := rows.Scan(&errorCode, &count); err != nil {
-  			return nil, fmt.Errorf("failed to scan error code: %w", err)
-  		}
-  		errorCodeStats[errorCode] = count
-  	}
-
-  	// 3. 聚合日志（取前 1000 条，避免过多）
-  	logsQuery := `
-  		SELECT string_agg(log_content, E'\n') as logs
-  		FROM (
-  			SELECT log_content
-  			FROM logs
-  			WHERE batch_id = $1
-  			ORDER BY timestamp DESC
-  			LIMIT 1000
-  		) subquery
-  	`
-  	var rawLogs sql.NullString
-  	err = r.db.QueryRowContext(ctx, logsQuery, batchID).Scan(&rawLogs)
-  	if err != nil && err != sql.ErrNoRows {
-  		return nil, fmt.Errorf("failed to query logs: %w", err)
-  	}
-
-  	// 4. 返回聚合数据
-  	return &domain.AggregatedData{
-  		BatchID:        batchID,
-  		ErrorCodeStats: errorCodeStats,
-  		RawLogs:        rawLogs.String,
-  		LogsSummary:    rawLogs.String, // TODO: 可以进一步做摘要
-  	}, nil
-  }
-
-  func (r *PostgresDiagnosisRepository) Save(ctx context.Context, diagnose *domain.Diagnosis) error {
-  	query := `
-  		INSERT INTO ai_diagnoses (
-  			id, batch_id, status, aggregated_data,
-  			diagnosis_summary, top_error_codes, recommendations, confidence,
-  			embedding, model, tokens_used, diagnosed_at,
-  			created_at, updated_at
-  		) VALUES (
-  			$1, $2, $3, $4,
-  			$5, $6, $7, $8,
-  			$9, $10, $11, $12,
-  			$13, $14
-  		)
-  		ON CONFLICT (id) DO UPDATE SET
-  			status = EXCLUDED.status,
-  			aggregated_data = EXCLUDED.aggregated_data,
-  			diagnosis_summary = EXCLUDED.diagnosis_summary,
-  			top_error_codes = EXCLUDED.top_error_codes,
-  			recommendations = EXCLUDED.recommendations,
-  			confidence = EXCLUDED.confidence,
-  			embedding = EXCLUDED.embedding,
-  			model = EXCLUDED.model,
-  			tokens_used = EXCLUDED.tokens_used,
-  			diagnosed_at = EXCLUDED.diagnosed_at,
-  			updated_at = EXCLUDED.updated_at
-  	`
-
-  	aggregatedJSON, err := json.Marshal(diagnose.AggregatedData)
-  	if err != nil {
-  		return fmt.Errorf("failed to marshal aggregated_data: %w", err)
-  	}
-
-  	_, err = r.db.ExecContext(ctx, query,
-  		diagnose.ID, diagnose.BatchID, diagnose.Status, aggregatedJSON,
-  		diagnose.DiagnosisSummary, pq.Array(diagnose.TopErrorCodes), pq.Array(diagnose.Recommendations), diagnose.Confidence,
-  		pq.Array(diagnose.Embedding), diagnose.Model, diagnose.TokensUsed, diagnose.DiagnosedAt,
-  		diagnose.CreatedAt, diagnose.UpdatedAt,
-  	)
-
-  	return err
-  }
-
-  func (r *PostgresDiagnosisRepository) FindByBatchID(ctx context.Context, batchID string) (*domain.Diagnosis, error) {
-  	query := `
-  		SELECT id, batch_id, status, aggregated_data,
-  			   diagnosis_summary, top_error_codes, recommendations, confidence,
-  			   embedding, model, tokens_used, diagnosed_at,
-  			   created_at, updated_at
-  		FROM ai_diagnoses
-  		WHERE batch_id = $1
-  	`
-
-  	row := r.db.QueryRowContext(ctx, query, batchID)
-
-  	var diagnose domain.Diagnosis
-  	var aggregatedJSON []byte
-
-  	err := row.Scan(
-  		&diagnose.ID, &diagnose.BatchID, &diagnose.Status, &aggregatedJSON,
-  		&diagnose.DiagnosisSummary, pq.Array(&diagnose.TopErrorCodes), pq.Array(&diagnose.Recommendations), &diagnose.Confidence,
-  		pq.Array(&diagnose.Embedding), &diagnose.Model, &diagnose.TokensUsed, &diagnose.DiagnosedAt,
-  		&diagnose.CreatedAt, &diagnose.UpdatedAt,
-  	)
-
-  	if err == sql.ErrNoRows {
-  		return nil, nil
-  	}
+func NewDiagnosisRepository(db *sql.DB) domain.DiagnosisRepository {
+	return &PostgresDiagnosisRepository{db}
+}
+func NewPostgresDiagnoseRepository(db *sql.DB) domain.DiagnosisRepository {
+	return NewDiagnosisRepository(db)
+}
+func (r *PostgresDiagnosisRepository) GetAggregatedData(ctx context.Context, id string) (*domain.AggregatedData, error) {
+	var exists bool
+	if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM batches WHERE id=$1)`, id).Scan(&exists); err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("batch not found: %s", id)
+	}
+	d := &domain.AggregatedData{BatchID: id, ErrorCodeStats: map[string]int{}}
+	rows, err := r.db.QueryContext(ctx, `SELECT COALESCE(NULLIF(error_code,''),'UNKNOWN'),COUNT(*) FROM files WHERE batch_id=$1 GROUP BY 1`, id)
 	if err != nil {
 		return nil, err
 	}
-  	if err := json.Unmarshal(aggregatedJSON, &diagnose.AggregatedData); err != nil {
-  		return nil, fmt.Errorf("failed to unmarshal aggregated_data: %w", err)
-  	}
+	for rows.Next() {
+		var code string
+		var count int
+		if err = rows.Scan(&code, &count); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		d.ErrorCodeStats[code] = count
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	var logs sql.NullString
+	err = r.db.QueryRowContext(ctx, `SELECT string_agg(log_content,E'\n' ORDER BY timestamp) FROM (SELECT timestamp,log_content FROM logs WHERE batch_id=$1 ORDER BY timestamp DESC LIMIT 1000) recent`, id).Scan(&logs)
+	if err != nil {
+		return nil, err
+	}
+	d.RawLogs = logs.String
+	d.LogsSummary = truncate(logs.String, 2400)
+	return d, nil
+}
+func truncate(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n*3/5]) + "\n...\n" + string(r[len(r)-n*2/5:])
+}
 
-  
-  
-  	return &diagnose, err
-  }
+type queryer interface {
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+}
 
+const diagnosisColumns = `id,batch_id,status,aggregated_data,diagnosis_summary,COALESCE(top_error_codes,'[]'),recommendations,confidence,model_name,COALESCE(total_tokens,0),diagnosed_at,created_at,updated_at`
 
-  func (r *PostgresDiagnosisRepository) FindByID(ctx context.Context, id string) (*domain.Diagnosis, error) {
-	query := `
-		SELECT id, batch_id, status, aggregated_data,
-			   diagnosis_summary, top_error_codes, recommendations, confidence,
-			   embedding, model, tokens_used, diagnosed_at,
-			   created_at, updated_at
-		FROM ai_diagnoses
-		WHERE id = $1
-	`
-
-	row := r.db.QueryRowContext(ctx, query, id)
-
-	var diagnose domain.Diagnosis
-	var aggregatedJSON []byte
-
-	err := row.Scan(
-		&diagnose.ID, &diagnose.BatchID, &diagnose.Status, &aggregatedJSON,
-		&diagnose.DiagnosisSummary, pq.Array(&diagnose.TopErrorCodes), pq.Array(&diagnose.Recommendations), &diagnose.Confidence,
-		pq.Array(&diagnose.Embedding), &diagnose.Model, &diagnose.TokensUsed, &diagnose.DiagnosedAt,
-		&diagnose.CreatedAt, &diagnose.UpdatedAt,
-	)
-
+func find(ctx context.Context, q queryer, where string, arg string) (*domain.Diagnosis, error) {
+	d := &domain.Diagnosis{}
+	var agg, codes, recs []byte
+	err := q.QueryRowContext(ctx, `SELECT `+diagnosisColumns+` FROM ai_diagnoses WHERE `+where+`=$1`, arg).Scan(&d.ID, &d.BatchID, &d.Status, &agg, &d.DiagnosisSummary, &codes, &recs, &d.Confidence, &d.Model, &d.TokensUsed, &d.DiagnosedAt, &d.CreatedAt, &d.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-
 	if err != nil {
 		return nil, err
 	}
-
-	if err := json.Unmarshal(aggregatedJSON, &diagnose.AggregatedData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal aggregated_data: %w", err)
+	if err = json.Unmarshal(agg, &d.AggregatedData); err != nil {
+		return nil, err
 	}
-
-	return &diagnose, nil
+	if err = json.Unmarshal(codes, &d.TopErrorCodes); err != nil {
+		return nil, err
+	}
+	if err = json.Unmarshal(recs, &d.Recommendations); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+func (r *PostgresDiagnosisRepository) FindByBatchID(ctx context.Context, id string) (*domain.Diagnosis, error) {
+	return find(ctx, r.db, "batch_id", id)
+}
+func (r *PostgresDiagnosisRepository) FindByID(ctx context.Context, id string) (*domain.Diagnosis, error) {
+	return find(ctx, r.db, "id", id)
 }
 
+type execer interface {
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+}
 
-// FindSimilar 查找相似诊断（RAG，基于向量相似度）
-func (r *PostgresDiagnosisRepository) FindSimilar(ctx context.Context, embedding []float32, limit int) ([]*domain.Diagnosis, error) {
-	query := `
-		SELECT id, batch_id, diagnosis_summary, confidence,
-			   1 - (embedding <=> $1::vector) as similarity
-		FROM ai_diagnoses
-		WHERE embedding IS NOT NULL
-		ORDER BY embedding <=> $1::vector
-		LIMIT $2
-	`
+func save(ctx context.Context, db execer, d *domain.Diagnosis) error {
+	if d == nil {
+		return fmt.Errorf("diagnosis is nil")
+	}
+	agg, err := json.Marshal(d.AggregatedData)
+	if err != nil {
+		return err
+	}
+	if d.AggregatedData == nil {
+		agg = []byte(`{}`)
+	}
+	codes, _ := json.Marshal(d.TopErrorCodes)
+	recs, _ := json.Marshal(d.Recommendations)
+	if d.TopErrorCodes == nil {
+		codes = []byte(`[]`)
+	}
+	if d.Recommendations == nil {
+		recs = []byte(`[]`)
+	}
+	_, err = db.ExecContext(ctx, `INSERT INTO ai_diagnoses(id,batch_id,status,aggregated_data,diagnosis_summary,top_error_codes,recommendations,confidence,model_name,total_tokens,diagnosed_at,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(batch_id) DO UPDATE SET status=EXCLUDED.status,aggregated_data=EXCLUDED.aggregated_data,diagnosis_summary=EXCLUDED.diagnosis_summary,top_error_codes=EXCLUDED.top_error_codes,recommendations=EXCLUDED.recommendations,confidence=EXCLUDED.confidence,model_name=EXCLUDED.model_name,total_tokens=EXCLUDED.total_tokens,diagnosed_at=EXCLUDED.diagnosed_at,updated_at=EXCLUDED.updated_at`, d.ID, d.BatchID, d.Status, agg, d.DiagnosisSummary, codes, recs, d.Confidence, d.Model, d.TokensUsed, d.DiagnosedAt, d.CreatedAt, d.UpdatedAt)
+	return err
+}
+func (r *PostgresDiagnosisRepository) Save(ctx context.Context, d *domain.Diagnosis) error {
+	return save(ctx, r.db, d)
+}
 
-	rows, err := r.db.QueryContext(ctx, query, pq.Array(embedding), limit)
+// GetOrCreate serializes same-batch diagnoses across processes and commits result + event together.
+func (r *PostgresDiagnosisRepository) GetOrCreate(ctx context.Context, id string, generate func() (*domain.Diagnosis, error)) (*domain.Diagnosis, error) {
+	parsedID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var diagnoses []*domain.Diagnosis
-	for rows.Next() {
-		var diagnose domain.Diagnosis
-		var similarity float64
-		if err := rows.Scan(&diagnose.ID, &diagnose.BatchID, &diagnose.DiagnosisSummary, &diagnose.Confidence, &similarity); err != nil {
+	id = parsedID.String()
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, id); err != nil {
+		return nil, err
+	}
+	d, err := find(ctx, tx, "batch_id", id)
+	if err != nil {
+		return nil, err
+	}
+	if d != nil && d.Status == domain.DiagnosisStatusFailed {
+		return nil, &core.PermanentTaskError{Err: fmt.Errorf("diagnosis is terminally failed; explicit reset required")}
+	}
+	if d == nil || d.Status != domain.DiagnosisStatusCompleted {
+		d, err = generate()
+		if err != nil {
 			return nil, err
 		}
-		diagnoses = append(diagnoses, &diagnose)
+		if err = save(ctx, tx, d); err != nil {
+			return nil, err
+		}
 	}
+	event := core.DiagnosisCompleted{Version: "v1.0", BatchID: d.BatchID, DiagnosisID: d.ID, DiagnosisSummary: d.DiagnosisSummary, OccurredAt: time.Now()}
+	if err = corepg.EnqueueEvent(ctx, tx, event); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+func (r *PostgresDiagnosisRepository) FindSimilar(ctx context.Context, v []float32, limit int) ([]*domain.Diagnosis, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT id FROM ai_diagnoses WHERE embedding IS NOT NULL ORDER BY embedding <=> $1::vector LIMIT $2`, pq.Array(v), limit)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	result := []*domain.Diagnosis{}
+	for _, id := range ids {
+		d, e := r.FindByID(ctx, id)
+		if e != nil {
+			return nil, e
+		}
+		result = append(result, d)
+	}
+	return result, nil
+}
 
-	return diagnoses, nil
+// RecordFailure persists terminal investigation state and its notification atomically.
+func (r *PostgresDiagnosisRepository) RecordFailure(ctx context.Context, id string, cause error) error {
+	batchID, err := uuid.Parse(id)
+	if err != nil {
+		return nil
+	}
+	id = batchID.String()
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, id); err != nil {
+		return err
+	}
+	var exists bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM batches WHERE id=$1)`, batchID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	old, err := find(ctx, tx, "batch_id", id)
+	if err != nil {
+		return err
+	}
+	if old != nil && old.Status == domain.DiagnosisStatusCompleted {
+		return nil
+	}
+	now := time.Now()
+	message := core.SafeText(cause.Error(), 1500)
+	d := &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusFailed, DiagnosisSummary: "Investigation failed: " + message, AggregatedData: map[string]interface{}{"failure": message}, Model: "failed-investigation", CreatedAt: now, UpdatedAt: now}
+	if old != nil {
+		d.ID = old.ID
+		d.CreatedAt = old.CreatedAt
+	}
+	if err = save(ctx, tx, d); err != nil {
+		return err
+	}
+	if err = corepg.EnqueueEvent(ctx, tx, core.WireEvent{Type: "DiagnosisFailed", BatchID: batchID, Timestamp: now, Data: map[string]interface{}{"reason": message}}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

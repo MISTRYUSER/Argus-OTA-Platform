@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 )
+
 type File struct {
 	ID               uuid.UUID
 	BatchID          uuid.UUID
@@ -23,28 +24,30 @@ type File struct {
 	UpdatedAt        time.Time
 }
 
-type ProcessingStatus string 
+type ProcessingStatus string
+
 const (
-	FileStatusPending 		ProcessingStatus = "pending"
-	FileStatusParsing 		ProcessingStatus = "parsing"
-	FileStatusParsed 		ProcessingStatus = "parsed"
-	FileStatusAggregating	ProcessingStatus = "aggregating"
-	FileStatusCompleted  	ProcessingStatus = "completed"
-	FileStatusFailed		ProcessingStatus = "failed"
+	FileStatusPending     ProcessingStatus = "pending"
+	FileStatusParsing     ProcessingStatus = "parsing"
+	FileStatusParsed      ProcessingStatus = "parsed"
+	FileStatusAggregating ProcessingStatus = "aggregating"
+	FileStatusCompleted   ProcessingStatus = "completed"
+	FileStatusFailed      ProcessingStatus = "failed"
 )
+
 func (s ProcessingStatus) String() string {
 	return string(s)
 }
 func (s ProcessingStatus) IsValid() bool {
 	switch s {
-		case
-			FileStatusPending,
-			FileStatusParsing,
-			FileStatusParsed,
-			FileStatusAggregating,
-			FileStatusCompleted,
-			FileStatusFailed:
-			return true
+	case
+		FileStatusPending,
+		FileStatusParsing,
+		FileStatusParsed,
+		FileStatusAggregating,
+		FileStatusCompleted,
+		FileStatusFailed:
+		return true
 	default:
 		return false
 	}

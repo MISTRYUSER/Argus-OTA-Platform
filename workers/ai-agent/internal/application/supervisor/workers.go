@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/nodes"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm"
 )
@@ -196,7 +197,7 @@ func (w *RAGWorker) Execute(ctx context.Context, state *domain.DiagnosisContext)
 
 	fmt.Printf("[RAGWorker] Searching for similar cases (confidence: %.2f)\n", state.Confidence)
 
-	if state.AggregatedData == nil {
+	if state.AggregatedData == nil || w.retriever == nil {
 		state.RecordWorker(w.Name())
 		state.RAGUnavailable = true
 		state.ProcessingStatus = domain.StatusProcessing
@@ -401,14 +402,7 @@ func (w *ReasoningWorker) formatRAGCases(cases []domain.SimilarCase) string {
 }
 
 func (w *ReasoningWorker) parseResult(content string) (*domain.DiagnosisResult, error) {
-	// 简化实现，实际应该解析 JSON
-	return &domain.DiagnosisResult{
-		RootCause:    "示例根因（需要实现完整解析）",
-		Suggestions:  []string{"建议1", "建议2"},
-		Severity:     "medium",
-		Confidence:   0.75,
-		RawLLMOutput: content,
-	}, nil
+	return nodes.ParseDiagnosisResult(content)
 }
 
 func (w *ReasoningWorker) GraphNode() *compose.Lambda {
