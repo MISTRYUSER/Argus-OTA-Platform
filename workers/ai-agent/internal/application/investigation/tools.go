@@ -159,5 +159,12 @@ func boundTools(repo domain.DiagnosisRepository, retriever domain.VectorRetrieve
 		return nil, err
 	}
 	result["search_history"] = history
+	if reader, ok := repo.(versionRegressionReader); ok {
+		regression, e := regressionTool(reader, id)
+		if e != nil {
+			return nil, e
+		}
+		result["read_version_regression"] = regression
+	}
 	return result, nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/cloudwego/eino/components/model"
 	"github.com/google/uuid"
 	core "github.com/xuewentao/argus-ota-platform/internal/domain"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/hybrid"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/investigation"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/supervisor"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
@@ -36,7 +37,7 @@ func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.Vect
 		runner, err = NewDiagnosisGraph(repo, retriever, cfg)
 	case "supervisor":
 		runner, err = supervisor.NewSupervisorGraph(repo, retriever, cfg)
-	case "", "investigation":
+	case "", "investigation", "hybrid":
 		reservationBudget := 1000000
 		if raw := os.Getenv("AI_MODEL_RESERVATION_BUDGET"); raw != "" {
 			reservationBudget, err = strconv.Atoi(raw)
@@ -48,6 +49,9 @@ func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.Vect
 		chat, err = llm.NewGLM4ChatModel(cfg)
 		if err == nil {
 			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{Telemetry: settings.telemetry, TelemetryPolicy: settings.policy, MaxSteps: 8, ModelName: cfg.Model, MaxReservedTokens: reservationBudget})
+		}
+		if err == nil && os.Getenv("AI_RUNNER") == "hybrid" {
+			runner, err = hybrid.NewRunner(repo, chat, runner, hybrid.Options{MaxReservedTokens: reservationBudget, ModelName: cfg.Model})
 		}
 	default:
 		return nil, fmt.Errorf("unsupported AI_RUNNER")

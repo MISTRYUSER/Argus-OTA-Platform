@@ -1,0 +1,81 @@
+name: Regression and reproducible fault injection
+on:
+  push:
+    branches: [main, 'codex/version-regression-hybrid-quota']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: argus
+          POSTGRES_PASSWORD: argus_password
+          POSTGRES_DB: argus_ota
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U argus -d argus_ota'
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd 'redis-cli ping'
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      ARGUS_TEST_DATABASE_URL: postgres://argus:argus_password@localhost:5432/argus_ota?sslmode=disable
+      ARGUS_TEST_REDIS_ADDR: localhost:6379
+      ARGUS_TEST_KAFKA_BROKERS: localhost:19092
+      ARGUS_LOAD_REPORT_DIR: ${{ github.workspace }}/.regression-results/measurements
+      OTEL_TRACES_SAMPLER: always_on
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.12'
+          cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Start real Kafka-compatible broker
+        run: |
+          docker run -d --name argus-kafka -p 19092:19092 docker.redpanda.com/redpandadata/redpanda:v24.3.18 redpanda start --overprovisioned --smp 1 --memory 512M --reserve-memory 0M --node-id 0 --check=false --kafka-addr 0.0.0.0:19092 --advertise-kafka-addr localhost:19092
+          for attempt in $(seq 1 60); do
+            if docker exec argus-kafka rpk cluster info -X brokers=localhost:19092; then break; fi
+            sleep 1
+          done
+      - name: Install optional real record parser
+        run: python -m pip install -r workers/python-aggregator/requirements-record.txt
+      - name: Install extensions in shared public schema before isolated tests
+        run: |
+          PGPASSWORD=argus_password psql -h localhost -U argus -d argus_ota -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public; CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;'
+      - name: Full regression, vet and build
+        run: |
+          mkdir -p .regression-results/measurements
+          ./scripts/regression.sh version-regression-hybrid-quota
+      - name: Python unit tests and actual public record
+        run: |
+          python -m unittest discover -s workers/python-aggregator -v
+          python -m unittest discover -s scripts/benchmark -v
+          python scripts/benchmark/public_record.py --metadata '{"version":"public-fixture-unmeasured","vehicle_id":"public-sample","vehicle_class":"unknown","replay_id":"apollo-example","workload":"public-simcontrol"}' --out .regression-results/measurements/public-record.json
+      - name: Reproducible routing and version fault-injection measurements
+        run: |
+          go run ./workers/ai-agent/cmd/agent-bench -fixture -out .regression-results/measurements/hybrid-fixture.json
+          python scripts/benchmark/version_regression.py --out .regression-results/measurements/version-regression.json
+      - name: Race checks for new execution paths
+        run: go test -race -count=1 ./internal/infrastructure/processing ./workers/ai-agent/internal/application/hybrid ./workers/ai-agent/internal/infrastructure/llm
+      - name: Show machine-readable measurements
+        if: always()
+        run: |
+          for result in .regression-results/measurements/*.json; do
+            if [ -f "$result" ]; then echo "FILE: $result"; cat "$result"; fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-measurements
+          path: .regression-results/

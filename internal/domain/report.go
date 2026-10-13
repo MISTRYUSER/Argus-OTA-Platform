@@ -21,6 +21,7 @@ type Report struct {
 	CPUStats *CPUStats
 	RAMStats *RAMStats
 
+	VersionRegression    json.RawMessage `json:"version_regression,omitempty"`
 	Hypotheses           json.RawMessage `json:"hypotheses,omitempty"`
 	InvestigationTrace   json.RawMessage `json:"tool_trace,omitempty"`
 	Evidence             json.RawMessage `json:"evidence,omitempty"`

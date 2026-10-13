@@ -1,0 +1,3 @@
+# Optional Apollo Cyber record decoder; use a dedicated virtual environment.
+cyber_record @ git+https://github.com/daohu527/cyber-record.git@f0b4be600dfd6fc9aac3db898a93337a091a324c
+protobuf==5.29.6
