@@ -85,12 +85,28 @@ class RegressionTests(unittest.TestCase):
         for a,b in [('v1','v1'),('v1','v3')]:
             with self.assertRaises(ValueError): self.r.analyze(self.rows(),a,b)
 
+    def test_distinct_messages_at_identical_timestamp_are_allowed(self):
+        rows=self.rows()
+        rows.append(dict(rows[-1],line=99,error_code="OTHER_EVENT"))
+        self.assertIsNotNone(self.r.analyze(rows,"v1","v2"))
+
+    def test_dense_replay_half_sample_offset_is_rejected(self):
+        base=self.rows()
+        rows=[dict(base[0],line=i+2,timestamp=1000+i*.01) for i in range(100)]+[dict(base[10],line=i+102,timestamp=1000+i*.01) for i in range(100)]
+        for r in rows[101:199]:r["timestamp"]+=.0049
+        self.assertEqual(self.r.analyze(rows,"v1","v2")["status"],"not_comparable")
+
     def test_duplicate_observations_rejected(self):
         rows=self.rows(); rows.append(dict(rows[0]))
         with self.assertRaises(ValueError): self.r.analyze(rows,'v1','v2')
 
     def test_maximum_rows_bounded(self):
         with self.assertRaises(ValueError): self.r.parse_csv(io.StringIO('timestamp,version\n'), 'f', max_rows=0)
+
+    def test_csv_preserves_explicit_ota_evidence(self):
+        row=self.parse(error_code="OTA_CHECKSUM_MISMATCH",error_type="OTA_CHECKSUM_MISMATCH",expected_checksum="abc",actual_checksum="def")[0]
+        self.assertEqual(row["error_type"],"OTA_CHECKSUM_MISMATCH")
+        self.assertEqual(row["expected_checksum"],"abc")
 
     def test_private_rec_dependency_absent_fails_explicitly(self):
         with tempfile.TemporaryDirectory() as d:

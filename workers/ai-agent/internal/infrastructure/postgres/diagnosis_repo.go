@@ -30,7 +30,7 @@ func (r *PostgresDiagnosisRepository) GetAggregatedData(ctx context.Context, id 
 	if !exists {
 		return nil, fmt.Errorf("batch not found: %s", id)
 	}
-	d := &domain.AggregatedData{BatchID: id, ErrorCodeStats: map[string]int{}}
+	d := &domain.AggregatedData{StatsGrain: "affected_file", BatchID: id, ErrorCodeStats: map[string]int{}}
 	rows, err := r.db.QueryContext(ctx, `SELECT COALESCE(NULLIF(error_code,''),'UNKNOWN'),COUNT(*) FROM files WHERE batch_id=$1 GROUP BY 1`, id)
 	if err != nil {
 		return nil, err
@@ -56,6 +56,37 @@ func (r *PostgresDiagnosisRepository) GetAggregatedData(ctx context.Context, id 
 	}
 	d.RawLogs = logs.String
 	d.LogsSummary = truncate(logs.String, 2400)
+	var parsedCount int
+	if err = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM parsed_file_data WHERE batch_id=$1`, id).Scan(&parsedCount); err != nil {
+		return nil, err
+	}
+	if parsedCount > 0 {
+		d.ErrorCodeStats = map[string]int{}
+		records, e := r.db.QueryContext(ctx, `SELECT o->>'error_code',COUNT(*) FROM parsed_file_data p CROSS JOIN LATERAL jsonb_array_elements(p.observations) o WHERE p.batch_id=$1 AND COALESCE(o->>'error_code','')<>'' GROUP BY 1`, id)
+		if e != nil {
+			return nil, e
+		}
+		for records.Next() {
+			var code string
+			var count int
+			if e = records.Scan(&code, &count); e != nil {
+				records.Close()
+				return nil, e
+			}
+			d.ErrorCodeStats[code] = count
+		}
+		e = records.Err()
+		records.Close()
+		if e != nil {
+			return nil, e
+		}
+		d.StatsGrain = "log_occurrence"
+		var allLogs int
+		if e = r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM logs WHERE batch_id=$1`, id).Scan(&allLogs); e != nil {
+			return nil, e
+		}
+		ApplyParsedCoverage(d, allLogs)
+	}
 	return d, nil
 }
 func truncate(s string, n int) string {

@@ -12,6 +12,7 @@ import json
 import math
 from pathlib import Path
 import sys
+import statistics
 
 REQUIRED = ('timestamp', 'version', 'vehicle_id', 'vehicle_class', 'module', 'replay_id', 'workload', 'error_code', 'cpu', 'memory_mb')
 MAX_ROWS = 100000
@@ -60,6 +61,12 @@ def parse_csv(stream, source, max_rows=MAX_ROWS):
         if len(record['error_code']) > 128:
             raise ValueError('oversized error_code')
         record.update(timestamp=_time(record['timestamp']), cpu=_metric(record['cpu']), memory_mb=_metric(record['memory_mb']), source=source, line=reader.line_num)
+        for optional in ('error_type','expected_checksum','actual_checksum'):
+            if optional in row and row[optional].strip():
+                if len(row[optional])>256:raise ValueError('oversized optional evidence')
+                record[optional]=row[optional].strip()
+        for optional in ('elapsed_ms','timeout_ms'):
+            if optional in row and row[optional].strip():record[optional]=_metric(row[optional])
         rows.append(record)
     if not rows:
         raise ValueError('empty input')
@@ -74,7 +81,7 @@ def parse_file(path, source, metadata=None):
         with path.open(newline='', encoding='utf-8-sig') as f:
             return parse_csv(f, source)
     if '.record' in path.name or path.suffix.lower() == '.rec':
-        if not metadata or metadata.get('record_format') != 'apollo_cyber':
+        if not metadata or metadata.get('record_format')!='apollo_cyber':
             raise ValueError('record format must explicitly be apollo_cyber; private rec is not interchangeable')
         from apollo_record import parse_record
         return parse_record(path, source, metadata, max_rows=MAX_ROWS)
@@ -120,7 +127,7 @@ def analyze(rows, baseline=None, candidate=None):
             v=row[metric]
             if (metric=='timestamp' and v is None) or (v is not None and (not isinstance(v,(float,int)) or not math.isfinite(v) or v<0)):
                 raise ValueError('invalid persisted metric')
-        identity = (_key(row), row['version'], row['timestamp'])
+        identity = (_key(row), row['version'], row.get('raw',{}).get('file_sha256',row['source']), row['line'])
         if identity in seen:
             raise ValueError('duplicate observation; refusing inflated sample counts')
         seen.add(identity)
@@ -128,7 +135,7 @@ def analyze(rows, baseline=None, candidate=None):
     versions = sorted({r['version'] for r in rows})
     report = dict(schema_version=1, experiment_source='uploaded_observations', baseline_version=baseline, candidate_version=candidate,
                   sample_count=len(rows), matched_samples=0, versions=versions, comparisons=[], unmatched_groups=[], candidates=[], evidence=[], timeline=[], limitations=[],
-                  policy=dict(min_samples_per_version=MIN_SAMPLES, max_duration_ratio=1.1, max_sample_ratio=1.1, percentile='sorted[floor(n*p)]', match_keys=['vehicle_id','vehicle_class','module','replay_id','workload']))
+                  policy=dict(min_samples_per_version=MIN_SAMPLES, max_duration_ratio=1.1, max_sample_ratio=1.1, percentile='sorted[floor(n*p)]',sampling_tolerance='max(1us,1% median positive baseline sample interval)', match_keys=['vehicle_id','vehicle_class','module','replay_id','workload']))
     if baseline is None and candidate is None:
         report.update(status='descriptive_only')
         report['limitations'].append('Explicit baseline and candidate versions required for regression comparison; version order is never inferred.')
@@ -147,11 +154,13 @@ def analyze(rows, baseline=None, candidate=None):
             reason='missing version or insufficient samples'
         else:
             db=before[-1]['timestamp']-before[0]['timestamp']; da=after[-1]['timestamp']-after[0]['timestamp']
+            gaps=[b['timestamp']-a['timestamp'] for a,b in zip(before,before[1:]) if b['timestamp']>a['timestamp']]
+            tolerance=max(.000001, statistics.median(gaps)*.01) if gaps else .000001
             if db<=0 or da<=0 or max(db,da)/min(db,da)>1.1:
                 reason='duration mismatch'
             elif max(len(before),len(after))/min(len(before),len(after))>1.1:
                 reason='sample count mismatch'
-            elif any(abs((b['timestamp']-before[0]['timestamp'])-(a['timestamp']-after[0]['timestamp']))>max(.001, db*.01) for b,a in zip(before,after)):
+            elif any(abs((b['timestamp']-before[0]['timestamp'])-(a['timestamp']-after[0]['timestamp']))>tolerance for b,a in zip(before,after)):
                 reason='replay sampling offset mismatch'
         if reason:
             report['unmatched_groups'].append(dict(group=label,reason=reason,baseline_samples=len(before),candidate_samples=len(after)))

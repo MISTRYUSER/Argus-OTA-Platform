@@ -24,6 +24,7 @@ type Processor struct {
 type uploadedFile struct {
 	ID        uuid.UUID
 	Name, Key string
+	Metadata  []byte
 }
 
 func (p *Processor) ParseBatch(ctx context.Context, id uuid.UUID) error {
@@ -37,14 +38,14 @@ func (p *Processor) ParseBatch(ctx context.Context, id uuid.UUID) error {
 	if status != "uploaded" && status != "scattering" {
 		return nil
 	}
-	rows, e := p.DB.QueryContext(ctx, `SELECT f.id,f.original_filename,f.minio_path FROM files f LEFT JOIN parsed_file_data p ON p.file_id=f.id WHERE f.batch_id=$1 AND p.file_id IS NULL ORDER BY f.id`, id)
+	rows, e := p.DB.QueryContext(ctx, `SELECT f.id,f.original_filename,f.minio_path,f.metadata FROM files f LEFT JOIN parsed_file_data p ON p.file_id=f.id WHERE f.batch_id=$1 AND p.file_id IS NULL ORDER BY f.id`, id)
 	if e != nil {
 		return e
 	}
 	var files []uploadedFile
 	for rows.Next() {
 		var f uploadedFile
-		if e = rows.Scan(&f.ID, &f.Name, &f.Key); e != nil {
+		if e = rows.Scan(&f.ID, &f.Name, &f.Key, &f.Metadata); e != nil {
 			rows.Close()
 			return e
 		}
@@ -98,7 +99,11 @@ func (p *Processor) parseFile(ctx context.Context, id uuid.UUID, f uploadedFile)
 	if n > MaxBytes {
 		return &domain.PermanentTaskError{Err: fmt.Errorf("input exceeds 32 MiB")}
 	}
-	parsed, e := p.Python.Parse(ctx, path, "minio:"+f.Key)
+	python := p.Python
+	if string(f.Metadata) != "{}" && len(f.Metadata) > 0 {
+		python.RecordMetadata = string(f.Metadata)
+	}
+	parsed, e := python.Parse(ctx, path, "minio:"+f.Key)
 	if e != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()

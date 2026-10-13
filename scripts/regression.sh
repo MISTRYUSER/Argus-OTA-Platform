@@ -3,6 +3,7 @@ set -eu
 cd "$(dirname "$0")/.."
 stage=${1:-regression}
 go_bin=${GO_BIN:-go}
+export OTEL_TRACES_SAMPLER=always_on
 mkdir -p .regression-results
 "$go_bin" test -count=1 -json ./... > ".regression-results/$stage-tests.json"
 "$go_bin" vet ./... > ".regression-results/$stage-vet.txt" 2>&1
