@@ -93,7 +93,7 @@ func (r *PostgresBatchRepository) SaveBatchAndFile(ctx context.Context, _ *domai
 	if b.Status != domain.BatchStatusPending {
 		return fmt.Errorf("upload is already closed")
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO files(id,batch_id,filename,original_filename,file_size,file_type,minio_path,processing_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, file.ID, file.BatchID, file.Filename, file.OriginalFilename, file.FileSize, file.FileType, file.MinIOPath, file.ProcessingStatus)
+	_, err = tx.ExecContext(ctx, `INSERT INTO files(id,batch_id,filename,original_filename,file_size,file_type,minio_path,processing_status,metadata) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, file.ID, file.BatchID, file.Filename, file.OriginalFilename, file.FileSize, file.FileType, file.MinIOPath, file.ProcessingStatus, fileMetadata(file.Metadata))
 	if err != nil {
 		return err
 	}

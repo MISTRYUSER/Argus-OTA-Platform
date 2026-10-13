@@ -124,7 +124,7 @@ func AddTokens(ctx context.Context, n int) {
 	}
 }
 func AddCounter(ctx context.Context, name string) {
-	if name != "argus_model_queue_rejections_total" && name != "argus_model_retries_total" {
+	if name != "argus_model_queue_rejections_total" && name != "argus_model_retries_total" && name != "argus_model_attempts_total" {
 		return
 	}
 	c, _ := otel.Meter("argus").Int64Counter(name)

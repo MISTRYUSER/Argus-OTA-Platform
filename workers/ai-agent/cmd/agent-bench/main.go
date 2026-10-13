@@ -13,6 +13,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/google/uuid"
 	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/hybrid"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/investigation"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/nodes"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
@@ -64,22 +65,31 @@ func (t *requestTrace) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 type inputCase struct {
-	ID    string   `json:"id"`
-	Lines []string `json:"lines"`
-	SHA   string   `json:"sha256"`
+	ID             string         `json:"id"`
+	Lines          []string       `json:"lines"`
+	SHA            string         `json:"sha256"`
+	ErrorCodeStats map[string]int `json:"error_code_stats,omitempty"`
+	LogsSummary    string         `json:"logs_summary,omitempty"`
 }
 type suite struct {
 	Benchmark, Revision, Adapter string
 	Cases                        []inputCase
+	Partition                    string `json:"partition,omitempty"`
 }
 type repo struct {
 	domain.DiagnosisRepository
-	lines      []string
-	checkpoint []byte
+	lines          []string
+	checkpoint     []byte
+	errorCodeStats map[string]int
+	logsSummary    string
 }
 
 func (r repo) GetAggregatedData(context.Context, string) (*domain.AggregatedData, error) {
-	return &domain.AggregatedData{RawLogs: strings.Join(r.lines, "\n"), ErrorCodeStats: map[string]int{"snapshot_records": len(r.lines)}}, nil
+	stats := r.errorCodeStats
+	if stats == nil {
+		stats = map[string]int{"snapshot_records": len(r.lines)}
+	}
+	return &domain.AggregatedData{LogsSummary: r.logsSummary, RawLogs: strings.Join(r.lines, "\n"), ErrorCodeStats: stats}, nil
 }
 
 func (r *repo) LoadInvestigationCheckpoint(context.Context, string) ([]byte, error) {
@@ -136,12 +146,20 @@ func run() error {
 	}()
 	input := flag.String("input", "", "blind JSON input")
 	out := flag.String("out", "", "result directory")
-	mode := flag.String("mode", "agent", "agent or single-shot baseline")
+	mode := flag.String("mode", "agent", "agent, hybrid, or single-shot baseline")
 	trials := flag.Int("trials", 3, "trials per scenario")
 	parallel := flag.Int("parallel", 2, "parallel investigations")
 	taskPlan := flag.String("task-plan", "", "explicit case/trial replay schedule; source attempts remain immutable")
+	heldout := flag.Bool("heldout", false, "require input partition=heldout, with no labels sent to the model")
+	fixture := flag.Bool("fixture", false, "run synthetic local HTTP hybrid comparison; out is a JSON file")
 	flag.Parse()
-	if *mode != "agent" && *mode != "baseline" {
+	if *fixture {
+		if *out == "" {
+			return fmt.Errorf("fixture requires -out JSON file")
+		}
+		return runHybridFixture(*out)
+	}
+	if *mode != "agent" && *mode != "baseline" && *mode != "hybrid" {
 		return fmt.Errorf("invalid mode")
 	}
 	if *trials < 1 || *trials > 3 || *parallel < 1 || *parallel > 4 || *input == "" || *out == "" {
@@ -154,6 +172,9 @@ func run() error {
 	var s suite
 	if e = json.Unmarshal(raw, &s); e != nil {
 		return e
+	}
+	if *heldout && s.Partition != "heldout" {
+		return fmt.Errorf("independent heldout run requires input partition=heldout")
 	}
 	if len(s.Cases) == 0 || len(s.Cases) > 35 {
 		return fmt.Errorf("expected 1..35 scenarios")
@@ -213,7 +234,7 @@ func run() error {
 				transport := &requestTrace{}
 				chat, err := llm.NewGLM4ChatModel(&llm.GLM4Config{HTTPClient: &http.Client{Transport: transport, Timeout: 60 * time.Second}, APIKey: key, BaseURL: "https://api.deepseek.com", Model: "deepseek-flash"})
 				var result *domain.DiagnosisResult
-				store := &repo{lines: c.Lines}
+				store := &repo{lines: c.Lines, errorCodeStats: c.ErrorCodeStats, logsSummary: c.LogsSummary}
 				observer := &briefModel{ChatModel: chat, brief: brief + fmt.Sprintf(" Snapshot contains %d addressable lines. Do not invent entity names.", len(c.Lines))}
 				if err == nil && *mode == "baseline" {
 					text := strings.Join(c.Lines, "\n")
@@ -239,11 +260,17 @@ func run() error {
 						}
 					}
 				}
-				if err == nil && *mode == "agent" {
+				if err == nil && (*mode == "agent" || *mode == "hybrid") {
 					var a *investigation.Agent
 					a, err = investigation.NewAgent(store, nil, observer, investigation.Options{TaskInstructions: brief + fmt.Sprintf(" Snapshot contains %d addressable lines. Do not invent entity names.", len(c.Lines)), MaxSteps: 12, ModelName: "deepseek-flash"})
 					if err == nil {
-						result, err = a.Run(ctx, batchID)
+						var runner domain.DiagnosisRunner = a
+						if *mode == "hybrid" {
+							runner, err = hybrid.NewRunner(store, observer, a, hybrid.Options{ModelName: "deepseek-flash"})
+						}
+						if err == nil {
+							result, err = runner.Run(ctx, batchID)
+						}
 					}
 				}
 				if err == nil && result == nil {
@@ -261,7 +288,14 @@ func run() error {
 					result.ExecutionTraceID = traceID
 				}
 				endBenchmark(err)
-				row := map[string]interface{}{"request_tool_policy": transport.rows, "checkpoint": json.RawMessage(store.checkpoint), "model_replies": observer.Replies, "provider_stats": stats, "trace_id": traceID, "mode": *mode, "scenario_id": c.ID, "trial": trial, "latency_ms": time.Since(start).Milliseconds(), "model": "deepseek-flash", "input_sha256": c.SHA, "benchmark_revision": s.Revision, "adapter": s.Adapter, "result": result, "valid_report": err == nil}
+				status := "success"
+				if err != nil {
+					status = "failure"
+				}
+				if result != nil && strings.HasPrefix(result.RootCause, "Unresolved:") {
+					status = "unresolved"
+				}
+				row := map[string]interface{}{"status": status, "partition": s.Partition, "actual_http_calls": len(transport.rows), "cost_usd": nil, "cost_status": "unknown: provider pricing not configured", "request_tool_policy": transport.rows, "checkpoint": json.RawMessage(store.checkpoint), "model_replies": observer.Replies, "provider_stats": stats, "trace_id": traceID, "mode": *mode, "scenario_id": c.ID, "trial": trial, "latency_ms": time.Since(start).Milliseconds(), "model": "deepseek-flash", "input_sha256": c.SHA, "benchmark_revision": s.Revision, "adapter": s.Adapter, "result": result, "valid_report": err == nil}
 				if err != nil {
 					row["error"] = strings.ReplaceAll(err.Error(), key, "[REDACTED]")
 				}
@@ -292,6 +326,11 @@ func run() error {
 	var errs []error
 	for err := range writeErrors {
 		errs = append(errs, err)
+	}
+	if len(errs) == 0 {
+		if err := writeEvaluationSummary(*out, *mode, s.Partition); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	return errors.Join(errs...)
 }

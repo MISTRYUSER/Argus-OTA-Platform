@@ -1,0 +1,967 @@
+{
+  "synthetic": true,
+  "scope": "Functional fixed-workflow routing and measured local HTTP call savings only; scripted answers and tokens do not establish real model quality, latency, or fees. Cost unknown. Cases are independent of ITBench labels.",
+  "attempts": [
+    {
+      "case": "checksum",
+      "mode": "agent",
+      "status": "success",
+      "actual_http_calls": 2,
+      "provider_reported_synthetic_tokens": 60,
+      "latency_ms": 12.399,
+      "cost_usd": null,
+      "result": {
+        "model_steps": 2,
+        "reserved_token_units": 72765,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "Observed failure, upstream cause unknown",
+            "status": "supported",
+            "supports": [
+              "log:1"
+            ],
+            "next_check": "Inspect upstream cause"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_CHECKSUM_MISMATCH\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:OTA_CHECKSUM_MISMATCH"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "batch:a280b2b9-d219-4851-9a03-55314fe6b67f:logs",
+            "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+          },
+          {
+            "id": "stats:OTA_CHECKSUM_MISMATCH",
+            "source": "batch:a280b2b9-d219-4851-9a03-55314fe6b67f:error_statistics",
+            "content": "OTA_CHECKSUM_MISMATCH count=1 grain="
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 1,
+            "tool": "read_logs",
+            "arguments": {},
+            "output": {
+              "next_offset": 1,
+              "total_matches": 1,
+              "evidence": [
+                {
+                  "id": "log:1",
+                  "source": "batch:a280b2b9-d219-4851-9a03-55314fe6b67f:logs",
+                  "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+                }
+              ]
+            },
+            "duration_ms": 1
+          },
+          {
+            "step": 1,
+            "tool": "error_statistics",
+            "arguments": {},
+            "output": {
+              "evidence": [
+                {
+                  "id": "stats:OTA_CHECKSUM_MISMATCH",
+                  "source": "batch:a280b2b9-d219-4851-9a03-55314fe6b67f:error_statistics",
+                  "content": "OTA_CHECKSUM_MISMATCH count=1 grain="
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "update_investigation_plan",
+            "arguments": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "output": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "duration_ms": 3
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response"
+        ],
+        "tokens_used": 60,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "timeout",
+      "mode": "agent",
+      "status": "success",
+      "actual_http_calls": 2,
+      "provider_reported_synthetic_tokens": 60,
+      "latency_ms": 1.451,
+      "cost_usd": null,
+      "result": {
+        "model_steps": 2,
+        "reserved_token_units": 72672,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "Observed failure, upstream cause unknown",
+            "status": "supported",
+            "supports": [
+              "log:1"
+            ],
+            "next_check": "Inspect upstream cause"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_DOWNLOAD_TIMEOUT\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:OTA_DOWNLOAD_TIMEOUT"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "batch:ee5237cd-b93a-4949-a20c-09f29db612d6:logs",
+            "content": "{\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"elapsed_ms\":200,\"timeout_ms\":100}"
+          },
+          {
+            "id": "stats:OTA_DOWNLOAD_TIMEOUT",
+            "source": "batch:ee5237cd-b93a-4949-a20c-09f29db612d6:error_statistics",
+            "content": "OTA_DOWNLOAD_TIMEOUT count=1 grain="
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 1,
+            "tool": "read_logs",
+            "arguments": {},
+            "output": {
+              "next_offset": 1,
+              "total_matches": 1,
+              "evidence": [
+                {
+                  "id": "log:1",
+                  "source": "batch:ee5237cd-b93a-4949-a20c-09f29db612d6:logs",
+                  "content": "{\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"elapsed_ms\":200,\"timeout_ms\":100}"
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "error_statistics",
+            "arguments": {},
+            "output": {
+              "evidence": [
+                {
+                  "id": "stats:OTA_DOWNLOAD_TIMEOUT",
+                  "source": "batch:ee5237cd-b93a-4949-a20c-09f29db612d6:error_statistics",
+                  "content": "OTA_DOWNLOAD_TIMEOUT count=1 grain="
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "update_investigation_plan",
+            "arguments": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "output": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "duration_ms": 0
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response"
+        ],
+        "tokens_used": 60,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "unknown",
+      "mode": "agent",
+      "status": "success",
+      "actual_http_calls": 2,
+      "provider_reported_synthetic_tokens": 60,
+      "latency_ms": 1.441,
+      "cost_usd": null,
+      "result": {
+        "model_steps": 2,
+        "reserved_token_units": 72387,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "Observed failure, upstream cause unknown",
+            "status": "supported",
+            "supports": [
+              "log:1"
+            ],
+            "next_check": "Inspect upstream cause"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:E_OTHER\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:E_OTHER"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "batch:10e036a1-2b09-420f-aa67-9e1b4d2040d7:logs",
+            "content": "E_OTHER: ambiguous symptom"
+          },
+          {
+            "id": "stats:E_OTHER",
+            "source": "batch:10e036a1-2b09-420f-aa67-9e1b4d2040d7:error_statistics",
+            "content": "E_OTHER count=1 grain="
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 1,
+            "tool": "read_logs",
+            "arguments": {},
+            "output": {
+              "next_offset": 1,
+              "total_matches": 1,
+              "evidence": [
+                {
+                  "id": "log:1",
+                  "source": "batch:10e036a1-2b09-420f-aa67-9e1b4d2040d7:logs",
+                  "content": "E_OTHER: ambiguous symptom"
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "error_statistics",
+            "arguments": {},
+            "output": {
+              "evidence": [
+                {
+                  "id": "stats:E_OTHER",
+                  "source": "batch:10e036a1-2b09-420f-aa67-9e1b4d2040d7:error_statistics",
+                  "content": "E_OTHER count=1 grain="
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "update_investigation_plan",
+            "arguments": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "output": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "duration_ms": 0
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response"
+        ],
+        "tokens_used": 60,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "conflict",
+      "mode": "agent",
+      "status": "success",
+      "actual_http_calls": 2,
+      "provider_reported_synthetic_tokens": 60,
+      "latency_ms": 1.417,
+      "cost_usd": null,
+      "result": {
+        "model_steps": 2,
+        "reserved_token_units": 72765,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "Observed failure, upstream cause unknown",
+            "status": "supported",
+            "supports": [
+              "log:1"
+            ],
+            "next_check": "Inspect upstream cause"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_CHECKSUM_MISMATCH\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:OTA_CHECKSUM_MISMATCH"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "batch:9255d6f7-c1a6-47fe-b27c-b1042ec0d0bd:logs",
+            "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+          },
+          {
+            "id": "stats:OTA_CHECKSUM_MISMATCH",
+            "source": "batch:9255d6f7-c1a6-47fe-b27c-b1042ec0d0bd:error_statistics",
+            "content": "OTA_CHECKSUM_MISMATCH count=1 grain="
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 1,
+            "tool": "read_logs",
+            "arguments": {},
+            "output": {
+              "next_offset": 1,
+              "total_matches": 1,
+              "evidence": [
+                {
+                  "id": "log:1",
+                  "source": "batch:9255d6f7-c1a6-47fe-b27c-b1042ec0d0bd:logs",
+                  "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "error_statistics",
+            "arguments": {},
+            "output": {
+              "evidence": [
+                {
+                  "id": "stats:OTA_CHECKSUM_MISMATCH",
+                  "source": "batch:9255d6f7-c1a6-47fe-b27c-b1042ec0d0bd:error_statistics",
+                  "content": "OTA_CHECKSUM_MISMATCH count=1 grain="
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "update_investigation_plan",
+            "arguments": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "output": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "duration_ms": 0
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response"
+        ],
+        "tokens_used": 60,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "invented-reference",
+      "mode": "agent",
+      "status": "failure",
+      "error": "[NodeRunError] invalid diagnosis: invented evidence reference: invented\n------------------------\nnode path: [finish]",
+      "actual_http_calls": 2,
+      "provider_reported_synthetic_tokens": 60,
+      "latency_ms": 1.459,
+      "cost_usd": null
+    },
+    {
+      "case": "budget-exhausted",
+      "mode": "agent",
+      "status": "failure",
+      "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]",
+      "actual_http_calls": 0,
+      "provider_reported_synthetic_tokens": 0,
+      "latency_ms": 0.119,
+      "cost_usd": null
+    },
+    {
+      "case": "checksum",
+      "mode": "hybrid",
+      "status": "success",
+      "actual_http_calls": 1,
+      "provider_reported_synthetic_tokens": 30,
+      "latency_ms": 0.373,
+      "cost_usd": null,
+      "result": {
+        "resolution_status": "provisional",
+        "model_steps": 1,
+        "reserved_token_units": 31905,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "OTA_CHECKSUM_MISMATCH observed; upstream cause unconfirmed",
+            "status": "open",
+            "supports": [
+              "log:1",
+              "stats:1"
+            ],
+            "next_check": "Verify upstream cause independently"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:1\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:1"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "aggregate:b3cb9a6a-0f45-4c43-8128-82ae91953cd8:line:1",
+            "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+          },
+          {
+            "id": "stats:1",
+            "source": "aggregate:b3cb9a6a-0f45-4c43-8128-82ae91953cd8:error_statistics",
+            "content": "{\"OTA_CHECKSUM_MISMATCH\":1}"
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 0,
+            "tool": "fixed_evidence",
+            "arguments": {},
+            "output": [
+              {
+                "id": "log:1",
+                "source": "aggregate:b3cb9a6a-0f45-4c43-8128-82ae91953cd8:line:1",
+                "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+              },
+              {
+                "id": "stats:1",
+                "source": "aggregate:b3cb9a6a-0f45-4c43-8128-82ae91953cd8:error_statistics",
+                "content": "{\"OTA_CHECKSUM_MISMATCH\":1}"
+              }
+            ],
+            "duration_ms": 0
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response",
+          "Hybrid fixed evidence workflow; upstream cause unconfirmed; confidence is uncalibrated"
+        ],
+        "tokens_used": 30,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "timeout",
+      "mode": "hybrid",
+      "status": "success",
+      "actual_http_calls": 1,
+      "provider_reported_synthetic_tokens": 30,
+      "latency_ms": 0.368,
+      "cost_usd": null,
+      "result": {
+        "resolution_status": "provisional",
+        "model_steps": 1,
+        "reserved_token_units": 31815,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "OTA_DOWNLOAD_TIMEOUT observed; upstream cause unconfirmed",
+            "status": "open",
+            "supports": [
+              "log:1",
+              "stats:1"
+            ],
+            "next_check": "Verify upstream cause independently"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:1\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:1"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "aggregate:6d8c05a1-13dd-4286-b70f-36d4ece54a58:line:1",
+            "content": "{\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"elapsed_ms\":200,\"timeout_ms\":100}"
+          },
+          {
+            "id": "stats:1",
+            "source": "aggregate:6d8c05a1-13dd-4286-b70f-36d4ece54a58:error_statistics",
+            "content": "{\"OTA_DOWNLOAD_TIMEOUT\":1}"
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 0,
+            "tool": "fixed_evidence",
+            "arguments": {},
+            "output": [
+              {
+                "id": "log:1",
+                "source": "aggregate:6d8c05a1-13dd-4286-b70f-36d4ece54a58:line:1",
+                "content": "{\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"elapsed_ms\":200,\"timeout_ms\":100}"
+              },
+              {
+                "id": "stats:1",
+                "source": "aggregate:6d8c05a1-13dd-4286-b70f-36d4ece54a58:error_statistics",
+                "content": "{\"OTA_DOWNLOAD_TIMEOUT\":1}"
+              }
+            ],
+            "duration_ms": 0
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response",
+          "Hybrid fixed evidence workflow; upstream cause unconfirmed; confidence is uncalibrated"
+        ],
+        "tokens_used": 30,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "unknown",
+      "mode": "hybrid",
+      "status": "success",
+      "actual_http_calls": 2,
+      "provider_reported_synthetic_tokens": 60,
+      "latency_ms": 1.729,
+      "cost_usd": null,
+      "result": {
+        "model_steps": 2,
+        "reserved_token_units": 72387,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "Observed failure, upstream cause unknown",
+            "status": "supported",
+            "supports": [
+              "log:1"
+            ],
+            "next_check": "Inspect upstream cause"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:E_OTHER\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:E_OTHER"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "batch:77a46494-f98e-42f2-9fdb-e1f51de54dbd:logs",
+            "content": "E_OTHER: ambiguous symptom"
+          },
+          {
+            "id": "stats:E_OTHER",
+            "source": "batch:77a46494-f98e-42f2-9fdb-e1f51de54dbd:error_statistics",
+            "content": "E_OTHER count=1 grain="
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 1,
+            "tool": "read_logs",
+            "arguments": {},
+            "output": {
+              "next_offset": 1,
+              "total_matches": 1,
+              "evidence": [
+                {
+                  "id": "log:1",
+                  "source": "batch:77a46494-f98e-42f2-9fdb-e1f51de54dbd:logs",
+                  "content": "E_OTHER: ambiguous symptom"
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "error_statistics",
+            "arguments": {},
+            "output": {
+              "evidence": [
+                {
+                  "id": "stats:E_OTHER",
+                  "source": "batch:77a46494-f98e-42f2-9fdb-e1f51de54dbd:error_statistics",
+                  "content": "E_OTHER count=1 grain="
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "update_investigation_plan",
+            "arguments": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "output": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "duration_ms": 0
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response",
+          "Hybrid route: investigation (unrecognized explicit error type)"
+        ],
+        "tokens_used": 60,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "conflict",
+      "mode": "hybrid",
+      "status": "success",
+      "actual_http_calls": 2,
+      "provider_reported_synthetic_tokens": 60,
+      "latency_ms": 1.01,
+      "cost_usd": null,
+      "result": {
+        "model_steps": 2,
+        "reserved_token_units": 72765,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "Observed failure, upstream cause unknown",
+            "status": "supported",
+            "supports": [
+              "log:1"
+            ],
+            "next_check": "Inspect upstream cause"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Observed failure; upstream cause unknown",
+        "Suggestions": [
+          "Inspect upstream cause"
+        ],
+        "Severity": "high",
+        "Confidence": 0.5,
+        "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_CHECKSUM_MISMATCH\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:OTA_CHECKSUM_MISMATCH"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "batch:bd5c8fdc-1523-4c77-b006-bcbb434867c7:logs",
+            "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+          },
+          {
+            "id": "stats:OTA_CHECKSUM_MISMATCH",
+            "source": "batch:bd5c8fdc-1523-4c77-b006-bcbb434867c7:error_statistics",
+            "content": "OTA_CHECKSUM_MISMATCH count=1 grain="
+          }
+        ],
+        "tool_trace": [
+          {
+            "step": 1,
+            "tool": "read_logs",
+            "arguments": {},
+            "output": {
+              "next_offset": 1,
+              "total_matches": 1,
+              "evidence": [
+                {
+                  "id": "log:1",
+                  "source": "batch:bd5c8fdc-1523-4c77-b006-bcbb434867c7:logs",
+                  "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "error_statistics",
+            "arguments": {},
+            "output": {
+              "evidence": [
+                {
+                  "id": "stats:OTA_CHECKSUM_MISMATCH",
+                  "source": "batch:bd5c8fdc-1523-4c77-b006-bcbb434867c7:error_statistics",
+                  "content": "OTA_CHECKSUM_MISMATCH count=1 grain="
+                }
+              ]
+            },
+            "duration_ms": 0
+          },
+          {
+            "step": 1,
+            "tool": "update_investigation_plan",
+            "arguments": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "output": {
+              "hypotheses": [
+                {
+                  "id": "H1",
+                  "description": "Observed failure, upstream cause unknown",
+                  "status": "supported",
+                  "supports": [
+                    "log:1"
+                  ],
+                  "next_check": "Inspect upstream cause"
+                }
+              ]
+            },
+            "duration_ms": 0
+          }
+        ],
+        "limitations": [
+          "Synthetic scripted response",
+          "Hybrid route: investigation (missing or conflicting checksum evidence)"
+        ],
+        "tokens_used": 60,
+        "model": "fixture"
+      }
+    },
+    {
+      "case": "invented-reference",
+      "mode": "hybrid",
+      "status": "failure",
+      "error": "invalid diagnosis: invented evidence invented",
+      "actual_http_calls": 1,
+      "provider_reported_synthetic_tokens": 30,
+      "latency_ms": 0.31,
+      "cost_usd": null
+    },
+    {
+      "case": "budget-exhausted",
+      "mode": "hybrid",
+      "status": "unresolved",
+      "actual_http_calls": 0,
+      "provider_reported_synthetic_tokens": 0,
+      "latency_ms": 0.073,
+      "cost_usd": null,
+      "result": {
+        "resolution_status": "unresolved",
+        "model_steps": 0,
+        "reserved_token_units": 0,
+        "hypotheses": [
+          {
+            "id": "H1",
+            "description": "Root cause unresolved",
+            "status": "open",
+            "next_check": "Human review"
+          }
+        ],
+        "hypothesis_id": "H1",
+        "RootCause": "Unresolved: investigation budget exhausted; human review required",
+        "Suggestions": [
+          "Review current evidence and gather missing observations before assigning root cause"
+        ],
+        "Severity": "info",
+        "Confidence": 0,
+        "RawLLMOutput": "{\"confidence\":0,\"evidence_ids\":[\"log:1\",\"stats:1\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Fixed workflow summary reservation exceeds configured budget\"],\"root_cause\":\"Unresolved: investigation budget exhausted; human review required\",\"severity\":\"info\",\"suggestions\":[\"Review current evidence and gather missing observations before assigning root cause\"]}",
+        "evidence_ids": [
+          "log:1",
+          "stats:1"
+        ],
+        "evidence": [
+          {
+            "id": "log:1",
+            "source": "aggregate:eabafbf8-13d2-4a97-8960-de7663eae04c:line:1",
+            "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+          },
+          {
+            "id": "stats:1",
+            "source": "aggregate:eabafbf8-13d2-4a97-8960-de7663eae04c:error_statistics",
+            "content": "{\"OTA_CHECKSUM_MISMATCH\":1}"
+          }
+        ],
+        "limitations": [
+          "Fixed workflow summary reservation exceeds configured budget"
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "agent": {
+      "attempts": 6,
+      "successes": 4,
+      "failures": 2,
+      "unresolved": 0,
+      "actual_http_calls": 10,
+      "provider_reported_synthetic_tokens": 300,
+      "latency_p95_ms": 12.399
+    },
+    "hybrid": {
+      "attempts": 6,
+      "successes": 4,
+      "failures": 1,
+      "unresolved": 1,
+      "actual_http_calls": 7,
+      "provider_reported_synthetic_tokens": 210,
+      "latency_p95_ms": 1.729
+    }
+  }
+}

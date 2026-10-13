@@ -1,0 +1,15 @@
+{
+  "run_id": 38372712810,
+  "run_url": "https://github.com/MISTRYUSER/Argus-OTA-Platform/actions/runs/38372712810",
+  "source_commit": "75159852ab955de24392aa50db49c0bd59a9b6cc",
+  "conclusion": "success",
+  "artifact_sha256": "890cbb6c3c2edc23fc44cf79684c77830c1a55bc6d23d9e43a45086ad7f0f305",
+  "files": {
+    "version-regression.json": "c1c16bba97aab3661d93719f502584238aa77d90ec8f9fc9328d36aed916b688",
+    "hybrid-fixture.json": "65126f3dc9ac24e0622322a421192aaac355b4475c4b2cd7b957d66b029c72e9",
+    "version-regression-pipeline.json": "4d120a01d533a8cb21200409dc7280da06f1b286d7c48a79c91184d351136243",
+    "public-record.json": "581e9fc87d188f2e60c089481570ff3c21e1e3154ccf7b014fc2af08aedd3ab8",
+    "shared-quota-multiprocess.json": "ff566bf283dc1344aa262b3400431e8857c321f4767e6b7c780175af679a324a",
+    "go-tests.json": "67c854e4a2d02e9c5e256f174a31268fda0d48cfb006695a6d8fb1c355cb0f2d"
+  }
+}

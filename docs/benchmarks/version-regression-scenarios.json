@@ -1,0 +1,1024 @@
+{
+  "schema_version": 1,
+  "benchmark": "heldout_synthetic_version_regression",
+  "seed": 20261013,
+  "repeats_per_kind": 6,
+  "label_origin": "Programmatic labels from independent synthetic fault-injection design.",
+  "scope": "Observed-regression detection and incomparable-input refusal; no causal root-cause score.",
+  "limitations": [
+    "Synthetic correctness scenarios are not production gains or production accuracy.",
+    "Inputs pair identical per-sample noise; injected changes test arithmetic and comparison guards.",
+    "Latency covers CSV generation/parsing, optional fixture writes, and local analysis; environment-dependent.",
+    "Failures remain in every all-task denominator and the confusion matrix."
+  ],
+  "summary": {
+    "total_tasks": 60,
+    "passed_tasks": 57,
+    "failed_tasks": 0,
+    "quality_all_tasks": 0.95,
+    "detection_recall": 1.0,
+    "no_change_correct_rate": 1.0,
+    "unmatched_refusal_rate": 0.9,
+    "evidence_correct_tasks": 60,
+    "evidence_correct_rate_all_tasks": 1.0,
+    "confusion_matrix": {
+      "regression": {
+        "regression": 18,
+        "no_regression": 0,
+        "refused": 0,
+        "failed": 0
+      },
+      "no_regression": {
+        "regression": 0,
+        "no_regression": 12,
+        "refused": 0,
+        "failed": 0
+      },
+      "refused": {
+        "regression": 0,
+        "no_regression": 3,
+        "refused": 27,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "samples": 60,
+      "mean": 1.8543142500069127,
+      "p95": 3.2940959999905317
+    }
+  },
+  "scenarios": [
+    {
+      "id": "cpu_increase-00",
+      "kind": "cpu_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "cpu"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "cpu"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 128,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 3.0845699993733433
+    },
+    {
+      "id": "cpu_increase-01",
+      "kind": "cpu_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "cpu"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "cpu"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 62,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.3045309997323784
+    },
+    {
+      "id": "cpu_increase-02",
+      "kind": "cpu_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "cpu"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "cpu"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 96,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 3.7912980005785357
+    },
+    {
+      "id": "cpu_increase-03",
+      "kind": "cpu_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "cpu"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "cpu"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 62,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.2090869995518005
+    },
+    {
+      "id": "cpu_increase-04",
+      "kind": "cpu_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "cpu"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "cpu"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 60,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 3.2940959999905317
+    },
+    {
+      "id": "cpu_increase-05",
+      "kind": "cpu_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "cpu"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "cpu"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 134,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 4.1123030005110195
+    },
+    {
+      "id": "memory_increase-00",
+      "kind": "memory_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "memory_mb"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "memory_mb"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 96,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.872859000286553
+    },
+    {
+      "id": "memory_increase-01",
+      "kind": "memory_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "memory_mb"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "memory_mb"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 94,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.6035929993449827
+    },
+    {
+      "id": "memory_increase-02",
+      "kind": "memory_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "memory_mb"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "memory_mb"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 86,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.6104429996630643
+    },
+    {
+      "id": "memory_increase-03",
+      "kind": "memory_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "memory_mb"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "memory_mb"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 86,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.68957300047623
+    },
+    {
+      "id": "memory_increase-04",
+      "kind": "memory_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "memory_mb"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "memory_mb"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 64,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.5061750000313623
+    },
+    {
+      "id": "memory_increase-05",
+      "kind": "memory_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "memory_mb"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "memory_mb"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 120,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 2.520797999750357
+    },
+    {
+      "id": "error_increase-00",
+      "kind": "error_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "error_rate"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "error_rate"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 72,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.5114939997147303
+    },
+    {
+      "id": "error_increase-01",
+      "kind": "error_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "error_rate"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "error_rate"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 68,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 2.8030149996993714
+    },
+    {
+      "id": "error_increase-02",
+      "kind": "error_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "error_rate"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "error_rate"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 50,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.3376309998420766
+    },
+    {
+      "id": "error_increase-03",
+      "kind": "error_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "error_rate"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "error_rate"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 98,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 2.2602050003115437
+    },
+    {
+      "id": "error_increase-04",
+      "kind": "error_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "error_rate"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "error_rate"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 70,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 1.5194759998848895
+    },
+    {
+      "id": "error_increase-05",
+      "kind": "error_increase",
+      "expected": "regression",
+      "expected_metrics": [
+        "error_rate"
+      ],
+      "predicted": "regression",
+      "actual_metrics": [
+        "error_rate"
+      ],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 132,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 2.3285980005312013
+    },
+    {
+      "id": "no_change-00",
+      "kind": "no_change",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 130,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 2.2065840003051562
+    },
+    {
+      "id": "no_change-01",
+      "kind": "no_change",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 56,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.1956560001635808
+    },
+    {
+      "id": "no_change-02",
+      "kind": "no_change",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 88,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.6661370000292663
+    },
+    {
+      "id": "no_change-03",
+      "kind": "no_change",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 130,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 2.3375709997708327
+    },
+    {
+      "id": "no_change-04",
+      "kind": "no_change",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 114,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 1.9260699991718866
+    },
+    {
+      "id": "no_change-05",
+      "kind": "no_change",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 102,
+      "evidence_count": 8,
+      "passed": true,
+      "latency_ms": 1.9769970003835624
+    },
+    {
+      "id": "workload_mismatch-00",
+      "kind": "workload_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.480406999689876
+    },
+    {
+      "id": "workload_mismatch-01",
+      "kind": "workload_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.2459919998946134
+    },
+    {
+      "id": "workload_mismatch-02",
+      "kind": "workload_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.8204500001957058
+    },
+    {
+      "id": "workload_mismatch-03",
+      "kind": "workload_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.97612499960087
+    },
+    {
+      "id": "workload_mismatch-04",
+      "kind": "workload_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 2.006570999583346
+    },
+    {
+      "id": "workload_mismatch-05",
+      "kind": "workload_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 2.0388399998410023
+    },
+    {
+      "id": "hardware_mismatch-00",
+      "kind": "hardware_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.3343159998839837
+    },
+    {
+      "id": "hardware_mismatch-01",
+      "kind": "hardware_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.7012910002449644
+    },
+    {
+      "id": "hardware_mismatch-02",
+      "kind": "hardware_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.8035550001513911
+    },
+    {
+      "id": "hardware_mismatch-03",
+      "kind": "hardware_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 2.196387999902072
+    },
+    {
+      "id": "hardware_mismatch-04",
+      "kind": "hardware_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.583282000865438
+    },
+    {
+      "id": "hardware_mismatch-05",
+      "kind": "hardware_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.9848279998768703
+    },
+    {
+      "id": "missing_metrics-00",
+      "kind": "missing_metrics",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 140,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 2.15494599979138
+    },
+    {
+      "id": "missing_metrics-01",
+      "kind": "missing_metrics",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 70,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 1.3779509999949369
+    },
+    {
+      "id": "missing_metrics-02",
+      "kind": "missing_metrics",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 126,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 1.9208419998903992
+    },
+    {
+      "id": "missing_metrics-03",
+      "kind": "missing_metrics",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 70,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 1.2895379995825351
+    },
+    {
+      "id": "missing_metrics-04",
+      "kind": "missing_metrics",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 136,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 2.137279000635317
+    },
+    {
+      "id": "missing_metrics-05",
+      "kind": "missing_metrics",
+      "expected": "no_regression",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 62,
+      "evidence_count": 6,
+      "passed": true,
+      "latency_ms": 1.2116900006731157
+    },
+    {
+      "id": "duration_mismatch-00",
+      "kind": "duration_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.065599999492406
+    },
+    {
+      "id": "duration_mismatch-01",
+      "kind": "duration_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.123046999964572
+    },
+    {
+      "id": "duration_mismatch-02",
+      "kind": "duration_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.4086179999139858
+    },
+    {
+      "id": "duration_mismatch-03",
+      "kind": "duration_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 2.3616870003024815
+    },
+    {
+      "id": "duration_mismatch-04",
+      "kind": "duration_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.689262000581948
+    },
+    {
+      "id": "duration_mismatch-05",
+      "kind": "duration_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 2.0809440002267365
+    },
+    {
+      "id": "sample_count_mismatch-00",
+      "kind": "sample_count_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.235056000041368
+    },
+    {
+      "id": "sample_count_mismatch-01",
+      "kind": "sample_count_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.1240079993513064
+    },
+    {
+      "id": "sample_count_mismatch-02",
+      "kind": "sample_count_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.0373579998486093
+    },
+    {
+      "id": "sample_count_mismatch-03",
+      "kind": "sample_count_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.3350270000955788
+    },
+    {
+      "id": "sample_count_mismatch-04",
+      "kind": "sample_count_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.7833540005085524
+    },
+    {
+      "id": "sample_count_mismatch-05",
+      "kind": "sample_count_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.2206139999761945
+    },
+    {
+      "id": "sampling_offset_mismatch-00",
+      "kind": "sampling_offset_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.975614000002679
+    },
+    {
+      "id": "sampling_offset_mismatch-01",
+      "kind": "sampling_offset_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.1603029997786507
+    },
+    {
+      "id": "sampling_offset_mismatch-02",
+      "kind": "sampling_offset_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 134,
+      "evidence_count": 8,
+      "passed": false,
+      "latency_ms": 2.5661070003479836
+    },
+    {
+      "id": "sampling_offset_mismatch-03",
+      "kind": "sampling_offset_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 120,
+      "evidence_count": 8,
+      "passed": false,
+      "latency_ms": 2.3270760002560564
+    },
+    {
+      "id": "sampling_offset_mismatch-04",
+      "kind": "sampling_offset_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "refused",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 0,
+      "evidence_count": 0,
+      "passed": true,
+      "latency_ms": 1.5023490004750784
+    },
+    {
+      "id": "sampling_offset_mismatch-05",
+      "kind": "sampling_offset_mismatch",
+      "expected": "refused",
+      "expected_metrics": [],
+      "predicted": "no_regression",
+      "actual_metrics": [],
+      "evidence_valid": true,
+      "causal_claim_valid": true,
+      "missingness_valid": true,
+      "matched_samples": 138,
+      "evidence_count": 8,
+      "passed": false,
+      "latency_ms": 2.329779999854509
+    }
+  ]
+}

@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -71,7 +72,18 @@ func (s *BatchService) AddFile(
 	originalFilename string,
 	fileSize int64,
 	minioPath string,
+	metadata ...json.RawMessage,
 ) error {
+	var provenance json.RawMessage
+	if len(metadata) > 1 {
+		return fmt.Errorf("one metadata object per file required")
+	}
+	if len(metadata) == 1 {
+		provenance = metadata[0]
+		if err := domain.ValidateFileMetadata(provenance); err != nil {
+			return err
+		}
+	}
 	// 1. 验证 Batch 存在
 	batch, err := s.batchRepo.FindByID(ctx, batchID)
 	if err != nil {
@@ -89,6 +101,7 @@ func (s *BatchService) AddFile(
 	// 3. 创建 File 记录
 	now := time.Now()
 	file := &domain.File{
+		Metadata:         provenance,
 		ID:               fileID,
 		BatchID:          batchID,
 		Filename:         fileID.String(), // 使用 fileID 作为 filename

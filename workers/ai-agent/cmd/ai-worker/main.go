@@ -58,6 +58,13 @@ func run() error {
 	if err = db.PingContext(ctx); err != nil {
 		return err
 	}
+	if cfg.SharedQuotaEnabled {
+		quota, e := llm.NewPostgresQuota(ctx, db, cfg.SharedQuotaScope, cfg.LLM.Governor.Concurrency, cfg.LLM.Governor.RequestTimeout, cfg.SharedQuotaGrace)
+		if e != nil {
+			return e
+		}
+		cfg.LLM.Governor.Shared = quota
+	}
 	repo := postgres.NewPostgresDiagnoseRepository(db)
 	var retriever domain.VectorRetriever = pgvector.NewTextRetriever(db)
 	if cfg.Embedding.APIKey != "" {

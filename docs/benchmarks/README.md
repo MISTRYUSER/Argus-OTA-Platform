@@ -35,6 +35,11 @@ Ordinary regression: `GO_BIN=go scripts/regression.sh <stage>` with PostgreSQL/R
 
 Checkpoint policy is now argus-harness-v3. Drain pending v1/v2 investigations under the old worker before deploying; do not silently reinterpret old checkpoints. Completed persisted diagnoses remain readable. Do not delete snapshots as part of rollout without an explicit recovery plan.
 
-LLM_CONCURRENCY (default4) and LLM_QUEUE_CAPACITY (default32) govern one process; they do not implement shared-provider or tenant quotas across replicas. AI_MODEL_RESERVATION_BUDGET defaults1000000. Cancellation reaches queue waits, backoff and HTTP calls. Queue-full admission becomes task deferral and does not consume investigation budget. A provider response followed by a crash before checkpoint persistence can repeat an external call; exactly-once billing is not claimed.
+LLM_CONCURRENCY (default4) and LLM_QUEUE_CAPACITY (default32) govern local admission. Migration09 and default-enabled LLM_SHARED_QUOTA additionally coordinate model attempts across replicas in the same explicit PostgreSQL scope; see [the current processing guide](version-regression-guide.md). AI_MODEL_RESERVATION_BUDGET defaults1000000. Cancellation reaches queue waits, backoff and HTTP calls. Queue-full admission becomes task deferral and does not consume investigation budget. A provider response followed by a crash before checkpoint persistence can repeat an external call; exactly-once billing is not claimed.
 
-Parser/aggregation mocks remain disclosed. Benchmark accuracy, operational correctness, local load scale, and production business results are separate evidence categories. No production SLA or enterprise deployment claim follows from these tests.
+Real CSV/Apollo parsing and Python aggregation are now default; mocks require ARGUS_PROCESSING_MODE=mock. Historical 2026-10-12 reports keep their original mock disclosure. Benchmark accuracy, operational correctness, local load scale, and production business results are separate evidence categories. No production SLA or enterprise deployment claim follows from these tests.
+
+
+## 2026-10-13 extension
+
+[Processing/routing/shared quota guide](version-regression-guide.md) and [measurement report](version-regression-results.md) distinguish real record decoding, synthetic comparison checks, HTTP routing fixtures and real subprocess/database recovery. ITBench model quality does not automatically transfer to OTA.

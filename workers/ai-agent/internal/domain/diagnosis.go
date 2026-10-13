@@ -10,6 +10,7 @@ import (
 
 // AggregatedData 聚合数据（从数据库获取）
 type AggregatedData struct {
+	StatsGrain     string
 	BatchID        string
 	ErrorCodeStats map[string]int
 	RawLogs        string
@@ -25,7 +26,8 @@ type ErrorCodeSummary struct {
 
 // DiagnosisResult 诊断结果（由 LLM 生成）
 type DiagnosisResult struct {
- ExecutionTraceID string `json:"execution_trace_id,omitempty"`
+	ResolutionStatus   string       `json:"resolution_status,omitempty"`
+	ExecutionTraceID   string       `json:"execution_trace_id,omitempty"`
 	ModelSteps         int          `json:"model_steps"`
 	ReservedTokens     int          `json:"reserved_token_units"`
 	ContextCompactions int          `json:"context_compactions,omitempty"`

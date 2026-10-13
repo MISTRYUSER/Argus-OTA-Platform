@@ -1,12 +1,14 @@
 package domain
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type File struct {
+	Metadata         json.RawMessage
 	ID               uuid.UUID
 	BatchID          uuid.UUID
 	Filename         string

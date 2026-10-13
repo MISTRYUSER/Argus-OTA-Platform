@@ -2,11 +2,11 @@ package llm
 
 import (
 	"context"
- obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"errors"
 	"fmt"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
 	"sync/atomic"
 	"time"
@@ -17,6 +17,8 @@ var ErrModelQueueFull = domain.ErrModelQueueFull
 type GovernorOptions struct {
 	Concurrency, QueueCapacity, Attempts int
 	Backoff                              time.Duration
+	RequestTimeout                       time.Duration
+	Shared                               SharedAdmission
 }
 type GovernorStats struct{ Active, Queued, PeakActive, PeakQueued, Attempts, Retries, Rejected, Canceled, Completed, Tokens, QueueMillis int64 }
 type GovernedModel struct {
@@ -29,6 +31,15 @@ type GovernedModel struct {
 func NewGovernedModel(inner model.ChatModel, o GovernorOptions) (*GovernedModel, error) {
 	if inner == nil || o.Concurrency < 1 || o.Concurrency > 128 || o.QueueCapacity < 0 || o.QueueCapacity > 4096 || o.Attempts < 1 || o.Attempts > 3 || o.Backoff <= 0 || o.Backoff > 5*time.Second {
 		return nil, fmt.Errorf("invalid model governor policy")
+	}
+	if o.RequestTimeout == 0 {
+		o.RequestTimeout = 60 * time.Second
+	}
+	if o.RequestTimeout < time.Millisecond || o.RequestTimeout > 10*time.Minute {
+		return nil, fmt.Errorf("invalid model request timeout")
+	}
+	if quota, ok := o.Shared.(*PostgresQuota); ok && quota.request != o.RequestTimeout {
+		return nil, fmt.Errorf("shared quota request timeout mismatch")
 	}
 	return &GovernedModel{inner: inner, options: o, active: make(chan struct{}, o.Concurrency), waiting: make(chan struct{}, o.QueueCapacity)}, nil
 }
@@ -58,7 +69,7 @@ func (g *GovernedModel) acquire(ctx context.Context) error {
 	case g.waiting <- struct{}{}:
 	default:
 		g.rejected.Add(1)
- obs.AddCounter(ctx,"argus_model_queue_rejections_total")
+		obs.AddCounter(ctx, "argus_model_queue_rejections_total")
 		return ErrModelQueueFull
 	}
 	n := g.q.Add(1)
@@ -88,8 +99,22 @@ func (g *GovernedModel) Generate(ctx context.Context, input []*schema.Message, o
 		if err = ctx.Err(); err != nil {
 			return nil, err
 		}
+		attemptCtx, cancel := context.WithTimeout(ctx, g.options.RequestTimeout)
+		release := func() {}
+		if g.options.Shared != nil {
+			release, err = g.options.Shared.Acquire(attemptCtx)
+			if err != nil {
+				cancel()
+				g.rejected.Add(1)
+				obs.AddCounter(ctx, "argus_model_queue_rejections_total")
+				return nil, err
+			}
+		}
 		g.attempts.Add(1)
-		reply, err = g.inner.Generate(ctx, input, opts...)
+		obs.AddCounter(ctx, "argus_model_attempts_total")
+		reply, err = g.inner.Generate(attemptCtx, input, opts...)
+		release()
+		cancel()
 		if err == nil {
 			g.completed.Add(1)
 			if reply != nil && reply.ResponseMeta != nil && reply.ResponseMeta.Usage != nil {
@@ -101,7 +126,7 @@ func (g *GovernedModel) Generate(ctx context.Context, input []*schema.Message, o
 			return nil, err
 		}
 		g.retries.Add(1)
- obs.AddCounter(ctx,"argus_model_retries_total")
+		obs.AddCounter(ctx, "argus_model_retries_total")
 		timer := time.NewTimer(g.options.Backoff * time.Duration(1<<i))
 		select {
 		case <-timer.C:

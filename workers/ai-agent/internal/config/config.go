@@ -16,6 +16,9 @@ type Config struct {
 	TaskTimeout                              time.Duration
 	LLM                                      *llm.GLM4Config
 	Embedding                                *llm.EmbeddingConfig
+	SharedQuotaScope                         string
+	SharedQuotaGrace                         time.Duration
+	SharedQuotaEnabled                       bool
 }
 
 func getenv(k, d string) string {
@@ -76,7 +79,20 @@ func Load() (*Config, error) {
 	if e != nil || queue < 0 || queue > 4096 {
 		return nil, fmt.Errorf("LLM_QUEUE_CAPACITY must be 0..4096")
 	}
-	cfg := &Config{Mode: getenv("MODE", "kafka"), BatchID: os.Getenv("BATCH_ID"), DatabaseURL: getenv("DATABASE_URL", "postgres://argus:argus_password@localhost:5432/argus_ota?sslmode=disable"), Topic: getenv("KAFKA_TOPIC", "batch-events"), Group: getenv("KAFKA_GROUP", "ai-agent-group"), Brokers: strings.Split(getenv("KAFKA_BROKERS", "localhost:9092"), ","), Concurrency: n, TaskTimeout: timeout, LLM: &llm.GLM4Config{Governor: &llm.GovernorOptions{Concurrency: llmConcurrency, QueueCapacity: queue, Attempts: 3, Backoff: 200 * time.Millisecond}, APIKey: key, BaseURL: getenv("LLM_BASE_URL", base), Model: getenv("LLM_MODEL", getenv("GLM_MODEL", model))}, Embedding: &llm.EmbeddingConfig{APIKey: os.Getenv("EMBEDDING_API_KEY"), BaseURL: getenv("EMBEDDING_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/"), Model: getenv("EMBEDDING_MODEL", "embedding-2")}}
+	requestTimeout, e := time.ParseDuration(getenv("LLM_REQUEST_TIMEOUT", "60s"))
+	if e != nil || requestTimeout < time.Millisecond || requestTimeout > 10*time.Minute {
+		return nil, fmt.Errorf("LLM_REQUEST_TIMEOUT must be 1ms..10m")
+	}
+	grace, e := time.ParseDuration(getenv("LLM_QUOTA_CRASH_GRACE", "30s"))
+	if e != nil || grace < time.Millisecond || grace > 10*time.Minute {
+		return nil, fmt.Errorf("LLM_QUOTA_CRASH_GRACE must be 1ms..10m")
+	}
+	shared, e := strconv.ParseBool(getenv("LLM_SHARED_QUOTA", "true"))
+	if e != nil {
+		return nil, fmt.Errorf("LLM_SHARED_QUOTA must be boolean")
+	}
+	scope := getenv("LLM_QUOTA_SCOPE", provider+":"+getenv("LLM_MODEL", getenv("GLM_MODEL", model)))
+	cfg := &Config{SharedQuotaEnabled: shared, SharedQuotaScope: scope, SharedQuotaGrace: grace, Mode: getenv("MODE", "kafka"), BatchID: os.Getenv("BATCH_ID"), DatabaseURL: getenv("DATABASE_URL", "postgres://argus:argus_password@localhost:5432/argus_ota?sslmode=disable"), Topic: getenv("KAFKA_TOPIC", "batch-events"), Group: getenv("KAFKA_GROUP", "ai-agent-group"), Brokers: strings.Split(getenv("KAFKA_BROKERS", "localhost:9092"), ","), Concurrency: n, TaskTimeout: timeout, LLM: &llm.GLM4Config{Governor: &llm.GovernorOptions{Concurrency: llmConcurrency, QueueCapacity: queue, Attempts: 3, Backoff: 200 * time.Millisecond, RequestTimeout: requestTimeout}, APIKey: key, BaseURL: getenv("LLM_BASE_URL", base), Model: getenv("LLM_MODEL", getenv("GLM_MODEL", model))}, Embedding: &llm.EmbeddingConfig{APIKey: os.Getenv("EMBEDDING_API_KEY"), BaseURL: getenv("EMBEDDING_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/"), Model: getenv("EMBEDDING_MODEL", "embedding-2")}}
 	if cfg.Mode != "kafka" && cfg.Mode != "once" {
 		return nil, fmt.Errorf("MODE must be kafka or once")
 	}

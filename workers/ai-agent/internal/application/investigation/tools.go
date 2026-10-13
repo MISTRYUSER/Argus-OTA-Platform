@@ -104,7 +104,7 @@ func boundTools(repo domain.DiagnosisRepository, retriever domain.VectorRetrieve
 		return nil, err
 	}
 	result["read_logs"] = logs
-	stats, err := utils.InferTool("error_statistics", "Read the number of parsed files carrying each error code in this batch; establish frequency before concluding.", func(ctx context.Context, _ *emptyInput) (*toolOutput, error) {
+	stats, err := utils.InferTool("error_statistics", "Read code-computed error counts in this batch. Grain is affected_file for legacy parsing or log_occurrence for actual parsed observations; never confuse these units.", func(ctx context.Context, _ *emptyInput) (*toolOutput, error) {
 		d, err := repo.GetAggregatedData(ctx, id)
 		if err != nil {
 			return nil, err
@@ -122,7 +122,7 @@ func boundTools(repo domain.DiagnosisRepository, retriever domain.VectorRetrieve
 			if len(out.Evidence) >= 20 {
 				break
 			}
-			out.Evidence = append(out.Evidence, domain.EvidenceItem{ID: "stats:" + code, Source: "batch:" + id + ":error_statistics", Content: fmt.Sprintf("%s count=%d", code, d.ErrorCodeStats[code])})
+			out.Evidence = append(out.Evidence, domain.EvidenceItem{ID: "stats:" + code, Source: "batch:" + id + ":error_statistics", Content: fmt.Sprintf("%s count=%d grain=%s", code, d.ErrorCodeStats[code], d.StatsGrain)})
 		}
 		return out, nil
 	})
@@ -159,5 +159,12 @@ func boundTools(repo domain.DiagnosisRepository, retriever domain.VectorRetrieve
 		return nil, err
 	}
 	result["search_history"] = history
+	if reader, ok := repo.(versionRegressionReader); ok {
+		regression, e := regressionTool(reader, id)
+		if e != nil {
+			return nil, e
+		}
+		result["read_version_regression"] = regression
+	}
 	return result, nil
 }

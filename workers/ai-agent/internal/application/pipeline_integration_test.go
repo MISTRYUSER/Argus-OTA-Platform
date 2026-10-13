@@ -13,6 +13,7 @@ import (
 	corekafka "github.com/xuewentao/argus-ota-platform/internal/infrastructure/kafka"
 	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/minio"
 	corepg "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
+	"github.com/xuewentao/argus-ota-platform/internal/infrastructure/processing"
 	coreredis "github.com/xuewentao/argus-ota-platform/internal/infrastructure/redis"
 	"github.com/xuewentao/argus-ota-platform/internal/interfaces/http/handlers"
 	"github.com/xuewentao/argus-ota-platform/internal/messaging"
@@ -26,13 +27,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
-func TestFullPipelineRealKafka(t *testing.T) {
+func TestFullPipelineRealKafka(t *testing.T) { runFullPipeline(t, false) }
+func TestFullPipelineActualCSVKafka(t *testing.T) {
+	if os.Getenv("ARGUS_TEST_MINIO_ADDR") == "" {
+		t.Skip("set ARGUS_TEST_MINIO_ADDR for real S3 storage")
+	}
+	runFullPipeline(t, true)
+}
+func runFullPipeline(t *testing.T, real bool) {
 	brokers := os.Getenv("ARGUS_TEST_KAFKA_BROKERS")
 	if brokers == "" {
 		t.Skip("set ARGUS_TEST_KAFKA_BROKERS for real Kafka workflow")
@@ -60,10 +69,17 @@ func TestFullPipelineRealKafka(t *testing.T) {
 	repo := corepg.NewPostgresBatchRepository(db)
 	orchestrator := coreapp.NewOrchestrateService(repo, nil, nil)
 	var modelCalls, uploads atomic.Int32
+	summary := "Connector loose"
+	if real {
+		summary = "Version-associated planner increase; causal attribution unproven"
+	}
 	modelServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		call := modelCalls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		message := map[string]interface{}{"role": "assistant", "content": `{"hypothesis_id":"H1","root_cause":"Connector loose","suggestions":["Inspect connector"],"severity":"high","confidence":0.85,"evidence_ids":["log:1"],"limitations":["Mock parser fixture"]}`}
+		if real {
+			message["content"] = fmt.Sprintf(`{"hypothesis_id":"H1","root_cause":%q,"suggestions":["Repeat identical replay and revert module change"],"severity":"high","confidence":0,"evidence_ids":["log:1"],"limitations":["Local scripted model; caller replay metadata; causality unproven"]}`, summary)
+		}
 		if call == 1 {
 			message = map[string]interface{}{"role": "assistant", "content": "", "tool_calls": []interface{}{map[string]interface{}{"id": "stats", "type": "function", "function": map[string]string{"name": "error_statistics", "arguments": "{}"}}, map[string]interface{}{"id": "logs", "type": "function", "function": map[string]string{"name": "read_logs", "arguments": "{}"}}}}
 		}
@@ -111,8 +127,14 @@ func TestFullPipelineRealKafka(t *testing.T) {
 			return process(ctx, id)
 		}
 	}
-	subscribe("-parser", stage("BatchCreated", func(ctx context.Context, id uuid.UUID) error { return corepg.MockParseBatch(ctx, db, id) }))
-	subscribe("-aggregator", stage("AllFilesScattered", func(ctx context.Context, id uuid.UUID) error { return corepg.MockAggregateBatch(ctx, db, id) }))
+	processor := &processing.Processor{DB: db, Python: processing.Python{Script: filepath.Join("..", "..", "..", "..", "workers", "python-aggregator", "regression.py"), Baseline: "v1", Candidate: "v2"}}
+	if !real {
+		subscribe("-parser", stage("BatchCreated", func(ctx context.Context, id uuid.UUID) error { return corepg.MockParseBatch(ctx, db, id) }))
+		subscribe("-aggregator", stage("AllFilesScattered", func(ctx context.Context, id uuid.UUID) error { return corepg.MockAggregateBatch(ctx, db, id) }))
+	} else {
+		subscribe("-parser", stage("BatchCreated", processor.ParseBatch))
+		subscribe("-aggregator", stage("AllFilesScattered", processor.AggregateBatch))
+	}
 	relayDone := make(chan struct{})
 	go func() {
 		defer close(relayDone)
@@ -145,10 +167,18 @@ func TestFullPipelineRealKafka(t *testing.T) {
 		w.WriteHeader(200)
 	}))
 	defer s3.Close()
-	storage, err := minio.NewMinIOClient(strings.TrimPrefix(s3.URL, "http://"), "fixture", "fixture", "fixture-secret", false)
+	endpoint, bucket, access, secret := strings.TrimPrefix(s3.URL, "http://"), "fixture", "fixture", "fixture-secret"
+	if real {
+		endpoint = os.Getenv("ARGUS_TEST_MINIO_ADDR")
+		bucket = "actual-" + uuid.NewString()
+		access = "minioadmin"
+		secret = "minioadmin"
+	}
+	storage, err := minio.NewMinIOClient(endpoint, bucket, access, secret, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+	processor.Fetch = storage.GetObject
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	batchService := coreapp.NewBatchService(repo, corepg.NewPostgresFileRepository(db), nil)
@@ -184,8 +214,23 @@ func TestFullPipelineRealKafka(t *testing.T) {
 	}
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
-	part, _ := form.CreateFormFile("file", "fixture.rec")
-	part.Write([]byte("fixture rec bytes"))
+	filename, content := "fixture.rec", "fixture rec bytes"
+	if real {
+		filename = "metrics.csv"
+		content = "timestamp,version,vehicle_id,vehicle_class,module,replay_id,workload,error_code,cpu,memory_mb\n"
+		for _, version := range []string{"v1", "v2"} {
+			for i := 0; i < 10; i++ {
+				cpu, errorCode := "20", ""
+				if version == "v2" {
+					cpu = "40"
+					errorCode = "E42"
+				}
+				content += fmt.Sprintf("%d,%s,fixture,truck,planner,R1,AD,%s,%s,100\n", 1000+i, version, errorCode, cpu)
+			}
+		}
+	}
+	part, _ := form.CreateFormFile("file", filename)
+	part.Write([]byte(content))
 	form.Close()
 	request("POST", "/api/v1/batches/"+created.ID.String()+"/files", form.FormDataContentType(), &body)
 	request("POST", "/api/v1/batches/"+created.ID.String()+"/complete", "", nil)
@@ -210,10 +255,10 @@ func TestFullPipelineRealKafka(t *testing.T) {
 	if err = json.Unmarshal(w.Body.Bytes(), &report); err != nil {
 		t.Fatal(err)
 	}
-	if report.DiagnosisResult != "Connector loose" || report.DiagnosisID == nil || report.Status != core.BatchStatusCompleted {
+	if report.DiagnosisResult != summary || report.DiagnosisID == nil || report.Status != core.BatchStatusCompleted {
 		t.Fatalf("report=%+v", report)
 	}
-	if uploads.Load() != 1 || modelCalls.Load() != 2 {
+	if (!real && uploads.Load() != 1) || modelCalls.Load() != 2 {
 		t.Fatalf("uploads=%d model calls=%d", uploads.Load(), modelCalls.Load())
 	}
 	if err = service.DiagnoseBatch(ctx, created.ID.String()); err != nil {
@@ -221,6 +266,25 @@ func TestFullPipelineRealKafka(t *testing.T) {
 	}
 	if modelCalls.Load() != 2 {
 		t.Fatal("replayed diagnosis called model again")
+	}
+	if real {
+		var regression struct {
+			Status      string `json:"status"`
+			SampleCount int    `json:"sample_count"`
+			Comparisons []struct {
+				CPU struct {
+					Delta float64 `json:"delta"`
+				} `json:"cpu"`
+			} `json:"comparisons"`
+		}
+		if e := json.Unmarshal(report.VersionRegression, &regression); e != nil {
+			t.Fatal(e)
+		}
+		if regression.Status != "comparable" || regression.SampleCount != 20 || len(regression.Comparisons) != 1 || regression.Comparisons[0].CPU.Delta != 20 {
+			t.Fatalf("incorrect actual processing %s", report.VersionRegression)
+		}
+		t.Log("HTTP upload -> real MinIO -> real Kafka/PostgreSQL -> actual Python CSV parsing/comparison -> scripted model -> durable completed report; replay makes no extra calls")
+		return
 	}
 	t.Log("real Kafka/PostgreSQL/Redis: HTTP upload -> mock parsing/aggregation -> model HTTP fixture -> durable diagnosis -> completed report; replay reused result")
 }

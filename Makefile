@@ -99,7 +99,7 @@ db-dump:
 
 build:
 	@mkdir -p build
-	@for service in ingestor orchestrator query-service mock-cpp-worker mock-python-worker event-relay; do go build -o build/$$service ./cmd/$$service || exit 1; done
+	@for service in ingestor orchestrator query-service parser-worker aggregator-worker mock-cpp-worker mock-python-worker event-relay; do go build -o build/$$service ./cmd/$$service || exit 1; done
 	go build -o build/ai-worker ./workers/ai-agent/cmd/ai-worker
 	go build -o build/progress-sse ./workers/ai-agent/cmd/progress-sse
 

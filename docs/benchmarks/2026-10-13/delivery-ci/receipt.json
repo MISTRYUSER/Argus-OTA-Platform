@@ -1,0 +1,43 @@
+{
+  "run_id": 38374023664,
+  "run_url": "https://github.com/MISTRYUSER/Argus-OTA-Platform/actions/runs/38374023664",
+  "source_commit": "9ff7749157af9a53e514b2213f1428086c953e13",
+  "conclusion": "success",
+  "artifact_sha256": "13b307a7400c719a71638485a96e7efa1e85038198c5304e6af22c31dce7d21a",
+  "go_top_level_passes": 148,
+  "go_pass_events_including_subtests": 160,
+  "go_failed": 0,
+  "go_skipped": 12,
+  "skipped_tests": [
+    "TestRealCollectorSeparatesInstanceCounters",
+    "TestBenchmarkCallsProductionRetrieverAgainstTemporaryCorpus",
+    "TestDeepSeekInvestigationLive",
+    "TestDeepSeekHypothesisReversalLive",
+    "TestAgentLiveTelemetryInvestigation",
+    "TestGovernorMeasuredLoad",
+    "TestNaturalQueryRecallsDispersedLexemesWithoutWholePhrase",
+    "TestLiteralPhraseRanksBeforeDispersedTerms",
+    "TestStructuredErrorFilterRemainsExactAndIndependentOfText",
+    "TestLiteralPercentUnderscoreDoNotBecomePhraseWildcards",
+    "TestEmptyPunctuationOrUnknownQueriesDoNotReturnUnrelatedCorpus",
+    "TestTextTopKRemainsCappedAtTen"
+  ],
+  "validation": [
+    "full go tests",
+    "go vet",
+    "go build",
+    "Python processing tests:22",
+    "Python benchmark tests:41",
+    "race checks on processing/hybrid/governor",
+    "real MinIO/Kafka/PostgreSQL/Redis upload pipeline",
+    "actually parsed OTA evidence -> one model call -> idempotent replay"
+  ],
+  "files": {
+    "version-regression.json": "bdd521c0a7531be4ad46d6e293f6acae564557f4b11d2ef2eab3276c2706ddce",
+    "actual-hybrid-pipeline.json": "f174817b74f08b7a3d130b5928ff1ab8d1008fbb526c653d8fca28758498884d",
+    "hybrid-fixture.json": "4725fb51d9f6eff0241ae9ea9e68cb3f4ce2987524b6455498061f5a5c17cc9c",
+    "version-regression-pipeline.json": "241d6f73c79a8f7f97a17e736f804d0733a0eacd8fbe9cd5b14a79bee4793697",
+    "public-record.json": "581e9fc87d188f2e60c089481570ff3c21e1e3154ccf7b014fc2af08aedd3ab8",
+    "shared-quota-multiprocess.json": "2290c9184e75a114bdecd78d7173b9fd7e103ae3fb9536e936599cbf6be4860e"
+  }
+}

@@ -133,7 +133,7 @@ func (r *PostgresReportRepository) FindByBatchID(ctx context.Context, id uuid.UU
 	var diagnosisID uuid.NullUUID
 	var summary sql.NullString
 	var investigation []byte
-	err := r.db.QueryRowContext(ctx, `SELECT b.vehicle_id,b.vin,b.status,b.total_files,b.processed_files,b.created_at,b.updated_at,d.id,d.diagnosis_summary,COALESCE(d.aggregated_data,'{}') FROM batches b LEFT JOIN ai_diagnoses d ON d.batch_id=b.id AND d.status='completed' WHERE b.id=$1`, id).Scan(&report.VehicleID, &report.VIN, &report.Status, &report.TotalFiles, &report.ProcessedFiles, &report.CreatedAt, &report.UpdatedAt, &diagnosisID, &summary, &investigation)
+	err := r.db.QueryRowContext(ctx, `SELECT b.vehicle_id,b.vin,b.status,b.total_files,b.processed_files,b.created_at,b.updated_at,d.id,d.diagnosis_summary,COALESCE(d.aggregated_data,'{}'),COALESCE(v.report,'null') FROM batches b LEFT JOIN ai_diagnoses d ON d.batch_id=b.id AND d.status='completed' LEFT JOIN version_regression_reports v ON v.batch_id=b.id WHERE b.id=$1`, id).Scan(&report.VehicleID, &report.VIN, &report.Status, &report.TotalFiles, &report.ProcessedFiles, &report.CreatedAt, &report.UpdatedAt, &diagnosisID, &summary, &investigation, &report.VersionRegression)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -141,14 +141,16 @@ func (r *PostgresReportRepository) FindByBatchID(ctx context.Context, id uuid.UU
 		return nil, err
 	}
 	var structured struct {
-		Hypotheses  json.RawMessage `json:"hypotheses"`
-		Trace       json.RawMessage `json:"tool_trace"`
-		Evidence    json.RawMessage `json:"evidence"`
-		Limitations json.RawMessage `json:"limitations"`
+		ResolutionStatus string          `json:"resolution_status"`
+		Hypotheses       json.RawMessage `json:"hypotheses"`
+		Trace            json.RawMessage `json:"tool_trace"`
+		Evidence         json.RawMessage `json:"evidence"`
+		Limitations      json.RawMessage `json:"limitations"`
 	}
 	if err = json.Unmarshal(investigation, &structured); err != nil {
 		return nil, err
 	}
+	report.ResolutionStatus = structured.ResolutionStatus
 	report.Hypotheses = structured.Hypotheses
 	report.InvestigationTrace = structured.Trace
 	report.Evidence = structured.Evidence

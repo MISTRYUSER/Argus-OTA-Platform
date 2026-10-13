@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -188,8 +189,8 @@ func (r *PostgresFileRepository) Save(ctx context.Context, file *domain.File) er
 		INSERT INTO files (
 			id, batch_id, filename, original_filename, file_size, file_type,
 			upload_time, minio_path, minio_etag, processing_status,
-			parse_duration_ms, record_count, error_message, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			parse_duration_ms, record_count, error_message, created_at, updated_at, metadata
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		ON CONFLICT (id) DO UPDATE SET
 			processing_status = EXCLUDED.processing_status,
 			parse_duration_ms = EXCLUDED.parse_duration_ms,
@@ -200,7 +201,7 @@ func (r *PostgresFileRepository) Save(ctx context.Context, file *domain.File) er
 	_, err := r.db.ExecContext(ctx, query,
 		file.ID, file.BatchID, file.Filename, file.OriginalFilename, file.FileSize, file.FileType,
 		file.UploadTime, file.MinIOPath, file.MinIOETag, file.ProcessingStatus.String(),
-		file.ParseDurationMs, file.RecordCount, file.ErrorMessage, file.CreatedAt, file.UpdatedAt,
+		file.ParseDurationMs, file.RecordCount, file.ErrorMessage, file.CreatedAt, file.UpdatedAt, fileMetadata(file.Metadata),
 	)
 	if err != nil {
 		return err
@@ -212,7 +213,7 @@ func (r *PostgresFileRepository) FindByID(ctx context.Context, id uuid.UUID) (*d
 	query := `
 		SELECT id, batch_id, filename, original_filename, file_size, file_type,
 			   upload_time, minio_path, minio_etag, processing_status,
-			   parse_duration_ms, record_count, error_message, created_at, updated_at
+			   parse_duration_ms, record_count, error_message, created_at, updated_at, metadata
 		FROM files
 		WHERE id = $1
 	`
@@ -221,7 +222,7 @@ func (r *PostgresFileRepository) FindByID(ctx context.Context, id uuid.UUID) (*d
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&file.ID, &file.BatchID, &file.Filename, &file.OriginalFilename, &file.FileSize, &file.FileType,
 		&file.UploadTime, &file.MinIOPath, &file.MinIOETag, &statusStr,
-		&file.ParseDurationMs, &file.RecordCount, &file.ErrorMessage, &file.CreatedAt, &file.UpdatedAt,
+		&file.ParseDurationMs, &file.RecordCount, &file.ErrorMessage, &file.CreatedAt, &file.UpdatedAt, &file.Metadata,
 	)
 	file.ProcessingStatus = domain.ProcessingStatus(statusStr)
 	if err == sql.ErrNoRows {
@@ -237,7 +238,7 @@ func (r *PostgresFileRepository) FindByBatchID(ctx context.Context, batchID uuid
 	query := `
 		SELECT id, batch_id, filename, original_filename, file_size, file_type,
 			   upload_time, minio_path, minio_etag, processing_status,
-			   parse_duration_ms, record_count, error_message, created_at, updated_at
+			   parse_duration_ms, record_count, error_message, created_at, updated_at, metadata
 		FROM files
 		WHERE batch_id = $1
 		ORDER BY upload_time DESC
@@ -256,7 +257,7 @@ func (r *PostgresFileRepository) FindByBatchID(ctx context.Context, batchID uuid
 		err := rows.Scan(
 			&file.ID, &file.BatchID, &file.Filename, &file.OriginalFilename, &file.FileSize, &file.FileType,
 			&file.UploadTime, &file.MinIOPath, &file.MinIOETag, &statusStr,
-			&file.ParseDurationMs, &file.RecordCount, &file.ErrorMessage, &file.CreatedAt, &file.UpdatedAt,
+			&file.ParseDurationMs, &file.RecordCount, &file.ErrorMessage, &file.CreatedAt, &file.UpdatedAt, &file.Metadata,
 		)
 		if err != nil {
 			return nil, err
@@ -384,4 +385,11 @@ func (r *PostgresBatchRepository) scanBatches(ctx context.Context, query string,
 	}
 
 	return batches, nil
+}
+
+func fileMetadata(raw json.RawMessage) []byte {
+	if len(raw) == 0 {
+		return []byte(`{}`)
+	}
+	return []byte(raw)
 }
