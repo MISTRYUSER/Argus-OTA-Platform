@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"log"
 	"net/http"
 	"os"
@@ -21,6 +22,15 @@ import (
 )
 
 func main() {
+	shutdownTelemetry, telemetryErr := obs.SetupFromEnv(context.Background(), "argus-query")
+	if telemetryErr != nil {
+		log.Fatal(telemetryErr)
+	}
+	defer func() {
+		flushCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+		defer c()
+		_ = shutdownTelemetry(flushCtx)
+	}()
 	ctx := context.Background()
 
 	// 1. 初始化 PostgreSQL
@@ -38,6 +48,7 @@ func main() {
 
 	// 5. 初始化 HTTP Server
 	router := gin.Default()
+	router.Use(obs.GinMiddleware())
 	queryHandler := handlers.NewQueryHandler(queryService)
 
 	router.GET("/api/v1/batches/:id/report", queryHandler.GetReport)

@@ -140,7 +140,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			attempts := 0
 			for {
 				attempts++
-				err := h.messageHandler(ctx, msg.Value)
+				err := h.observedMessage(ctx, msg)
 				if err == nil {
 					session.MarkMessage(msg, "")
 					break

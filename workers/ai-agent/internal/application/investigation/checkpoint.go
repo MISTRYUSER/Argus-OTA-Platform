@@ -15,6 +15,7 @@ import (
 const checkpointPolicy = "argus-harness-v3"
 
 type checkpoint struct {
+	TelemetryPolicy                                    string
 	TaskInstructions                                   string
 	Version                                            int
 	Policy, Model, BatchID, Phase                      string
@@ -38,7 +39,7 @@ func (a *Agent) saveCheckpoint(ctx context.Context, s *agentState) error {
 	if !ok {
 		return nil
 	}
-	data, err := json.Marshal(checkpoint{TaskInstructions: a.options.TaskInstructions, Version: 1, Policy: checkpointPolicy, Model: a.options.ModelName, BatchID: s.batchID, Phase: s.phase, MaxSteps: a.options.MaxSteps, MaxReservedTokens: a.options.MaxReservedTokens, ReservedTokens: s.reservedTokens, MaxContextChars: a.options.MaxContextChars, Step: s.step, Tokens: s.tokens, NextTool: s.nextTool, Messages: s.messages, Response: s.response, Observations: s.observations, Evidence: s.evidence, Used: s.used, Limitations: s.limitations, Hypotheses: s.hypotheses, Artifacts: s.artifacts, ToolArtifacts: s.toolArtifacts, Result: s.result, Compactions: s.compactions})
+	data, err := json.Marshal(checkpoint{TelemetryPolicy: a.options.TelemetryPolicy, TaskInstructions: a.options.TaskInstructions, Version: 1, Policy: checkpointPolicy, Model: a.options.ModelName, BatchID: s.batchID, Phase: s.phase, MaxSteps: a.options.MaxSteps, MaxReservedTokens: a.options.MaxReservedTokens, ReservedTokens: s.reservedTokens, MaxContextChars: a.options.MaxContextChars, Step: s.step, Tokens: s.tokens, NextTool: s.nextTool, Messages: s.messages, Response: s.response, Observations: s.observations, Evidence: s.evidence, Used: s.used, Limitations: s.limitations, Hypotheses: s.hypotheses, Artifacts: s.artifacts, ToolArtifacts: s.toolArtifacts, Result: s.result, Compactions: s.compactions})
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func (a *Agent) loadCheckpoint(ctx context.Context, s *agentState) error {
 	if err = json.Unmarshal(data, &c); err != nil {
 		return err
 	}
-	if c.TaskInstructions != a.options.TaskInstructions || c.Version != 1 || c.Policy != checkpointPolicy || c.Model != a.options.ModelName || c.BatchID != s.batchID || c.MaxSteps != a.options.MaxSteps || c.MaxReservedTokens != a.options.MaxReservedTokens || c.MaxContextChars != a.options.MaxContextChars {
+	if c.TelemetryPolicy != a.options.TelemetryPolicy || c.TaskInstructions != a.options.TaskInstructions || c.Version != 1 || c.Policy != checkpointPolicy || c.Model != a.options.ModelName || c.BatchID != s.batchID || c.MaxSteps != a.options.MaxSteps || c.MaxReservedTokens != a.options.MaxReservedTokens || c.MaxContextChars != a.options.MaxContextChars {
 		return fmt.Errorf("checkpoint policy/model/batch mismatch")
 	}
 	if c.ReservedTokens < 0 || c.ReservedTokens > a.options.MaxReservedTokens || c.Tokens < 0 {

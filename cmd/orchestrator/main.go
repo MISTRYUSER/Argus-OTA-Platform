@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"log"
 	"os"
 	"os/signal"
@@ -21,6 +22,15 @@ import (
 )
 
 func main() {
+	shutdownTelemetry, telemetryErr := obs.SetupFromEnv(context.Background(), "argus-orchestrator")
+	if telemetryErr != nil {
+		log.Fatal(telemetryErr)
+	}
+	defer func() {
+		flushCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+		defer c()
+		_ = shutdownTelemetry(flushCtx)
+	}()
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

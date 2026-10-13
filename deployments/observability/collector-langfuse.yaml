@@ -1,0 +1,22 @@
+# Additional collector config merged with collector.yaml; opt-in only.
+processors:
+  filter/agent:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["argus.agent"] != true'
+exporters:
+  otlp_http/langfuse:
+    endpoint: http://langfuse-web:3000/api/public/otel
+    headers:
+      Authorization: "Basic ${env:LANGFUSE_AUTH_BASE64}"
+      x-langfuse-ingestion-version: "4"
+    sending_queue:
+      enabled: true
+      storage: file_storage
+service:
+  pipelines:
+    traces/langfuse:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/agent, batch]
+      exporters: [otlp_http/langfuse]

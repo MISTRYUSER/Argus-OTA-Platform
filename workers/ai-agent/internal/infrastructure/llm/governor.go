@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+ obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"errors"
 	"fmt"
 	"github.com/cloudwego/eino/components/model"
@@ -57,6 +58,7 @@ func (g *GovernedModel) acquire(ctx context.Context) error {
 	case g.waiting <- struct{}{}:
 	default:
 		g.rejected.Add(1)
+ obs.AddCounter(ctx,"argus_model_queue_rejections_total")
 		return ErrModelQueueFull
 	}
 	n := g.q.Add(1)
@@ -99,6 +101,7 @@ func (g *GovernedModel) Generate(ctx context.Context, input []*schema.Message, o
 			return nil, err
 		}
 		g.retries.Add(1)
+ obs.AddCounter(ctx,"argus_model_retries_total")
 		timer := time.NewTimer(g.options.Backoff * time.Duration(1<<i))
 		select {
 		case <-timer.C:

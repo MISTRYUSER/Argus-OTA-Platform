@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"log"
 	"net/http"
 	"os"
@@ -154,6 +155,7 @@ func initKafkaProducer(cfg *Config) (messaging.KafkaEventPublisher, error) {
 }
 func initRouter(batchService *application.BatchService, minioClient *minio.MinIOClient) *gin.Engine {
 	router := gin.Default()
+	router.Use(obs.GinMiddleware())
 
 	handler := handlers.NewBatchHandler(batchService, minioClient)
 	handler.RegisterRoutes(router)
@@ -207,6 +209,15 @@ func gracefulShutdown(server *http.Server, db *sql.DB, kafkaProducer messaging.K
 	log.Println("[Shutdown] Graceful shutdown completed")
 }
 func main() {
+	shutdownTelemetry, telemetryErr := obs.SetupFromEnv(context.Background(), "argus-ingestor")
+	if telemetryErr != nil {
+		log.Fatal(telemetryErr)
+	}
+	defer func() {
+		flushCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+		defer c()
+		_ = shutdownTelemetry(flushCtx)
+	}()
 	// 1. 加载配置
 	cfg := loadConfig()
 

@@ -116,3 +116,72 @@ func TestCompactionArchivesOldAssistantToolGroups(t *testing.T) {
 		t.Fatal("latest tool group lost")
 	}
 }
+
+func TestResumeRejectsChangedTelemetryPolicyBeforeModelCall(t *testing.T) {
+	base, calls := makeAgent(t, `{"hypothesis_id":"H1","root_cause":"Connector loose","suggestions":[],"severity":"high","confidence":0.8,"evidence_ids":["log:1"]}`, 4)
+	store := &checkpointFixture{crashAt: 3}
+	first, err := NewAgent(store, nil, base.model, Options{MaxSteps: 4, Telemetry: &signalFixture{}, TelemetryPolicy: "trusted-scope-v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch := uuid.NewString()
+	if _, err = first.Run(context.Background(), batch); err == nil {
+		t.Fatal("expected injected crash")
+	}
+	before := *calls
+	resumed, err := NewAgent(store, nil, base.model, Options{MaxSteps: 4, Telemetry: &signalFixture{}, TelemetryPolicy: "trusted-scope-v2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = resumed.Run(context.Background(), batch); err == nil {
+		t.Fatal("changed scope policy accepted")
+	}
+	if *calls != before {
+		t.Fatal("model called before rejecting incompatible checkpoint")
+	}
+}
+
+// Exercise the actual completed checkpoint serializer, including every copy
+// retained by the fallback artifact store and final result, at the query cap.
+func TestSixBoundedTelemetryOutputsFitCompletedCheckpoint(t *testing.T) {
+	store := &checkpointFixture{}
+	a := &Agent{repo: store, options: Options{MaxSteps: 12, MaxReservedTokens: 50000, MaxContextChars: 24000, TelemetryPolicy: "bounded-v1"}}
+	s := &agentState{batchID: uuid.NewString(), phase: "completed", artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}, evidence: map[string]domain.EvidenceItem{}, result: &domain.DiagnosisResult{}}
+	for queryIndex := 0; queryIndex < 6; queryIndex++ {
+		items := []domain.EvidenceItem{}
+		for item := 0; item < 7; item++ {
+			evidence := domain.EvidenceItem{ID: fmt.Sprintf("log:bounded:%d:%d", queryIndex, item), Source: "loki:trusted-scope", Content: strings.Repeat("\"", 1000)}
+			items = append(items, evidence)
+			s.evidence[evidence.ID] = evidence
+			s.result.Evidence = append(s.result.Evidence, evidence)
+		}
+		body, err := json.Marshal(toolOutput{Evidence: items})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(body) > 16*1024 {
+			t.Fatalf("fixture violates returned query budget: %d", len(body))
+		}
+		key := fmt.Sprint(queryIndex)
+		observation := domain.ToolObservation{Tool: "query_service_logs", Arguments: json.RawMessage(`{}`), Output: body}
+		s.observations = append(s.observations, observation)
+		s.result.ToolTrace = append(s.result.ToolTrace, observation)
+		s.artifacts[key] = body
+		s.toolArtifacts[key] = key
+		s.messages = append(s.messages, schema.ToolMessage(string(body), key, schema.WithToolName("query_service_logs")))
+	}
+	if err := a.saveCheckpoint(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.data) > 1024*1024 {
+		t.Fatalf("completed checkpoint exceeds 1MiB: %d", len(store.data))
+	}
+	restored := &agentState{batchID: s.batchID}
+	if err := a.loadCheckpoint(context.Background(), restored); err != nil {
+		t.Fatal(err)
+	}
+	if restored.result == nil || len(restored.result.ToolTrace) != 6 {
+		t.Fatal("completed recovery lost tool trace")
+	}
+	t.Logf("completed checkpoint bytes=%d", len(store.data))
+}
