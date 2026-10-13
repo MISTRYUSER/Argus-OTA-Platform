@@ -1,0 +1,19 @@
+{
+  "benchmark": "IBM ITBench-Lite SRE",
+  "dataset_revision": "d0916b08ba421ce5e672e9ad68aa947d938dfef0",
+  "prepared_scenario_ids": [1, 2, 4, 5, 6, 7, 8, 9, 11, 12],
+  "preflight_kind": "adapter-schema and production-router contract analysis; raw dataset was not downloaded in this run",
+  "adapter_output_fields_per_case": ["id", "lines", "sha256"],
+  "required_fixed_route_fields_absent": ["error_code_stats", "logs_summary"],
+  "fixed_route_cases": 0,
+  "agent_route_cases": 10,
+  "fixed_route_rate": 0.0,
+  "agent_route_rate": 1.0,
+  "reason": "hybrid.Eligible rejects each case because error_code_stats has zero entries; it requires exactly one error-code statistic and a complete log_occurrence coverage summary.",
+  "implication": "This SRE suite can compare diagnosis quality but cannot measure hybrid routing savings with the current adapter and router.",
+  "model_calls_made": 0,
+  "limitations": [
+    "This is a deterministic schema-level result, not a fresh CLI run over downloaded ITBench files.",
+    "No diagnosis quality, latency, token, or cost conclusion follows from route coverage."
+  ]
+}

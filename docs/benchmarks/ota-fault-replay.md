@@ -80,7 +80,11 @@ python scripts/benchmark/score_ota_faults.py \
 - `root_cause_accuracy` 是**受控六类主因识别**；它与关键证据指标一起看，不能单凭类别正确证明完整因果解释正确。输出标注 `semantic_review_status`，真实模型运行后仍需人工检查解释、反证与验证建议。
 - OTA v2 契约同时校验行 SHA、包含统计/摘要/来源/任务的完整输入摘要和整个套件版本；旧 SRE 行 SHA 契约兼容。比较器拒绝混用不同输入、模型名、端点、预算或价格表。供应商返回模型名变化也拒绝合并评分；模型只返回别名时明确记录版本未核实。
 
-现有 SRE 数据先运行相同的 `-preflight-only`，不要假设其数据自动适配 OTA。当前保存样例不是 ITBench 的实际命中统计。
+### ITBench-Lite 分流覆盖预检
+
+现有 ITBench-Lite 适配器输出的每个 case 只有 `id`、`lines`、`sha256`；没有 `error_code_stats` 和 `logs_summary`。生产 `hybrid.Eligible` 要求恰有一种错误码统计及完整的 `log_occurrence` 覆盖摘要，因此这 10 个预先选定的 SRE case **固定分支命中为 0/10，Agent 分支为 10/10**。这是从实际适配器输出契约和生产路由函数逐项核对得到的确定路由结果；无需读取评分标签，也不依赖模型调用。回执见 [SRE 路由预检](sre-routing-preflight-2026-10-14.json)。
+
+这意味着现有 SRE 集可以比较 Agent 与单次调用的诊断质量，但不能证明混合策略降低了 SRE 场景的调用量或费用。原始 ITBench 文件本轮未重新下载，故该结果是适配器 schema 级预检，不是本轮对下载文件执行 CLI 的运行回执。要在 SRE 上测分流收益，需先设计有依据的 SRE 固定取证规则和完整覆盖统计，再重新做盲测；不能把 OTA 错误码规则硬套到 Kubernetes 场景。
 
 ## 测试与来源
 

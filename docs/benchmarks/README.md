@@ -47,3 +47,5 @@ Real CSV/Apollo parsing and Python aggregation are now default; mocks require AR
 ## 同领域故障现场回放
 
 [OTA 实际 HTTP 故障包与三策略评测](ota-fault-replay.md)：12 个实际运行故障，固定分支命中 2/12；真实模型对照尚未运行。复用 agent-bench，不新增评测平台。
+
+ITBench-Lite 的适配器 schema 预检见 [SRE 路由回执](sre-routing-preflight-2026-10-14.json)：当前十个预选场景全部进入 Agent（0/10 固定分支），因此现有 SRE 对照不能证明混合分流节省调用。
