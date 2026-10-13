@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"fmt"
 	"github.com/joho/godotenv"
 	redisclient "github.com/redis/go-redis/v9"
 	corekafka "github.com/xuewentao/argus-ota-platform/internal/infrastructure/kafka"
 	corepg "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/config"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
@@ -15,10 +18,13 @@ import (
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres"
 	progress "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/redis"
+	query "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/telemetryquery"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -34,6 +40,15 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+	shutdownTelemetry, e := obs.SetupFromEnv(ctx, "argus-ai-agent")
+	if e != nil {
+		return e
+	}
+	defer func() {
+		flushCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+		defer c()
+		_ = shutdownTelemetry(flushCtx)
+	}()
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		return err
@@ -64,7 +79,17 @@ func run() error {
 		}
 		publisher = progress.NewEventPublisher(client)
 	}
-	service, err := application.NewMultiAgentService(repo, retriever, publisher, cfg.LLM, application.WithConcurrency(cfg.Concurrency))
+	options := []application.ServiceOption{application.WithConcurrency(cfg.Concurrency)}
+	if os.Getenv("TELEMETRY_PROMETHEUS_URL") != "" {
+		metrics := strings.Split(os.Getenv("TELEMETRY_ALLOWED_METRICS"), ",")
+		reader, e := query.NewClient(query.Config{PrometheusURL: os.Getenv("TELEMETRY_PROMETHEUS_URL"), LokiURL: os.Getenv("TELEMETRY_LOKI_URL"), TempoURL: os.Getenv("TELEMETRY_TEMPO_URL"), AllowedMetrics: metrics}, query.NewPostgresScopeResolver(db))
+		if e != nil {
+			return e
+		}
+		policy := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join([]string{os.Getenv("TELEMETRY_PROMETHEUS_URL"), os.Getenv("TELEMETRY_LOKI_URL"), os.Getenv("TELEMETRY_TEMPO_URL"), strings.Join(metrics, ",")}, "|"))))
+		options = append(options, application.WithTelemetryReader(reader, policy))
+	}
+	service, err := application.NewMultiAgentService(repo, retriever, publisher, cfg.LLM, options...)
 	if err != nil {
 		return err
 	}

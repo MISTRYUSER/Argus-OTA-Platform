@@ -1,0 +1,88 @@
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+  file_log:
+    include: [/var/log/argus/*.jsonl]
+    start_at: beginning
+    storage: file_storage
+    operators:
+      - type: json_parser
+        parse_to: attributes
+        timestamp:
+          parse_from: attributes.time
+          layout_type: gotime
+          layout: "2006-01-02T15:04:05.999999999Z07:00"
+        severity:
+          parse_from: attributes.level
+      - type: trace_parser
+        if: 'attributes.trace_id != nil && attributes.trace_id != "" && attributes.span_id != nil && attributes.span_id != ""'
+        trace_id:
+          parse_from: attributes.trace_id
+        span_id:
+          parse_from: attributes.span_id
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  resource/logs:
+    attributes:
+      - key: namespace
+        value: ${env:ARGUS_NAMESPACE}
+        action: insert
+      - key: service.name
+        value: ${env:OTEL_SERVICE_NAME}
+        action: insert
+  transform/metrics:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          - 'set(datapoint.attributes["service_name"], resource.attributes["service.name"]) where resource.attributes["service.name"] != nil'
+          - 'set(datapoint.attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil'
+  transform/logs:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - 'set(resource.attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil'
+          - 'set(resource.attributes["service.name"], log.attributes["service_name"]) where log.attributes["service_name"] != nil'
+          - 'set(resource.attributes["namespace"], log.attributes["namespace"]) where log.attributes["namespace"] != nil'
+  batch: {}
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: false
+  otlp_http/tempo:
+    endpoint: http://tempo:4318
+    tls:
+      insecure: true
+    sending_queue:
+      enabled: true
+      storage: file_storage
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+    sending_queue:
+      enabled: true
+      storage: file_storage
+service:
+  extensions: [file_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/metrics, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp, file_log]
+      processors: [memory_limiter, resource/logs, transform/logs, batch]
+      exporters: [otlp_http/loki]

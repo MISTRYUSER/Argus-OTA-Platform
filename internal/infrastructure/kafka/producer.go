@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"log"
 	"time"
 
@@ -61,7 +62,9 @@ func NewKafkaEventProducer(brokers []string, topic string, dlqTopic string) (mes
 }
 
 // PublishEvents - 批量发布领域事件（实现 messaging.KafkaEventPublisher 接口）
-func (k *kafkaEventProducer) PublishEvents(ctx context.Context, events []domain.DomainEvent) error {
+func (k *kafkaEventProducer) PublishEvents(ctx context.Context, events []domain.DomainEvent) (publishErr error) {
+	ctx, end := obs.Operation(ctx, "kafka.produce")
+	defer func() { end(publishErr) }()
 	for _, event := range events {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -73,7 +76,7 @@ func (k *kafkaEventProducer) PublishEvents(ctx context.Context, events []domain.
 		if len(body) > maxMessageSize {
 			return fmt.Errorf("event exceeds 1MB")
 		}
-		_, _, err = k.producer.SendMessage(&sarama.ProducerMessage{Topic: k.topic, Key: sarama.StringEncoder(event.AggregateID().String()), Value: sarama.ByteEncoder(body)})
+		_, _, err = k.producer.SendMessage(&sarama.ProducerMessage{Headers: producerTraceHeaders(ctx), Topic: k.topic, Key: sarama.StringEncoder(event.AggregateID().String()), Value: sarama.ByteEncoder(body)})
 		if err != nil {
 			return err
 		}

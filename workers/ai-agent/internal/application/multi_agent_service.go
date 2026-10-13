@@ -13,7 +13,7 @@ import (
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm"
 	"os"
 	"sort"
- "strconv"
+	"strconv"
 	"time"
 )
 
@@ -25,6 +25,10 @@ type MultiAgentService struct {
 }
 
 func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.VectorRetriever, publisher domain.EventPublisher, cfg *llm.GLM4Config, options ...ServiceOption) (*MultiAgentService, error) {
+	settings := serviceSettings{concurrency: 20}
+	for _, option := range options {
+		option(&settings)
+	}
 	var runner domain.DiagnosisRunner
 	var err error
 	switch os.Getenv("AI_RUNNER") {
@@ -34,11 +38,16 @@ func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.Vect
 		runner, err = supervisor.NewSupervisorGraph(repo, retriever, cfg)
 	case "", "investigation":
 		reservationBudget := 1000000
- if raw := os.Getenv("AI_MODEL_RESERVATION_BUDGET"); raw != "" { reservationBudget, err = strconv.Atoi(raw); if err != nil || reservationBudget < 1 { return nil, fmt.Errorf("AI_MODEL_RESERVATION_BUDGET must be positive") } }
+		if raw := os.Getenv("AI_MODEL_RESERVATION_BUDGET"); raw != "" {
+			reservationBudget, err = strconv.Atoi(raw)
+			if err != nil || reservationBudget < 1 {
+				return nil, fmt.Errorf("AI_MODEL_RESERVATION_BUDGET must be positive")
+			}
+		}
 		var chat model.ChatModel
 		chat, err = llm.NewGLM4ChatModel(cfg)
 		if err == nil {
-			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{MaxSteps: 8, ModelName: cfg.Model, MaxReservedTokens:reservationBudget})
+			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{Telemetry: settings.telemetry, TelemetryPolicy: settings.policy, MaxSteps: 8, ModelName: cfg.Model, MaxReservedTokens: reservationBudget})
 		}
 	default:
 		return nil, fmt.Errorf("unsupported AI_RUNNER")
@@ -46,11 +55,7 @@ func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.Vect
 	if err != nil {
 		return nil, err
 	}
-	concurrency := 20
-	for _, option := range options {
-		option(&concurrency)
-	}
-	return NewServiceWithRunner(repo, runner, publisher, concurrency), nil
+	return NewServiceWithRunner(repo, runner, publisher, settings.concurrency), nil
 }
 
 func NewServiceWithRunner(repo domain.DiagnosisRepository, runner domain.DiagnosisRunner, publisher domain.EventPublisher, concurrency int) *MultiAgentService {
@@ -101,7 +106,7 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 		if result.Model == "" {
 			result.Model = "configured-model"
 		}
-		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"model_steps": result.ModelSteps, "reserved_token_units": result.ReservedTokens, "context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
+		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"execution_trace_id": result.ExecutionTraceID, "model_steps": result.ModelSteps, "reserved_token_units": result.ReservedTokens, "context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
 	}
 	if leased, ok := s.diagnosisRepo.(domain.LeasedDiagnosisRepository); ok {
 		_, err = leased.ExecuteOnce(ctx, id, generate)
@@ -136,9 +141,16 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 	return nil
 }
 
-type ServiceOption func(*int)
+type serviceSettings struct {
+	concurrency int
+	telemetry   domain.TelemetryReader
+	policy      string
+}
+type ServiceOption func(*serviceSettings)
 
-func WithConcurrency(n int) ServiceOption { return func(value *int) { *value = n } }
+func WithConcurrency(n int) ServiceOption {
+	return func(value *serviceSettings) { value.concurrency = n }
+}
 
 func (s *MultiAgentService) FailBatch(ctx context.Context, id string, cause error) error {
 	if recorder, ok := s.diagnosisRepo.(interface {
@@ -150,9 +162,15 @@ func (s *MultiAgentService) FailBatch(ctx context.Context, id string, cause erro
 }
 
 func classifyDiagnosisError(err error) error {
- if errors.Is(err, domain.ErrModelQueueFull) { return &core.DeferredTaskError{Reason:"model admission full; retry after capacity becomes available"} }
+	if errors.Is(err, domain.ErrModelQueueFull) {
+		return &core.DeferredTaskError{Reason: "model admission full; retry after capacity becomes available"}
+	}
 	if errors.Is(err, domain.ErrInvalidDiagnosis) || errors.Is(err, domain.ErrInvestigationBudget) || llm.IsPermanentError(err) {
 		return &core.PermanentTaskError{Err: err}
 	}
 	return err
+}
+
+func WithTelemetryReader(reader domain.TelemetryReader, policy string) ServiceOption {
+	return func(s *serviceSettings) { s.telemetry = reader; s.policy = policy }
 }

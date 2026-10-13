@@ -11,12 +11,17 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 	"github.com/google/uuid"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/nodes"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 )
 
 type Options struct {
+	Telemetry         domain.TelemetryReader
+	TelemetryPolicy   string
 	TaskInstructions  string
 	MaxReservedTokens int
 	MaxContextChars   int
@@ -90,7 +95,22 @@ func NewAgent(repo domain.DiagnosisRepository, retriever domain.VectorRetriever,
 	definitions["update_investigation_plan"] = planning
 	artifact, _ := (&Agent{repo: repo}).artifactTool(&agentState{})
 	definitions["read_evidence_artifact"] = artifact
+	if options.Telemetry != nil {
+		if options.TelemetryPolicy == "" {
+			options.TelemetryPolicy = "scoped-telemetry-v1"
+		}
+		extra, e := telemetryTools(&agentState{}, options.Telemetry)
+		if e != nil {
+			return nil, e
+		}
+		for name, t := range extra {
+			definitions[name] = t
+		}
+	}
 	names := []string{"error_statistics", "read_logs", "search_history", "update_investigation_plan", "read_evidence_artifact"}
+	if options.Telemetry != nil {
+		names = append(names, "query_metrics", "query_service_logs", "query_traces")
+	}
 	infos := []*schema.ToolInfo{}
 	for _, name := range names {
 		info, e := definitions[name].Info(context.Background())
@@ -182,7 +202,13 @@ func (a *Agent) plan(ctx context.Context, s *agentState) (*agentState, error) {
 	if err := a.saveCheckpoint(ctx, s); err != nil {
 		return s, err
 	}
-	reply, err := a.model.Generate(ctx, s.messages, modelOptions...)
+	modelCtx, finishModel := obs.Operation(ctx, "model", attribute.Int("argus.step", s.step), attribute.String("gen_ai.request.model", a.options.ModelName))
+	reply, err := a.model.Generate(modelCtx, s.messages, modelOptions...)
+	if reply != nil && reply.ResponseMeta != nil && reply.ResponseMeta.Usage != nil {
+		usage := reply.ResponseMeta.Usage
+		trace.SpanFromContext(modelCtx).SetAttributes(attribute.Int("gen_ai.usage.input_tokens", usage.PromptTokens), attribute.Int("gen_ai.usage.output_tokens", usage.CompletionTokens))
+	}
+	finishModel(err)
 	if errors.Is(err, domain.ErrModelQueueFull) {
 		s.step--
 		s.reservedTokens -= reservation
@@ -201,6 +227,7 @@ func (a *Agent) plan(ctx context.Context, s *agentState) (*agentState, error) {
 	s.messages = append(s.messages, reply)
 	if reply.ResponseMeta != nil && reply.ResponseMeta.Usage != nil {
 		s.tokens += reply.ResponseMeta.Usage.TotalTokens
+		obs.AddTokens(ctx, reply.ResponseMeta.Usage.TotalTokens)
 	}
 	if len(reply.ToolCalls) > 0 {
 		if len(reply.ToolCalls) > 4 {
@@ -223,6 +250,7 @@ func (a *Agent) executeTools(ctx context.Context, s *agentState) (*agentState, e
 			return s, err
 		}
 		start := time.Now()
+		toolCtx, finishTool := obs.Operation(ctx, "tool", attribute.String("tool.name", call.Function.Name), attribute.Int("argus.step", s.step))
 		observation := domain.ToolObservation{Step: s.step, Tool: call.Function.Name, Arguments: json.RawMessage(call.Function.Arguments)}
 		var output string
 		var err error
@@ -231,11 +259,12 @@ func (a *Agent) executeTools(ctx context.Context, s *agentState) (*agentState, e
 				err = allowHistorySearch(s, call.Function.Arguments)
 			}
 			if err == nil {
-				output, err = t.InvokableRun(ctx, call.Function.Arguments)
+				output, err = t.InvokableRun(toolCtx, call.Function.Arguments)
 			}
 		} else {
 			err = fmt.Errorf("unknown read-only tool: %s", call.Function.Name)
 		}
+		finishTool(err)
 		if err != nil {
 			observation.Error = err.Error()
 			b, _ := json.Marshal(map[string]string{"error": err.Error()})
@@ -322,6 +351,7 @@ func (a *Agent) finish(ctx context.Context, s *agentState) (*agentState, error) 
 		result.Limitations = append(result.Limitations, limitation)
 	}
 	result.ToolTrace = s.observations
+	result.ExecutionTraceID = obs.TraceID(ctx)
 	result.TokensUsed = s.tokens
 	result.ModelSteps = s.step
 	result.ReservedTokens = s.reservedTokens
@@ -331,7 +361,9 @@ func (a *Agent) finish(ctx context.Context, s *agentState) (*agentState, error) 
 	s.phase = "completed"
 	return s, a.saveCheckpoint(ctx, s)
 }
-func (a *Agent) Run(ctx context.Context, id string) (*domain.DiagnosisResult, error) {
+func (a *Agent) Run(ctx context.Context, id string) (result *domain.DiagnosisResult, runErr error) {
+	ctx, end := obs.Operation(obs.AgentContext(ctx, id), "task", attribute.String("argus.batch_id", id))
+	defer func() { end(runErr) }()
 	if _, err := uuid.Parse(id); err != nil {
 		return nil, fmt.Errorf("invalid batch id: %w", err)
 	}
@@ -356,6 +388,15 @@ func (a *Agent) Run(ctx context.Context, id string) (*domain.DiagnosisResult, er
 		return nil, err
 	}
 	state.tools["read_evidence_artifact"] = artifact
+	if a.options.Telemetry != nil {
+		extra, e := telemetryTools(state, a.options.Telemetry)
+		if e != nil {
+			return nil, e
+		}
+		for name, t := range extra {
+			state.tools[name] = t
+		}
+	}
 	out, err := a.graph.Invoke(ctx, state)
 	if err != nil {
 		return nil, err

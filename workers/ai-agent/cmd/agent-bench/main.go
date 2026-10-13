@@ -12,10 +12,12 @@ import (
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/google/uuid"
+	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/investigation"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/nodes"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm"
+	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"net/http"
 	"os"
@@ -47,8 +49,18 @@ func (t *requestTrace) RoundTrip(r *http.Request) (*http.Response, error) {
 			}
 		}
 	}
-	t.rows = append(t.rows, map[string]interface{}{"tool_choice": body["tool_choice"], "tool_names": names})
-	return http.DefaultTransport.RoundTrip(r)
+	row := map[string]interface{}{"tool_choice": body["tool_choice"], "tool_names": names}
+	t.rows = append(t.rows, row)
+	start := time.Now()
+	response, err := http.DefaultTransport.RoundTrip(r)
+	row["duration_ms"] = time.Since(start).Milliseconds()
+	if response != nil {
+		row["http_status"] = response.StatusCode
+	}
+	if err != nil {
+		row["transport_error"] = true
+	}
+	return response, err
 }
 
 type inputCase struct {
@@ -94,6 +106,16 @@ func (m *briefModel) Generate(ctx context.Context, messages []*schema.Message, o
 	return reply, err
 }
 
+// Baseline generation preserves raw replies even when report parsing fails.
+// It delegates directly so the single-shot prompt is not augmented by briefModel.
+func (m *briefModel) BaselineGenerate(ctx context.Context, messages []*schema.Message, options ...model.Option) (*schema.Message, error) {
+	reply, err := m.ChatModel.Generate(ctx, messages, options...)
+	if reply != nil {
+		m.Replies = append(m.Replies, reply)
+	}
+	return reply, err
+}
+
 const brief = `This is an ITBench-Lite SRE transfer evaluation, not vehicle diagnosis. Investigate the Kubernetes incident using only the supplied snapshot evidence. Use read_logs query/offset/limit to inspect more than the first page, and maintain competing hypotheses with gathered evidence. Do not treat downstream alerts as sufficient proof of a root cause. No historical retrieval database is provided. At the end use the required diagnosis JSON schema, and additionally include "entities":[{"name":"namespace/Kind/name","contributing_factor":true,"reason":"evidence-backed explanation"}]. Only list actual root cause candidates, most likely first. root_cause should explain their causal role. Explicitly disclose missing metrics, application logs and traces.`
 
 func main() {
@@ -103,11 +125,21 @@ func main() {
 	}
 }
 func run() error {
+	shutdown, e := obs.SetupFromEnv(context.Background(), "argus-agent-bench")
+	if e != nil {
+		return e
+	}
+	defer func() {
+		ctx, c := context.WithTimeout(context.Background(), 5*time.Second)
+		defer c()
+		_ = shutdown(ctx)
+	}()
 	input := flag.String("input", "", "blind JSON input")
 	out := flag.String("out", "", "result directory")
 	mode := flag.String("mode", "agent", "agent or single-shot baseline")
 	trials := flag.Int("trials", 3, "trials per scenario")
 	parallel := flag.Int("parallel", 2, "parallel investigations")
+	taskPlan := flag.String("task-plan", "", "explicit case/trial replay schedule; source attempts remain immutable")
 	flag.Parse()
 	if *mode != "agent" && *mode != "baseline" {
 		return fmt.Errorf("invalid mode")
@@ -135,6 +167,17 @@ func run() error {
 			return fmt.Errorf("input hash mismatch: %s", c.ID)
 		}
 	}
+	var selected map[taskKey]bool
+	if *taskPlan != "" {
+		data, err := os.ReadFile(*taskPlan)
+		if err != nil {
+			return err
+		}
+		selected, err = parseTaskPlan(data, s.Cases, *trials)
+		if err != nil {
+			return err
+		}
+	}
 	keyBytes, e := os.ReadFile(os.Getenv("DEEPSEEK_API_KEY_FILE"))
 	if e != nil {
 		return fmt.Errorf("cannot read private API key file")
@@ -154,6 +197,9 @@ func run() error {
 	slots := make(chan struct{}, *parallel)
 	for _, c := range s.Cases {
 		for trial := 0; trial < *trials; trial++ {
+			if selected != nil && !selected[taskKey{c.ID, trial}] {
+				continue
+			}
 			slots <- struct{}{}
 			wg.Add(1)
 			go func(c inputCase, trial int) {
@@ -162,6 +208,8 @@ func run() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 				defer cancel()
 				start := time.Now()
+				batchID := uuid.NewSHA1(uuid.NameSpaceURL, []byte("itbench:"+s.Revision+":"+c.ID+fmt.Sprint(trial))).String()
+				ctx, endBenchmark := benchmarkContext(ctx, batchID, *mode)
 				transport := &requestTrace{}
 				chat, err := llm.NewGLM4ChatModel(&llm.GLM4Config{HTTPClient: &http.Client{Transport: transport, Timeout: 60 * time.Second}, APIKey: key, BaseURL: "https://api.deepseek.com", Model: "deepseek-flash"})
 				var result *domain.DiagnosisResult
@@ -174,7 +222,12 @@ func run() error {
 						text = string(rr[:24000])
 					}
 					var reply *schema.Message
-					reply, err = chat.Generate(ctx, []*schema.Message{schema.SystemMessage(brief + ` Return exactly this JSON schema: {"hypothesis_id":"H1","root_cause":"explanation","suggestions":["inspection"],"severity":"high","confidence":0.5,"evidence_ids":[],"limitations":["missing telemetry"],"entities":[{"name":"namespace/Kind/name","contributing_factor":true,"reason":"explanation"}]}. suggestions, evidence_ids, limitations and entities MUST be arrays. severity MUST be high/medium/low/info/critical. No tools are available in this single-shot baseline. Do not fabricate unseen observations.`), schema.UserMessage(text)})
+					modelCtx, endModel := obs.Operation(ctx, "model", attribute.String("gen_ai.request.model", "deepseek-flash"))
+					reply, err = observer.BaselineGenerate(modelCtx, []*schema.Message{schema.SystemMessage(brief + ` Return exactly this JSON schema: {"hypothesis_id":"H1","root_cause":"explanation","suggestions":["inspection"],"severity":"high","confidence":0.5,"evidence_ids":[],"limitations":["missing telemetry"],"entities":[{"name":"namespace/Kind/name","contributing_factor":true,"reason":"explanation"}]}. suggestions, evidence_ids, limitations and entities MUST be arrays. severity MUST be high/medium/low/info/critical. No tools are available in this single-shot baseline. Do not fabricate unseen observations.`), schema.UserMessage(text)})
+					if reply != nil && reply.ResponseMeta != nil && reply.ResponseMeta.Usage != nil {
+						obs.AddTokens(modelCtx, reply.ResponseMeta.Usage.TotalTokens)
+					}
+					endModel(err)
 					if err == nil && reply != nil {
 						result, err = nodes.ParseDiagnosisResult(reply.Content)
 						if result != nil {
@@ -190,7 +243,7 @@ func run() error {
 					var a *investigation.Agent
 					a, err = investigation.NewAgent(store, nil, observer, investigation.Options{TaskInstructions: brief + fmt.Sprintf(" Snapshot contains %d addressable lines. Do not invent entity names.", len(c.Lines)), MaxSteps: 12, ModelName: "deepseek-flash"})
 					if err == nil {
-						result, err = a.Run(ctx, uuid.NewSHA1(uuid.NameSpaceURL, []byte("itbench:"+s.Revision+":"+c.ID+fmt.Sprint(trial))).String())
+						result, err = a.Run(ctx, batchID)
 					}
 				}
 				if err == nil && result == nil {
@@ -203,7 +256,12 @@ func run() error {
 				if len(store.checkpoint) == 0 {
 					store.checkpoint = []byte("null")
 				}
-				row := map[string]interface{}{"request_tool_policy": transport.rows, "checkpoint": json.RawMessage(store.checkpoint), "model_replies": observer.Replies, "provider_stats": stats, "mode": *mode, "scenario_id": c.ID, "trial": trial, "latency_ms": time.Since(start).Milliseconds(), "model": "deepseek-flash", "input_sha256": c.SHA, "benchmark_revision": s.Revision, "adapter": s.Adapter, "result": result, "valid_report": err == nil}
+				traceID := obs.TraceID(ctx)
+				if result != nil {
+					result.ExecutionTraceID = traceID
+				}
+				endBenchmark(err)
+				row := map[string]interface{}{"request_tool_policy": transport.rows, "checkpoint": json.RawMessage(store.checkpoint), "model_replies": observer.Replies, "provider_stats": stats, "trace_id": traceID, "mode": *mode, "scenario_id": c.ID, "trial": trial, "latency_ms": time.Since(start).Milliseconds(), "model": "deepseek-flash", "input_sha256": c.SHA, "benchmark_revision": s.Revision, "adapter": s.Adapter, "result": result, "valid_report": err == nil}
 				if err != nil {
 					row["error"] = strings.ReplaceAll(err.Error(), key, "[REDACTED]")
 				}
@@ -236,4 +294,10 @@ func run() error {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
+}
+
+// The benchmark root survives nil diagnosis results, so failed trials can be
+// correlated with their exported execution spans and subsequent eval scores.
+func benchmarkContext(ctx context.Context, batchID, mode string) (context.Context, func(error)) {
+	return obs.Operation(obs.AgentContext(ctx, batchID), "task", attribute.String("argus.benchmark.mode", mode))
 }

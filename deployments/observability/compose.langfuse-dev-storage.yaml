@@ -1,0 +1,82 @@
+# Validation-only disposable dependency overlay. Existing-storage deployment
+# uses compose.langfuse.yaml alone and does not create these services.
+services:
+  langfuse-dev-postgres:
+    profiles: [langfuse]
+    image: postgres:16.13-alpine
+    mem_limit: 256m
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: argus_dev
+      POSTGRES_PASSWORD: ${LANGFUSE_DEV_POSTGRES_PASSWORD:?generated dev password required}
+    volumes:
+      - langfuse-dev-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d argus_dev]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  langfuse-dev-redis:
+    profiles: [langfuse]
+    image: redis:7.4.7-alpine
+    mem_limit: 128m
+    command: [redis-server, --requirepass, "${LANGFUSE_DEV_REDIS_PASSWORD:?required}", --maxmemory, 96mb, --maxmemory-policy, noeviction]
+    volumes: ["langfuse-dev-redis-data:/data"]
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$${LANGFUSE_DEV_REDIS_PASSWORD}" redis-cli ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      LANGFUSE_DEV_REDIS_PASSWORD: ${LANGFUSE_DEV_REDIS_PASSWORD:?required}
+  langfuse-dev-minio:
+    profiles: [langfuse]
+    image: cgr.dev/chainguard/minio@sha256:dc455cdd4db6e390b1b26514f15ff37681a777bf8dab41aac445a0259f751e56
+    mem_limit: 256m
+    command: [server, /data]
+    environment:
+      MINIO_ROOT_USER: ${LANGFUSE_DEV_MINIO_ROOT_USER:?required}
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_DEV_MINIO_ROOT_PASSWORD:?required}
+    ports: ["127.0.0.1:19000:9000"]
+    volumes: ["langfuse-dev-minio-data:/data"]
+  langfuse-dev-minio-init:
+    profiles: [langfuse]
+    image: cgr.dev/chainguard/minio@sha256:dc455cdd4db6e390b1b26514f15ff37681a777bf8dab41aac445a0259f751e56
+    mem_limit: 256m
+    depends_on: [langfuse-dev-minio]
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        until mc alias set lf http://langfuse-dev-minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null 2>&1; do sleep 1; done
+        mc mb --ignore-existing lf/argus-langfuse >/dev/null
+        mc anonymous set none lf/argus-langfuse >/dev/null
+        mc admin user add lf "$${LANGFUSE_S3_ACCESS_KEY_ID}" "$${LANGFUSE_S3_SECRET_ACCESS_KEY}" >/dev/null
+        mc admin policy create lf langfuse-bucket /policy.json >/dev/null
+        mc admin policy attach lf langfuse-bucket --user "$${LANGFUSE_S3_ACCESS_KEY_ID}" >/dev/null
+    environment:
+      MINIO_ROOT_USER: ${LANGFUSE_DEV_MINIO_ROOT_USER:?required}
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_DEV_MINIO_ROOT_PASSWORD:?required}
+      LANGFUSE_S3_ACCESS_KEY_ID: ${LANGFUSE_S3_ACCESS_KEY_ID:?required}
+      LANGFUSE_S3_SECRET_ACCESS_KEY: ${LANGFUSE_S3_SECRET_ACCESS_KEY:?required}
+    volumes: ["./minio-langfuse-policy.json:/policy.json:ro"]
+    restart: "no"
+  langfuse-worker:
+    depends_on:
+      langfuse-dev-postgres:
+        condition: service_healthy
+      langfuse-dev-redis:
+        condition: service_healthy
+      langfuse-dev-minio-init:
+        condition: service_completed_successfully
+  langfuse-web:
+    depends_on:
+      langfuse-dev-postgres:
+        condition: service_healthy
+      langfuse-dev-redis:
+        condition: service_healthy
+      langfuse-dev-minio-init:
+        condition: service_completed_successfully
+volumes:
+  langfuse-dev-postgres-data: {}
+  langfuse-dev-redis-data: {}
+  langfuse-dev-minio-data: {}
