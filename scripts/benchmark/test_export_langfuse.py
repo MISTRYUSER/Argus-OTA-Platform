@@ -30,7 +30,7 @@ class ExportTest(unittest.TestCase):
         strict.write_text(json.dumps({'rows': [{'incident_id': '1', 'trial': '1', 'f1': .5}]}))
         official = self.root / 'official.json'
         official.write_text(json.dumps({'raw_results': [{'incident_id': '2', 'trial': 1,
-            'scores': {'root_cause_entity': {'calculation_f1': 0}}, 'error': 'failure retained'}]}))
+            'scores': {'root_cause_entity': {'calculation_f1': 0}, 'root_cause_entity_k@3': {'calculation_f1': 1.5}}, 'error': 'failure retained'}]}))
         return e.build_plan(runs, [('strict', strict), ('official', official)], dataset='local',
                             run='test-run', release='git-sha', model='fixture', timestamp_ns=123)
 
@@ -64,6 +64,27 @@ class ExportTest(unittest.TestCase):
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         return f'http://127.0.0.1:{server.server_port}', seen
+
+    def test_upstream_out_of_range_k_components_are_raw_flagged_not_clamped(self):
+        name, annotation, comment = e.score_annotation('official.root_cause_entity_k@3.calculation_f1', 1.5)
+        self.assertEqual(name, 'official.raw.root_cause_entity_k@3.calculation_f1')
+        self.assertEqual(annotation['expected_range'], [0, 1])
+        self.assertEqual(annotation['score_range_validation'], 'outside_expected_range')
+        self.assertTrue(annotation['excluded_from_validated_headline'])
+        self.assertFalse(annotation['validated_headline_metric'])
+        self.assertIn('not clamped', comment)
+        name, annotation, _ = e.score_annotation('official.root_cause_entity.calculation_f1', .5)
+        self.assertTrue(annotation['headline_component_eligible'])
+        self.assertFalse(annotation['validated_headline_metric'])
+        _, annotation, _ = e.score_annotation('official.root_cause_entity_k@1.calculation_f1', .5)
+        self.assertTrue(annotation['excluded_from_validated_headline'])
+        plan = self.plan()
+        official = [r['body'] for r in plan['requests'] if r['path'].endswith('/scores') and r['body']['name'].startswith('official.raw.')]
+        self.assertTrue(official)
+        self.assertTrue(all(r['metadata']['raw_upstream_component'] for r in official))
+        invalid = [r for r in official if r['metadata']['score_range_validation'] == 'outside_expected_range']
+        self.assertEqual(invalid[0]['value'], 1.5)
+        self.assertEqual(plan['cases'][1]['raw']['official']['scores']['root_cause_entity_k@3']['calculation_f1'], 1.5)
 
     def test_protocol_mock(self):
         endpoint, seen = self.server()

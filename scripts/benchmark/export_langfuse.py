@@ -79,6 +79,36 @@ def numeric_scores(row, kind):
             if isinstance(v, (int, float)) and math.isfinite(v)}
 
 
+def score_annotation(name, value):
+    """Keep upstream components unchanged while separating them from headlines."""
+    if not name.startswith('official.'):
+        return name, {}, None
+    source_path = name[len('official.'):]
+    rubric, _, field = source_path.partition('.')
+    k_variant = rubric.startswith('root_cause_entity_k')
+    bounded = field in ('calculation_precision', 'calculation_recall', 'calculation_f1') or source_path == 'root_cause_reasoning.calculation'
+    range_valid = 0 <= value <= 1 if bounded else None
+    primary = source_path in ('root_cause_entity.calculation_f1', 'root_cause_reasoning.calculation')
+    metadata = {
+        'raw_upstream_component': True,
+        'score_source_path': source_path,
+        'expected_range': [0, 1] if bounded else None,
+        'score_range_validation': ('within_expected_range' if range_valid else 'outside_expected_range') if bounded else 'not_a_bounded_metric',
+        'k_variant': k_variant,
+        'headline_component_eligible': bool(primary and range_valid),
+        'validated_headline_metric': False,
+        'excluded_from_validated_headline': bool(k_variant or not primary or range_valid is False),
+    }
+    comment = 'Raw upstream component, preserved unchanged; not a headline accuracy metric. '
+    if k_variant:
+        comment += 'K variant excluded from validated headline metrics. '
+    if range_valid is False:
+        comment += 'Upstream value outside expected [0,1]; not clamped.'
+    else:
+        comment += 'Aggregate definitions and missing-score coverage remain in the report.'
+    return 'official.raw.' + source_path, metadata, comment
+
+
 def attribute(key, value):
     return {'key': key, 'value': {'stringValue': str(value)}}
 
@@ -150,14 +180,17 @@ def build_plan(runs, score_sources, *, dataset, run, release, model, timestamp_n
                     'scopeSpans': [{'scope': {'name': 'argus.eval.import'}, 'spans': [span]}]}]}
         requests.append({'path': '/api/public/otel/v1/traces', 'body': payload, 'case': case_id, 'trial': trial})
         for name, value in sorted(case['scores'].items()):
+            display_name, annotation, comment = score_annotation(name, value)
             # Scores visible in experiment snapshot and original execution, if recorded.
             targets = [(snapshot_trace, snapshot_span)]
             if execution_trace:
                 targets.append((execution_trace, case['span_id']))
             for trace_id, observation_id in targets:
                 body = {'id': stable_id(experiment_id, case_id, trial, name, trace_id),
-                        'name': name, 'value': value, 'dataType': 'NUMERIC',
-                        'traceId': trace_id, 'environment': 'experiment', 'metadata': metadata}
+                        'name': display_name, 'value': value, 'dataType': 'NUMERIC',
+                        'traceId': trace_id, 'environment': 'experiment', 'metadata': {**metadata, **annotation}}
+                if comment:
+                    body['comment'] = comment
                 if observation_id:
                     body['observationId'] = observation_id
                 requests.append({'path': '/api/public/scores', 'body': body, 'case': case_id, 'trial': trial})

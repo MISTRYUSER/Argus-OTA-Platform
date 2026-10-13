@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/cloudwego/eino/schema"
 	obs "github.com/xuewentao/argus-ota-platform/internal/observability"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/nodes"
+	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -60,5 +63,29 @@ func TestRequestTraceRecordsActual429WithoutHeaders(t *testing.T) {
 	}
 	if strings.Contains(string(body), "private-test-credential") || strings.Contains(string(body), "Authorization") {
 		t.Fatal("headers leaked into receipt")
+	}
+}
+
+func TestInvalidBaselineReplyRemainsInRawEvidence(t *testing.T) {
+	content := `{"root_cause":"truncated`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"choices": []interface{}{map[string]interface{}{"message": map[string]string{"role": "assistant", "content": content}}}})
+	}))
+	defer server.Close()
+	chat, err := llm.NewGLM4ChatModel(&llm.GLM4Config{APIKey: "fixture", Model: "fixture", BaseURL: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	observer := &briefModel{ChatModel: chat}
+	reply, err := observer.BaselineGenerate(context.Background(), []*schema.Message{schema.UserMessage("controlled invalid JSON fixture")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = nodes.ParseDiagnosisResult(reply.Content); err == nil {
+		t.Fatal("fixture must fail parsing")
+	}
+	if len(observer.Replies) != 1 || observer.Replies[0].Content != content {
+		t.Fatal("invalid model response lost after parse failure")
 	}
 }

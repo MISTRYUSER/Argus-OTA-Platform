@@ -11,12 +11,12 @@ User request: after telemetry integration, run the complete benchmark set and re
 
 ## Tasks and regression gates
 
-- [ ] Freeze telemetry code, complete native middleware/eval evidence and regressions.
-- [ ] Download and hash all35 declared inputs; prepare label-blind records; run210 production model trials with realDeepSeek and OTLP export.
-- [ ] Add/test full-trial summarizer including failure/unknown/duplicate handling; score all diagnosis trials.
-- [ ] Add/test retrieval benchmark against realPostgreSQL; run all300queries and save official scoring receipts.
-- [ ] Independently review metric definitions/data completeness; run fullGo/Python regression after changes.
-- [ ] Deliver raw data, measurement report, source revision and STAR text supported by actual results; create reviewable PR.
+- [x] Freeze telemetry code, complete native middleware/eval evidence and regressions.
+- [x] Download and hash all35 declared inputs; prepare label-blind records; run210 production model trials with realDeepSeek and OTLP export.
+- [x] Add/test full-trial summarizer including failure/unknown/duplicate handling; score all diagnosis trials.
+- [x] Add/test retrieval benchmark against realPostgreSQL; run all300queries and save official scoring receipts.
+- [x] Independently review metric definitions/data completeness; run fullGo/Python regression after changes.
+- [x] Deliver raw data, measurement report, source revision and STAR text supported by actual results; create reviewable PR.
 
 ## Review focus
 
@@ -25,3 +25,5 @@ No label leakage into diagnosis inputs; no test-qrel tuning; failed tasks stay i
 ## Prespecified retrieval defect repair
 
 The first complete300-query run returned no documents for any query. Source investigation showed the production fallback required a literal full query substring before its full-text rank could run. Preserve that baseline. Before evaluating any fixed result, freeze one general repair: simple PostgreSQL lexeme OR matching, literal phrase match priority, then ts_rank; structured error-code filtering remains exact, topK remains capped10, and empty/punctuation-only unstructured queries return no rows. Verify on independently authored distributed-term/phrase/structured/escaping/topK fixtures. Run identical complete300queries once into a new fixed directory without choosing parameters from test qrels. This is post-test defect repair, not an untouched zero-shot score; retain old/fixed/offlinebaseline distinctions and source hashes.
+
+Final source verification: all-final-verified 138 pass/5 opt-in skips; vet/build passed. Python36 and configuration9 passed. Real native telemetry receipts retained; environment reset removed disposable VM, so persistent Lima state and middleware restoration were added. Original210 attempts plus98 explicitly scheduled provider replays are all retained. Report/STAR/data archive and PR publication are task outputs, with independent reviewed provenance.

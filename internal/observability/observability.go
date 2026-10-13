@@ -111,7 +111,7 @@ func Operation(ctx context.Context, operation string, attrs ...attribute.KeyValu
 		labels := metric.WithAttributes(attribute.String("operation", operation), attribute.String("outcome", outcome))
 		counter, _ := otel.Meter("argus").Int64Counter("argus_operations_total")
 		counter.Add(ctx, 1, labels)
-		duration, _ := otel.Meter("argus").Float64Histogram("argus_operation_duration_seconds", metric.WithUnit("s"))
+		duration, _ := otel.Meter("argus").Float64Histogram("argus_operation_duration_seconds", metric.WithUnit("s"), metric.WithExplicitBucketBoundaries(0.0001, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20, 30, 60, 120, 180))
 		duration.Record(ctx, time.Since(start).Seconds(), labels)
 		Logger(ctx).Info("operation_completed", "operation", operation, "outcome", outcome, "duration_ms", time.Since(start).Milliseconds())
 		span.End()

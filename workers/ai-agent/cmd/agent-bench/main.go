@@ -106,6 +106,16 @@ func (m *briefModel) Generate(ctx context.Context, messages []*schema.Message, o
 	return reply, err
 }
 
+// Baseline generation preserves raw replies even when report parsing fails.
+// It delegates directly so the single-shot prompt is not augmented by briefModel.
+func (m *briefModel) BaselineGenerate(ctx context.Context, messages []*schema.Message, options ...model.Option) (*schema.Message, error) {
+	reply, err := m.ChatModel.Generate(ctx, messages, options...)
+	if reply != nil {
+		m.Replies = append(m.Replies, reply)
+	}
+	return reply, err
+}
+
 const brief = `This is an ITBench-Lite SRE transfer evaluation, not vehicle diagnosis. Investigate the Kubernetes incident using only the supplied snapshot evidence. Use read_logs query/offset/limit to inspect more than the first page, and maintain competing hypotheses with gathered evidence. Do not treat downstream alerts as sufficient proof of a root cause. No historical retrieval database is provided. At the end use the required diagnosis JSON schema, and additionally include "entities":[{"name":"namespace/Kind/name","contributing_factor":true,"reason":"evidence-backed explanation"}]. Only list actual root cause candidates, most likely first. root_cause should explain their causal role. Explicitly disclose missing metrics, application logs and traces.`
 
 func main() {
@@ -213,7 +223,7 @@ func run() error {
 					}
 					var reply *schema.Message
 					modelCtx, endModel := obs.Operation(ctx, "model", attribute.String("gen_ai.request.model", "deepseek-flash"))
-					reply, err = chat.Generate(modelCtx, []*schema.Message{schema.SystemMessage(brief + ` Return exactly this JSON schema: {"hypothesis_id":"H1","root_cause":"explanation","suggestions":["inspection"],"severity":"high","confidence":0.5,"evidence_ids":[],"limitations":["missing telemetry"],"entities":[{"name":"namespace/Kind/name","contributing_factor":true,"reason":"explanation"}]}. suggestions, evidence_ids, limitations and entities MUST be arrays. severity MUST be high/medium/low/info/critical. No tools are available in this single-shot baseline. Do not fabricate unseen observations.`), schema.UserMessage(text)})
+					reply, err = observer.BaselineGenerate(modelCtx, []*schema.Message{schema.SystemMessage(brief + ` Return exactly this JSON schema: {"hypothesis_id":"H1","root_cause":"explanation","suggestions":["inspection"],"severity":"high","confidence":0.5,"evidence_ids":[],"limitations":["missing telemetry"],"entities":[{"name":"namespace/Kind/name","contributing_factor":true,"reason":"explanation"}]}. suggestions, evidence_ids, limitations and entities MUST be arrays. severity MUST be high/medium/low/info/critical. No tools are available in this single-shot baseline. Do not fabricate unseen observations.`), schema.UserMessage(text)})
 					if reply != nil && reply.ResponseMeta != nil && reply.ResponseMeta.Usage != nil {
 						obs.AddTokens(modelCtx, reply.ResponseMeta.Usage.TotalTokens)
 					}
