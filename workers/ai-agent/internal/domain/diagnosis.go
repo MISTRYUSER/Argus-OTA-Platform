@@ -26,6 +26,7 @@ type ErrorCodeSummary struct {
 
 // DiagnosisResult 诊断结果（由 LLM 生成）
 type DiagnosisResult struct {
+	ResolutionStatus   string       `json:"resolution_status,omitempty"`
 	ExecutionTraceID   string       `json:"execution_trace_id,omitempty"`
 	ModelSteps         int          `json:"model_steps"`
 	ReservedTokens     int          `json:"reserved_token_units"`

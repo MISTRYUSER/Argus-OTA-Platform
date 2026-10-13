@@ -63,3 +63,22 @@ func TestFallbackBudgetProducesReviewReport(t *testing.T) {
 		t.Fatalf("out=%+v err=%v", out, err)
 	}
 }
+
+type checkpointBudgetRepo struct{ repository }
+
+func (checkpointBudgetRepo) LoadInvestigationCheckpoint(context.Context, string) ([]byte, error) {
+	return []byte(`{"BatchID":"b","Tokens":120,"Step":3,"ReservedTokens":1000,"Observations":[{"tool":"read_logs"}]}`), nil
+}
+func TestUnresolvedKeepsSpentBudgetAndExplicitStatus(t *testing.T) {
+	r, e := NewRunner(checkpointBudgetRepo{repository{data: &domain.AggregatedData{RawLogs: "ambiguous", ErrorCodeStats: map[string]int{"E": 1}}}}, nil, budgetRunner{}, Options{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	out, e := r.Run(context.Background(), "b")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if out.TokensUsed != 120 || out.ModelSteps != 3 || out.ReservedTokens != 1000 || out.ResolutionStatus != "unresolved" || len(out.ToolTrace) != 1 {
+		t.Fatalf("spent usage or status lost %+v", out)
+	}
+}

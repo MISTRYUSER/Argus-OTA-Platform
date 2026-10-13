@@ -55,7 +55,9 @@ services:
 
   # MinIO - 对象存储服务
   minio:
-    image: minio/minio:latest
+    build:
+      context: ..
+      dockerfile: deployments/minio.Dockerfile
     container_name: argus-minio
     command: server /data --console-address ":9001"
     environment:
@@ -74,22 +76,7 @@ services:
       timeout: 20s
       retries: 3
 
-  # MinIO Client (MC) - 用于初始化 Bucket
-  minio-init:
-    image: minio/mc:latest
-    container_name: argus-minio-init
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      sleep 5;
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb myminio/argus-logs --ignore-existing;
-      /usr/bin/mc policy set download myminio/argus-logs;
-      echo 'MinIO initialization completed';
-      "
-    networks:
-      - argus-network
+  # Ingestor creates the configured bucket idempotently; no obsolete mc image is required.
 
 volumes:
   postgres_data:

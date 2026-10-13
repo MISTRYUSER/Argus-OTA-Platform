@@ -61,7 +61,7 @@ def parse_csv(stream, source, max_rows=MAX_ROWS):
         if len(record['error_code']) > 128:
             raise ValueError('oversized error_code')
         record.update(timestamp=_time(record['timestamp']), cpu=_metric(record['cpu']), memory_mb=_metric(record['memory_mb']), source=source, line=reader.line_num)
-        for optional in ('error_type','expected_checksum','actual_checksum'):
+        for optional in ('error_type','expected_checksum','actual_checksum','change_id','change_description'):
             if optional in row and row[optional].strip():
                 if len(row[optional])>256:raise ValueError('oversized optional evidence')
                 record[optional]=row[optional].strip()
@@ -198,6 +198,15 @@ def analyze(rows, baseline=None, candidate=None):
                 report['evidence'].append(dict(id=eid,source=row['source'],line=row['line'],timestamp=row['timestamp'],version=row['version'],module=row['module'],error_code=row['error_code'],cpu=row['cpu'],memory_mb=row['memory_mb']))
         comparison['evidence_ids']=ids
         report['comparisons'].append(comparison)
+        for metric in ('cpu','memory_mb'):
+            if metric in worsened:
+                row=max((r for r in after if r[metric] is not None),key=lambda r:r[metric])
+                report['timeline'].append(dict(type='resource_increase',timestamp=row['timestamp'],version=candidate,module=row['module'],metric=metric,delta=comparison[metric]['delta'],source=row['source'],line=row['line']))
+        report['timeline'].append(dict(type='declared_version_transition',timestamp=after[0]['timestamp'],baseline_version=baseline,candidate_version=candidate,timestamp_origin='candidate_window_start; actual deployment time not observed',group=label))
+        for row in after:
+            if row.get('change_id'):
+                report['timeline'].append(dict(type='declared_module_change',timestamp=row['timestamp'],version=candidate,module=row['module'],change_id=row['change_id'],description=row.get('change_description',''),source=row['source'],line=row['line']))
+                break
         report['timeline'].append(dict(type='version_comparison',group=label,baseline_window=comparison['baseline_window'],candidate_window=comparison['candidate_window'],evidence_ids=ids))
         for row in after:
             if row['error_code'] in comparison['new_error_codes']:

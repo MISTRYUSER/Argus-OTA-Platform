@@ -50,7 +50,7 @@ func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.Vect
 		if err == nil {
 			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{Telemetry: settings.telemetry, TelemetryPolicy: settings.policy, MaxSteps: 8, ModelName: cfg.Model, MaxReservedTokens: reservationBudget})
 		}
-		if err == nil && os.Getenv("AI_RUNNER") == "hybrid" {
+		if err == nil && (os.Getenv("AI_RUNNER") == "hybrid" || os.Getenv("AI_RUNNER") == "") {
 			runner, err = hybrid.NewRunner(repo, chat, runner, hybrid.Options{MaxReservedTokens: reservationBudget, ModelName: cfg.Model})
 		}
 	default:
@@ -110,7 +110,7 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 		if result.Model == "" {
 			result.Model = "configured-model"
 		}
-		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"execution_trace_id": result.ExecutionTraceID, "model_steps": result.ModelSteps, "reserved_token_units": result.ReservedTokens, "context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
+		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"resolution_status": result.ResolutionStatus, "execution_trace_id": result.ExecutionTraceID, "model_steps": result.ModelSteps, "reserved_token_units": result.ReservedTokens, "context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
 	}
 	if leased, ok := s.diagnosisRepo.(domain.LeasedDiagnosisRepository); ok {
 		_, err = leased.ExecuteOnce(ctx, id, generate)

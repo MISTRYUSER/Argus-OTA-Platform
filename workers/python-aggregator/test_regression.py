@@ -36,6 +36,7 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(d['candidates'][0]['causal_status'],'unproven')
         self.assertTrue(all(e['source']=='minio:source.csv' and e['line']>=2 for e in d['evidence']))
         self.assertTrue(d['candidates'][0]['verification'])
+        self.assertTrue(any(e["type"]=="resource_increase" for e in d["timeline"]))
 
     def test_different_workload_is_not_version_regression(self):
         d=self.r.analyze(self.rows('MAN'), 'v1','v2')

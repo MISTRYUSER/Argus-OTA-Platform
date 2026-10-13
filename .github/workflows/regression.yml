@@ -50,7 +50,12 @@ jobs:
           done
       - name: Start real object storage
         run: |
-          docker run -d --name argus-minio -p 19000:9000 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio:latest server /data
+          # Pinned historical public MinIO binary for isolated CI only.
+          curl -fL https://github.com/minio/minio/releases/download/RELEASE.2025-09-07T16-13-09Z/minio_20250907161309.0.0_amd64.deb -o "$RUNNER_TEMP/argus-minio.deb"
+          echo "eeda08f699f6592d1b868ac8bda864ae2cacdb5ee1b888663366e8c8ff566249  $RUNNER_TEMP/argus-minio.deb" | sha256sum -c -
+          dpkg-deb -x "$RUNNER_TEMP/argus-minio.deb" "$RUNNER_TEMP/argus-minio"
+          minio_bin=$(find "$RUNNER_TEMP/argus-minio" -type f -name minio | head -1)
+          MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin nohup "$minio_bin" server --address 127.0.0.1:19000 "$RUNNER_TEMP/argus-minio-data" > "$RUNNER_TEMP/argus-minio.log" 2>&1 &
           for attempt in $(seq 1 60); do
             if curl -fsS http://localhost:19000/minio/health/live; then break; fi
             sleep 1

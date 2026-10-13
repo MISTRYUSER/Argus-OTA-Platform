@@ -10,6 +10,9 @@ import (
 )
 
 type evaluationSummary struct {
+	MeanCalls     float64  `json:"mean_actual_http_calls"`
+	MeanMS        float64  `json:"latency_mean_ms"`
+	MeanCostUSD   *float64 `json:"mean_cost_usd"`
 	Mode          string   `json:"mode"`
 	Partition     string   `json:"partition"`
 	Attempts      int      `json:"attempts"`
@@ -63,6 +66,13 @@ func writeEvaluationSummary(dir, mode, partition string) error {
 	})
 	if err != nil {
 		return err
+	}
+	if s.Attempts > 0 {
+		s.MeanCalls = float64(s.HTTPCalls) / float64(s.Attempts)
+		for _, value := range lat {
+			s.MeanMS += value
+		}
+		s.MeanMS /= float64(s.Attempts)
 	}
 	sort.Float64s(lat)
 	if len(lat) > 0 {

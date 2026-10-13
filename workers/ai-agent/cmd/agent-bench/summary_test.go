@@ -27,7 +27,7 @@ func TestSummaryIncludesFailuresAndUnresolved(t *testing.T) {
 	if err := json.Unmarshal(b, &s); err != nil {
 		t.Fatal(err)
 	}
-	if s.Attempts != 3 || s.Failures != 1 || s.Unresolved != 1 || s.HTTPCalls != 6 || s.Tokens != 15 || s.P95MS != 3 || s.CostUSD != nil {
+	if s.Attempts != 3 || s.Failures != 1 || s.Unresolved != 1 || s.HTTPCalls != 6 || s.Tokens != 15 || s.P95MS != 3 || s.MeanCalls != 2 || s.MeanMS != 2 || s.CostUSD != nil {
 		t.Fatalf("summary %+v", s)
 	}
 }

@@ -1,0 +1,3 @@
+timestamp,version,vehicle_id,vehicle_class,module,replay_id,workload,error_code,cpu,memory_mb,error_type,expected_checksum,actual_checksum
+2026-10-01T00:00:00Z,demo-v1,public-fixture,simulator,ota-downloader,explicit-checksum-demo,test,OTA_CHECKSUM_MISMATCH,,,OTA_CHECKSUM_MISMATCH,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+2026-10-01T00:00:01Z,demo-v1,public-fixture,simulator,ota-downloader,explicit-checksum-demo,test,OTA_CHECKSUM_MISMATCH,,,OTA_CHECKSUM_MISMATCH,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb

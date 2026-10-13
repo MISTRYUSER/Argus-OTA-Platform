@@ -129,7 +129,7 @@ func review(ev []domain.EvidenceItem, reason string) *domain.DiagnosisResult {
 	for _, e := range ev {
 		ids = append(ids, e.ID)
 	}
-	result := &domain.DiagnosisResult{RootCause: "Unresolved: investigation budget exhausted; human review required", Suggestions: []string{"Review current evidence and gather missing observations before assigning root cause"}, Severity: "info", Confidence: 0, Evidence: ev, EvidenceIDs: ids, Limitations: []string{reason}, Hypotheses: []domain.Hypothesis{{ID: "H1", Description: "Root cause unresolved", Status: "open", NextCheck: "Human review"}}, HypothesisID: "H1"}
+	result := &domain.DiagnosisResult{ResolutionStatus: "unresolved", RootCause: "Unresolved: investigation budget exhausted; human review required", Suggestions: []string{"Review current evidence and gather missing observations before assigning root cause"}, Severity: "info", Confidence: 0, Evidence: ev, EvidenceIDs: ids, Limitations: []string{reason}, Hypotheses: []domain.Hypothesis{{ID: "H1", Description: "Root cause unresolved", Status: "open", NextCheck: "Human review"}}, HypothesisID: "H1"}
 	b, _ := json.Marshal(map[string]interface{}{"hypothesis_id": result.HypothesisID, "root_cause": result.RootCause, "suggestions": result.Suggestions, "severity": result.Severity, "confidence": 0, "evidence_ids": result.EvidenceIDs, "limitations": result.Limitations})
 	result.RawLLMOutput = string(b)
 	return result
@@ -144,7 +144,10 @@ func (r *Runner) Run(ctx context.Context, id string) (*domain.DiagnosisResult, e
 	if !ok || r.chat == nil {
 		out, e := r.fallback.Run(ctx, id)
 		if errors.Is(e, domain.ErrInvestigationBudget) {
-			out = review(ev, e.Error())
+			out, checkpointErr := r.unresolved(ctx, id, ev, e.Error())
+			if checkpointErr != nil {
+				return nil, checkpointErr
+			}
 			out.ExecutionTraceID = obs.TraceID(ctx)
 			return out, nil
 		}
@@ -190,6 +193,7 @@ func (r *Runner) Run(ctx context.Context, id string) (*domain.DiagnosisResult, e
 	out.Evidence = ev
 	out.Hypotheses = []domain.Hypothesis{{ID: "H1", Description: reason + " observed; upstream cause unconfirmed", Status: "open", Supports: out.EvidenceIDs, NextCheck: "Verify upstream cause independently"}}
 	out.Limitations = append(out.Limitations, "Hybrid fixed evidence workflow; upstream cause unconfirmed; confidence is uncalibrated")
+	out.ResolutionStatus = "provisional"
 	out.ModelSteps = 1
 	out.ReservedTokens = reservation
 	out.Model = r.options.ModelName
@@ -199,5 +203,44 @@ func (r *Runner) Run(ctx context.Context, id string) (*domain.DiagnosisResult, e
 		obs.AddTokens(ctx, out.TokensUsed)
 	}
 	out.ToolTrace = []domain.ToolObservation{{Step: 0, Tool: "fixed_evidence", Arguments: json.RawMessage(`{}`), Output: b, DurationMillis: time.Since(start).Milliseconds()}}
+	return out, nil
+}
+
+// Unresolved reports preserve spent committed counters instead of reporting a
+// zero-cost success after a multi-step investigation reaches its budget.
+func (r *Runner) unresolved(ctx context.Context, id string, ev []domain.EvidenceItem, reason string) (*domain.DiagnosisResult, error) {
+	out := review(ev, reason)
+	store, ok := r.repo.(interface {
+		LoadInvestigationCheckpoint(context.Context, string) ([]byte, error)
+	})
+	if !ok {
+		return out, nil
+	}
+	raw, e := store.LoadInvestigationCheckpoint(ctx, id)
+	if e != nil {
+		return nil, e
+	}
+	if len(raw) == 0 {
+		return out, nil
+	}
+	if len(raw) > 1024*1024 {
+		return nil, fmt.Errorf("oversized checkpoint")
+	}
+	var saved struct {
+		BatchID                      string
+		Tokens, Step, ReservedTokens int
+		Observations                 []domain.ToolObservation
+	}
+	if e = json.Unmarshal(raw, &saved); e != nil {
+		return nil, e
+	}
+	if saved.BatchID != id || saved.Tokens < 0 || saved.Step < 0 || saved.Step > 32 || saved.ReservedTokens < 0 {
+		return nil, fmt.Errorf("invalid unresolved checkpoint counters")
+	}
+	out.TokensUsed = saved.Tokens
+	out.ModelSteps = saved.Step
+	out.ReservedTokens = saved.ReservedTokens
+	out.ToolTrace = saved.Observations
+	out.Limitations = append(out.Limitations, "Usage includes committed counters only; interrupted external calls can have unreported provider usage")
 	return out, nil
 }
