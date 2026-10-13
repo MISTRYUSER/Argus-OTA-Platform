@@ -1,0 +1,8 @@
+{"timestamp_ms":21.229,"module":"artifact_service","event":"response","request":1,"status":200,"service_elapsed_ms":20.202}
+{"timestamp_ms":21.485,"error_type":"OTA_CHECKSUM_MISMATCH","expected_checksum":"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599","actual_checksum":"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4","published_sha256":"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599"}
+{"timestamp_ms":42.238,"module":"artifact_service","event":"response","request":2,"status":200,"service_elapsed_ms":20.196}
+{"timestamp_ms":42.475,"error_type":"OTA_CHECKSUM_MISMATCH","expected_checksum":"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599","actual_checksum":"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4","published_sha256":"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599"}
+{"timestamp_ms":63.209,"module":"artifact_service","event":"response","request":3,"status":200,"service_elapsed_ms":20.193}
+{"timestamp_ms":63.489,"error_type":"OTA_CHECKSUM_MISMATCH","expected_checksum":"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599","actual_checksum":"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4","published_sha256":"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599"}
+{"module":"display","event":"heartbeat","status":"healthy"}
+{"module":"display","event":"config_applied","key":"ui_banner","value":"new"}

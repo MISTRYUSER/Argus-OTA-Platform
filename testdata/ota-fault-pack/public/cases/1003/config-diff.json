@@ -1,0 +1,10 @@
+{
+  "proxy_delay_ms": {
+    "before": 0,
+    "after": 290
+  },
+  "ui_banner": {
+    "before": "old",
+    "after": "new"
+  }
+}

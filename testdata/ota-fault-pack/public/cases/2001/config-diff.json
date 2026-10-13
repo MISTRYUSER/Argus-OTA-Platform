@@ -1,0 +1,10 @@
+{
+  "timeout_ms": {
+    "before": 234,
+    "after": 32
+  },
+  "ui_banner": {
+    "before": "old",
+    "after": "new"
+  }
+}

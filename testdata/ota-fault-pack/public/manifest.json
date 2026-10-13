@@ -1,0 +1,65 @@
+{
+  "schema": "ota-fault-pack-v1",
+  "cases": [
+    {
+      "id": "1001",
+      "partition": "dev",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "1002",
+      "partition": "dev",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "1003",
+      "partition": "dev",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "1004",
+      "partition": "dev",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "1005",
+      "partition": "dev",
+      "snapshot_scope": "compact"
+    },
+    {
+      "id": "1006",
+      "partition": "dev",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "2001",
+      "partition": "heldout",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "2002",
+      "partition": "heldout",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "2003",
+      "partition": "heldout",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "2004",
+      "partition": "heldout",
+      "snapshot_scope": "full"
+    },
+    {
+      "id": "2005",
+      "partition": "heldout",
+      "snapshot_scope": "compact"
+    },
+    {
+      "id": "2006",
+      "partition": "heldout",
+      "snapshot_scope": "full"
+    }
+  ]
+}

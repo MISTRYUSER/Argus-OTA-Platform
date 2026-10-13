@@ -1,0 +1,11 @@
+{"timestamp_ms":181.832,"module":"download","error_type":"OTA_DOWNLOAD_TIMEOUT","logical":0,"attempt":1,"elapsed_ms":181.074,"timeout_ms":180}
+{"timestamp_ms":313.242,"module":"artifact_service","event":"response","request":1,"status":200,"service_elapsed_ms":20.261}
+{"timestamp_ms":313.603,"module":"transit_proxy","event":"response","transit_elapsed_ms":311.86}
+{"timestamp_ms":363.527,"module":"download","error_type":"OTA_DOWNLOAD_TIMEOUT","logical":1,"attempt":1,"elapsed_ms":181.659,"timeout_ms":180}
+{"timestamp_ms":494.325,"module":"artifact_service","event":"response","request":2,"status":200,"service_elapsed_ms":20.32}
+{"timestamp_ms":494.657,"module":"transit_proxy","event":"response","transit_elapsed_ms":311.685}
+{"timestamp_ms":544.278,"module":"download","error_type":"OTA_DOWNLOAD_TIMEOUT","logical":2,"attempt":1,"elapsed_ms":180.715,"timeout_ms":180}
+{"timestamp_ms":676.673,"module":"artifact_service","event":"response","request":3,"status":200,"service_elapsed_ms":20.214}
+{"timestamp_ms":677.034,"module":"transit_proxy","event":"response","transit_elapsed_ms":311.873}
+{"module":"display","event":"heartbeat","status":"healthy"}
+{"module":"display","event":"config_applied","key":"ui_banner","value":"new"}

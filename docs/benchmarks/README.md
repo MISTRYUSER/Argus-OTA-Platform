@@ -43,3 +43,7 @@ Real CSV/Apollo parsing and Python aggregation are now default; mocks require AR
 ## 2026-10-13 extension
 
 [Processing/routing/shared quota guide](version-regression-guide.md) and [measurement report](version-regression-results.md) distinguish real record decoding, synthetic comparison checks, HTTP routing fixtures and real subprocess/database recovery. ITBench model quality does not automatically transfer to OTA.
+
+## 同领域故障现场回放
+
+[OTA 实际 HTTP 故障包与三策略评测](ota-fault-replay.md)：12 个实际运行故障，固定分支命中 2/12；真实模型对照尚未运行。复用 agent-bench，不新增评测平台。
