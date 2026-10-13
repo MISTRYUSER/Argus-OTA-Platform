@@ -1,0 +1,9 @@
+{
+  "actual_http_calls": 1,
+  "deliveries": 2,
+  "duplicate_final_results": 0,
+  "error_occurrences": 2,
+  "input": "actual CSV parse products in PostgreSQL",
+  "provider": "local scripted HTTP fixture; no root-cause quality claim",
+  "resolution_status": "provisional"
+}
