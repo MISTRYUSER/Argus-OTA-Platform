@@ -28,6 +28,8 @@ class RegressionTests(unittest.TestCase):
     def test_matched_replay_reports_deltas_and_source_evidence(self):
         d = self.r.analyze(self.rows(), 'v1', 'v2')
         self.assertEqual(d['status'], 'comparable')
+        self.assertEqual(d["concentration"][0]["affected_vehicles"],1)
+        self.assertEqual(d["concentration"][0]["vehicle_class"],"truck")
         g=d['comparisons'][0]
         self.assertEqual(g['cpu']['delta'],20)
         self.assertEqual(g['error_rate']['delta'],1)

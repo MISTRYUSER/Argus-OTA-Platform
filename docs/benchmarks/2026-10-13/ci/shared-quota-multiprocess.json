@@ -1,0 +1,25 @@
+{
+  "actual_http_calls": 17,
+  "checkpoints": 12,
+  "completed": 12,
+  "completion_outbox_events": 12,
+  "crash_grace_ms": 200,
+  "duplicate_final_results": 0,
+  "http_429": 3,
+  "independent_worker_processes": 2,
+  "initial_scheduled_deliveries": 50,
+  "lost_final_results": 0,
+  "provider": "local HTTP fixture; no paid model quality/cost claim",
+  "recovery_ms": [
+    30045.255,
+    30062.313
+  ],
+  "recovery_p95_ms": 30062.313,
+  "recovery_sample_size": 2,
+  "request_bound_ms": 2000,
+  "shared_capacity": 2,
+  "shared_peak_http": 2,
+  "sigkill_victims": 2,
+  "task_lease_ms": 30000,
+  "tasks": 12
+}

@@ -1,0 +1,17 @@
+{
+  "artifact_type": "local_measurement_receipt",
+  "source_commit_before_final_metadata": "75159852ab955de24392aa50db49c0bd59a9b6cc",
+  "working_tree_has_final_concentration_change": true,
+  "python": "3.12.14",
+  "system": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "sha256": {
+    "workers/python-aggregator/regression.py": "90f1e38920a8f485cdf80d1eae4636c394cb22682a7f58675b69604114cef734",
+    "workers/python-aggregator/apollo_record.py": "200e9e5c938785d0ab2c166c35a4fc9aef3900a3d2842da0922add5fb062f747",
+    "workers/python-aggregator/requirements-record.txt": "cb2dd63de8af834cc0a1814f3a9600fca63f5f9b2c976a2041631af03f649398",
+    "scripts/benchmark/version_regression.py": "8733951b2fce49a50eaa7ff6d13a44233cf058d9b636a5e8e8e3e55b50b5bd83",
+    "testdata/public-record/example.record.00000": "3d88a00681de8bdd077430bf3adb883f9ab94799b573f6860492b701dcfd777b"
+  },
+  "limitations": [
+    "Local Python timing excludes network, storage and model inference; synthetic detection is not causal root-cause quality."
+  ]
+}

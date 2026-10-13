@@ -1,0 +1,24 @@
+{
+  "format": "apollo-cyber-record",
+  "source_url": "https://raw.githubusercontent.com/daohu527/cyber-record/f0b4be600dfd6fc9aac3db898a93337a091a324c/test/assets/example.record.00000",
+  "parser_commit": "f0b4be600dfd6fc9aac3db898a93337a091a324c",
+  "sha256": "3d88a00681de8bdd077430bf3adb883f9ab94799b573f6860492b701dcfd777b",
+  "bytes": 489010,
+  "decoded_messages": 34,
+  "topics": {
+    "/apollo/canbus/chassis": 15,
+    "/apollo/localization/pose": 15,
+    "/apollo/planning": 1,
+    "/apollo/prediction": 2,
+    "/apollo/routing_response_history": 1
+  },
+  "duration_seconds": 0.138967839,
+  "error_observations": 0,
+  "cpu_observations": 0,
+  "memory_observations": 0,
+  "limitations": [
+    "Public Apollo format is not Inceptio .rec.",
+    "Caller metadata is a provenance label, not a measured OTA version.",
+    "This fixture validates decoding only; it cannot establish an OTA regression."
+  ]
+}

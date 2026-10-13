@@ -134,7 +134,7 @@ def analyze(rows, baseline=None, candidate=None):
         groups[_key(row)][row['version']].append(row)
     versions = sorted({r['version'] for r in rows})
     report = dict(schema_version=1, experiment_source='uploaded_observations', baseline_version=baseline, candidate_version=candidate,
-                  sample_count=len(rows), matched_samples=0, versions=versions, comparisons=[], unmatched_groups=[], candidates=[], evidence=[], timeline=[], limitations=[],
+                  sample_count=len(rows), matched_samples=0, versions=versions, comparisons=[], unmatched_groups=[], concentration=[], candidates=[], evidence=[], timeline=[], limitations=[],
                   policy=dict(min_samples_per_version=MIN_SAMPLES, max_duration_ratio=1.1, max_sample_ratio=1.1, percentile='sorted[floor(n*p)]',sampling_tolerance='max(1us,1% median positive baseline sample interval)', match_keys=['vehicle_id','vehicle_class','module','replay_id','workload']))
     if baseline is None and candidate is None:
         report.update(status='descriptive_only')
@@ -214,6 +214,13 @@ def analyze(rows, baseline=None, candidate=None):
                 break
         if worsened:
             report['candidates'].append(dict(id='C'+str(len(report['candidates'])+1),group=label,description='Observed increases in '+','.join(worsened)+' after version change; module-associated candidate, not proven root cause',metrics=worsened,causal_status='unproven',evidence_ids=ids,verification=['Repeat both versions on the exact same replay and hardware with randomized execution order.','Check environment, temperature, dependencies and module change manifest; revert the suspected change separately.']))
+    clusters=defaultdict(lambda:dict(matched=set(),affected=set(),metrics=set()))
+    for comparison in report['comparisons']:
+        group=comparison['group'];clusters[(group['vehicle_class'],group['module'])]['matched'].add(group['vehicle_id'])
+    for candidate_item in report['candidates']:
+        group=candidate_item['group'];cluster=clusters[(group['vehicle_class'],group['module'])]
+        cluster['affected'].add(group['vehicle_id']);cluster['metrics'].update(candidate_item['metrics'])
+    report['concentration']=[dict(vehicle_class=key[0],module=key[1],matched_vehicles=len(value['matched']),affected_vehicles=len(value['affected']),affected_vehicle_ids=sorted(value['affected']),metrics=sorted(value['metrics']),meaning='vehicles with any matched replay group showing an observed increase; not confirmed failures') for key,value in sorted(clusters.items())]
     report['status']='comparable' if report['comparisons'] else 'not_comparable'
     report['limitations'].append('Replay/workload labels are caller-supplied; matched labels and timing reduce confounding but do not prove identical environment or causality. No statistical significance claim; inspect independent repeat runs.')
     report['timeline'].sort(key=lambda e:e.get('timestamp',e.get('candidate_window',[0])[0]))
