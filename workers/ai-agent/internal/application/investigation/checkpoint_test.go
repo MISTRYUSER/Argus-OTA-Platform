@@ -117,6 +117,148 @@ func TestCompactionArchivesOldAssistantToolGroups(t *testing.T) {
 	}
 }
 
+func TestCompactionRetainsLogPageCursor(t *testing.T) {
+	s := &agentState{artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}}
+	a := &Agent{repo: repositoryFixture{}, options: Options{MaxContextChars: 2000}}
+	body, _ := json.Marshal(toolOutput{NextOffset: 20, TotalMatches: 858, Evidence: []domain.EvidenceItem{{ID: "log:11", Content: strings.Repeat("prefix ", 500)}}})
+	id, _ := a.archive(context.Background(), s, string(body))
+	s.toolArtifacts["page"] = id
+	s.messages = []*schema.Message{schema.ToolMessage(string(body), "page", schema.WithToolName("read_logs"))}
+	if err := a.compactContext(s); err != nil {
+		t.Fatal(err)
+	}
+	var page toolOutput
+	if err := json.Unmarshal([]byte(s.messages[0].Content), &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.NextOffset != 20 || page.TotalMatches != 858 {
+		t.Fatalf("lost page cursor: %+v", page)
+	}
+}
+
+func TestArtifactPageDoesNotMistakeRowLimitForCharacterLimit(t *testing.T) {
+	s := &agentState{artifacts: map[string]json.RawMessage{}}
+	a := &Agent{repo: repositoryFixture{}}
+	body := `{"evidence":[{"id":"log:7","content":"` + strings.Repeat("metadata ", 25) + `payment executable not found"}]}`
+	id, _ := a.archive(context.Background(), s, body)
+	reader, _ := a.artifactTool(s)
+	output, err := reader.InvokableRun(context.Background(), fmt.Sprintf(`{"artifact_id":"%s","limit":10}`, id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var page struct {
+		Content    string `json:"content"`
+		NextOffset int    `json:"next_offset"`
+	}
+	if err = json.Unmarshal([]byte(output), &page); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(page.Content, "payment executable not found") || page.NextOffset != len([]rune(body)) {
+		t.Fatalf("unusable tiny archive page: %+v", page)
+	}
+}
+
+func TestCompactionRetainsLatestResultAndHypothesisEvidence(t *testing.T) {
+	fact := strings.Repeat("metadata ", 20) + "probe failed: payment Pod OOMKilled"
+	s := &agentState{artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}, evidence: map[string]domain.EvidenceItem{"log:1": {ID: "log:1", Source: "batch", Content: fact}}, hypotheses: []domain.Hypothesis{{ID: "H1", Description: "payment OOM", Status: "open", Supports: []string{"log:1"}}}}
+	a := &Agent{repo: repositoryFixture{}, options: Options{MaxContextChars: 4000}}
+	s.messages = []*schema.Message{schema.SystemMessage("system"), schema.UserMessage("task")}
+	for i := 0; i < 5; i++ {
+		call := fmt.Sprint(i)
+		body, _ := json.Marshal(toolOutput{NextOffset: i + 1, TotalMatches: 858, Evidence: []domain.EvidenceItem{{ID: "log:1", Content: fact}}})
+		id, _ := a.archive(context.Background(), s, string(body))
+		s.toolArtifacts[call] = id
+		s.messages = append(s.messages, &schema.Message{Role: schema.Assistant, Content: strings.Repeat("reasoning ", 200), ToolCalls: []schema.ToolCall{{ID: call, Function: schema.FunctionCall{Name: "read_logs", Arguments: `{}`}}}}, schema.ToolMessage(string(body), call, schema.WithToolName("read_logs")))
+	}
+	latest := s.messages[len(s.messages)-1].Content
+	if err := a.compactContext(s); err != nil {
+		t.Fatal(err)
+	}
+	if s.messages[len(s.messages)-1].Content != latest {
+		t.Fatal("newest evidence was truncated before model could consume it")
+	}
+	var summary struct {
+		Evidence []domain.EvidenceItem `json:"evidence"`
+	}
+	if err := json.Unmarshal([]byte(s.messages[2].Content), &summary); err != nil {
+		t.Fatal(err)
+	}
+	if len(summary.Evidence) != 1 || summary.Evidence[0].Content != fact {
+		t.Fatalf("supporting fact lost from durable context: %+v", summary)
+	}
+}
+
+func TestCompactionBoundsMultipleLargeFreshPagesWithFullFacts(t *testing.T) {
+	s := &agentState{artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}, evidence: map[string]domain.EvidenceItem{}}
+	a := &Agent{repo: repositoryFixture{}, options: Options{MaxContextChars: 24000}}
+	s.messages = []*schema.Message{schema.SystemMessage("system"), schema.UserMessage("task"), {Role: schema.Assistant, ToolCalls: []schema.ToolCall{{ID: "a", Function: schema.FunctionCall{Name: "read_logs", Arguments: `{}`}}, {ID: "b", Function: schema.FunctionCall{Name: "read_logs", Arguments: `{}`}}}}}
+	for _, call := range []string{"a", "b"} {
+		page := toolOutput{NextOffset: 40, TotalMatches: 80}
+		for i := 0; i < 40; i++ {
+			page.Evidence = append(page.Evidence, domain.EvidenceItem{ID: fmt.Sprintf("log:%s:%d", call, i), Source: "batch", Content: strings.Repeat("m", 300) + " causal-condition: startup-command-not-found"})
+		}
+		body, _ := json.Marshal(page)
+		id, _ := a.archive(context.Background(), s, string(body))
+		s.toolArtifacts[call] = id
+		s.messages = append(s.messages, schema.ToolMessage(string(body), call, schema.WithToolName("read_logs")))
+	}
+	if err := a.compactContext(s); err != nil {
+		t.Fatalf("ordinary wide pages stopped investigation: %v", err)
+	}
+	for _, message := range s.messages[3:] {
+		var page struct {
+			Evidence   []domain.EvidenceItem `json:"evidence"`
+			ArtifactID string                `json:"artifact_id"`
+			Omitted    int                   `json:"omitted_evidence_count"`
+		}
+		if err := json.Unmarshal([]byte(message.Content), &page); err != nil {
+			t.Fatal(err)
+		}
+		if page.ArtifactID == "" || page.Omitted <= 0 || len(page.Evidence) == 0 {
+			t.Fatalf("missing bounded full evidence and recovery link: %s", message.Content)
+		}
+		for _, item := range page.Evidence {
+			if !strings.HasSuffix(item.Content, "startup-command-not-found") {
+				t.Fatal("fresh causal facts truncated")
+			}
+		}
+	}
+}
+
+func TestFreshGroupBudgetCountsArgumentsAndEscapedPreview(t *testing.T) {
+	s := &agentState{artifacts: map[string]json.RawMessage{}, toolArtifacts: map[string]string{}, evidence: map[string]domain.EvidenceItem{}}
+	a := &Agent{repo: repositoryFixture{}, options: Options{MaxContextChars: 24000}}
+	plan := planInput{}
+	for i := 0; i < 5; i++ {
+		plan.Hypotheses = append(plan.Hypotheses, domain.Hypothesis{ID: fmt.Sprint(i), Description: strings.Repeat(`"`, 600), NextCheck: strings.Repeat(`"`, 600), Status: "open"})
+	}
+	args, _ := json.Marshal(plan)
+	s.messages = []*schema.Message{schema.SystemMessage("system"), schema.UserMessage("task"), {Role: schema.Assistant, ToolCalls: []schema.ToolCall{{ID: "plan", Function: schema.FunctionCall{Name: "update_investigation_plan", Arguments: string(args)}}, {ID: "logs", Function: schema.FunctionCall{Name: "read_logs", Arguments: `{}`}}}}}
+	page := toolOutput{}
+	for i := 0; i < 40; i++ {
+		page.Evidence = append(page.Evidence, domain.EvidenceItem{ID: fmt.Sprint(i), Content: strings.Repeat("x", 350)})
+	}
+	logBody, _ := json.Marshal(page)
+	for _, item := range []struct{ call, body string }{{"plan", string(args)}, {"logs", string(logBody)}} {
+		id, _ := a.archive(context.Background(), s, item.body)
+		s.toolArtifacts[item.call] = id
+		s.messages = append(s.messages, schema.ToolMessage(item.body, item.call))
+	}
+	if err := a.compactContext(s); err != nil {
+		t.Fatalf("escaped valid tool group overran budget: %v", err)
+	}
+	chars := 0
+	for _, m := range s.messages {
+		chars += len([]rune(m.Content))
+		for _, call := range m.ToolCalls {
+			chars += len([]rune(call.Function.Arguments))
+		}
+	}
+	if chars > 24000 {
+		t.Fatalf("actual encoded previews/arguments occupy%d", chars)
+	}
+}
+
 func TestResumeRejectsChangedTelemetryPolicyBeforeModelCall(t *testing.T) {
 	base, calls := makeAgent(t, `{"hypothesis_id":"H1","root_cause":"Connector loose","suggestions":[],"severity":"high","confidence":0.8,"evidence_ids":["log:1"]}`, 4)
 	store := &checkpointFixture{crashAt: 3}
