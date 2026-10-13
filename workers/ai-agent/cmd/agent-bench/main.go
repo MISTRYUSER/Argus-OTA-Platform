@@ -129,6 +129,7 @@ func run() error {
 	mode := flag.String("mode", "agent", "agent or single-shot baseline")
 	trials := flag.Int("trials", 3, "trials per scenario")
 	parallel := flag.Int("parallel", 2, "parallel investigations")
+	taskPlan := flag.String("task-plan", "", "explicit case/trial replay schedule; source attempts remain immutable")
 	flag.Parse()
 	if *mode != "agent" && *mode != "baseline" {
 		return fmt.Errorf("invalid mode")
@@ -156,6 +157,17 @@ func run() error {
 			return fmt.Errorf("input hash mismatch: %s", c.ID)
 		}
 	}
+	var selected map[taskKey]bool
+	if *taskPlan != "" {
+		data, err := os.ReadFile(*taskPlan)
+		if err != nil {
+			return err
+		}
+		selected, err = parseTaskPlan(data, s.Cases, *trials)
+		if err != nil {
+			return err
+		}
+	}
 	keyBytes, e := os.ReadFile(os.Getenv("DEEPSEEK_API_KEY_FILE"))
 	if e != nil {
 		return fmt.Errorf("cannot read private API key file")
@@ -175,6 +187,9 @@ func run() error {
 	slots := make(chan struct{}, *parallel)
 	for _, c := range s.Cases {
 		for trial := 0; trial < *trials; trial++ {
+			if selected != nil && !selected[taskKey{c.ID, trial}] {
+				continue
+			}
 			slots <- struct{}{}
 			wg.Add(1)
 			go func(c inputCase, trial int) {

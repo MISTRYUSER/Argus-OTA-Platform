@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
+	"strings"
 )
 
 // NewTextRetriever enables case lookup when the chat provider has no embedding API.
@@ -18,7 +19,9 @@ func (r *PgvectorRetriever) searchText(ctx context.Context, p domain.SearchParam
 	if limit > 10 {
 		limit = 10
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT id,symptom_text,solution_text FROM knowledge_base WHERE ($1::text[] IS NULL OR error_code=ANY($1)) AND ($1::text[] IS NOT NULL OR symptom_text ILIKE '%'||$2||'%' OR solution_text ILIKE '%'||$2||'%') ORDER BY (CASE WHEN $2 <> '' AND (symptom_text ILIKE '%'||$2||'%' OR solution_text ILIKE '%'||$2||'%') THEN 1 ELSE 0 END) DESC, ts_rank(to_tsvector('simple',symptom_text||' '||solution_text),plainto_tsquery('simple',$2)) DESC,id LIMIT $3`, buildErrorCodesParam(p.ErrorCodes), p.EmbeddingText, limit)
+	literalPattern := "%" + strings.NewReplacer("\\", "\\\\", "%", "\\%", "_", "\\_").Replace(p.EmbeddingText) + "%"
+	rows, err := r.db.QueryContext(ctx, textSearchSQL, buildErrorCodesParam(p.ErrorCodes), p.EmbeddingText, limit, literalPattern)
+
 	if err != nil {
 		return nil, err
 	}
@@ -34,3 +37,22 @@ func (r *PgvectorRetriever) searchText(ctx context.Context, p domain.SearchParam
 	}
 	return result, rows.Err()
 }
+
+// Plain parsing quotes every lexeme; only its generated AND operators become OR.
+// The phrase pattern is separately escaped and bound so %/_/backslash stay literal.
+const textSearchSQL = `WITH query AS (
+ SELECT replace(plainto_tsquery('simple',$2)::text,' & ',' | ')::tsquery AS terms
+)
+SELECT id,symptom_text,solution_text FROM knowledge_base CROSS JOIN query
+WHERE ($1::text[] IS NULL OR error_code=ANY($1))
+ AND ($1::text[] IS NOT NULL OR (
+  numnode(query.terms)>0 AND (
+   symptom_text ILIKE $4 ESCAPE '\' OR solution_text ILIKE $4 ESCAPE '\'
+   OR to_tsvector('simple',symptom_text||' '||solution_text) @@ query.terms
+  )
+ ))
+ORDER BY (CASE WHEN $2 <> '' AND (
+ symptom_text ILIKE $4 ESCAPE '\' OR solution_text ILIKE $4 ESCAPE '\'
+) THEN 1 ELSE 0 END) DESC,
+ts_rank(to_tsvector('simple',symptom_text||' '||solution_text),query.terms) DESC,id
+LIMIT $3`

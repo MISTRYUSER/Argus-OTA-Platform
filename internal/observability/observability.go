@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -24,11 +25,22 @@ import (
 	"time"
 )
 
+// Opaque process identity separates cumulative metrics from independent replicas.
+// Keep it stable for this process; avoid hostnames, VINs or per-task identifiers.
+var processInstance = uuid.NewString()
+
+func instanceIdentity(configured string) string {
+	if configured != "" {
+		return configured
+	}
+	return processInstance
+}
+
 type agentKey struct{}
 type agentBatchKey struct{}
 type Config struct {
-	Endpoint, Service string
-	MetricInterval    time.Duration
+	Endpoint, Service, Instance string
+	MetricInterval              time.Duration
 }
 
 func AgentContext(ctx context.Context, batch ...string) context.Context {
@@ -126,6 +138,9 @@ func Setup(ctx context.Context, c Config) (func(context.Context) error, error) {
 	if e != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.RawQuery != "" {
 		return nil, fmt.Errorf("invalid OTLP base endpoint")
 	}
+	if len(c.Instance) > 128 {
+		return nil, fmt.Errorf("instance identity exceeds128bytes")
+	}
 	if c.Service == "" {
 		return nil, fmt.Errorf("service name required")
 	}
@@ -142,7 +157,7 @@ func Setup(ctx context.Context, c Config) (func(context.Context) error, error) {
 		te.Shutdown(ctx)
 		return nil, e
 	}
-	r := resource.NewSchemaless(attribute.String("service.name", c.Service), attribute.String("service.version", os.Getenv("ARGUS_RELEASE")), attribute.String("k8s.namespace.name", namespace()))
+	r := resource.NewSchemaless(attribute.String("service.name", c.Service), attribute.String("service.instance.id", instanceIdentity(c.Instance)), attribute.String("service.version", os.Getenv("ARGUS_RELEASE")), attribute.String("k8s.namespace.name", namespace()))
 	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(te), sdktrace.WithResource(r))
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(me, sdkmetric.WithInterval(c.MetricInterval))), sdkmetric.WithResource(r))
 	oldT, oldM := otel.GetTracerProvider(), otel.GetMeterProvider()
@@ -158,7 +173,7 @@ func SetupFromEnv(ctx context.Context, service string) (func(context.Context) er
 	if os.Getenv("ARGUS_LOG_FORMAT") == "json" {
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service_name", service, "namespace", namespace()))
 	}
-	return Setup(ctx, Config{Endpoint: os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), Service: service})
+	return Setup(ctx, Config{Endpoint: os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), Service: service, Instance: os.Getenv("ARGUS_INSTANCE_ID")})
 }
 
 func namespace() string {
