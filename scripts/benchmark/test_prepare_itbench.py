@@ -17,4 +17,12 @@ class AdapterTests(unittest.TestCase):
  def test_latest_snapshot_does_not_depend_on_input_order(self):
   def obj(message):return json.dumps({'kind':'Pod','metadata':{'namespace':'otel-demo','name':'fixture'},'status':{'message':message}})
   d=self.make([{'Body':obj('new'),'TimestampTime':'2025-02-01'},{'Body':obj('old'),'TimestampTime':'2025-01-01'}]);joined=''.join(x.split(' ',2)[2] for x in records(d));self.assertEqual(json.loads(joined)['object']['status']['message'],'new')
+ def test_latest_warning_event_does_not_depend_on_input_order(self):
+  d=self.make([])
+  event={'type':'Warning','involvedObject':{'namespace':'otel-demo','name':'fixture'},'reason':'BackOff','message':'retrying'}
+  with open(d/'k8s_events_raw.tsv','w') as f:
+   w=csv.DictWriter(f,fieldnames=['Body','TimestampTime'],delimiter='\t');w.writeheader()
+   w.writerows([{'Body':json.dumps(event),'TimestampTime':t} for t in ['2025-02-01','2025-01-01']])
+  joined=''.join(x.split(' ',2)[2] for x in records(d))
+  self.assertEqual(json.loads(joined)['time'],'2025-02-01')
 if __name__=='__main__':unittest.main()

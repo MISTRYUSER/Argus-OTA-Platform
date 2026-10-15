@@ -1,0 +1,12 @@
+[
+  {
+    "upstream": "download",
+    "downstream": "artifact_service",
+    "source": "executed HTTP"
+  },
+  {
+    "upstream": "download",
+    "downstream": "transit_proxy",
+    "source": "configured hop"
+  }
+]
