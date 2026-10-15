@@ -205,3 +205,14 @@ func TestCompactedToolGroupTracksRetrievalSeparatelyFromExposure(t *testing.T) {
 		}
 	}
 }
+
+func TestSREObservationFieldsCannotGrantOTAEligibility(t *testing.T) {
+	for _, reason := range []string{"BackOff", "ImagePullBackOff", "FailedScheduling"} {
+		line := fmt.Sprintf(`{"error_type":%q,"reason":%q}`, reason, reason)
+		c := inputCase{ID: reason, Lines: []string{line}, ErrorCodeStats: map[string]int{reason: 1}, LogsSummary: fixtureCoverage}
+		got := preflightSuite(suite{Task: "sre", Cases: []inputCase{c}})
+		if got.Fixed != 0 || got.Agent != 1 || got.Cases[0].Reason != "unrecognized explicit error type" {
+			t.Fatalf("SRE reason must not be accepted as OTA evidence: %+v", got)
+		}
+	}
+}

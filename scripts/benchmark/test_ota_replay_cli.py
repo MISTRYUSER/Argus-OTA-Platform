@@ -73,6 +73,21 @@ class ReplayCLITests(unittest.TestCase):
                 self.assertEqual(row['request_tool_policy'][0]['provider_model'], 'scripted-test-v1')
                 self.assertEqual(json.loads(row['result']['RawLLMOutput'])['cause_code'], 'manifest_mismatch')
                 self.assertNotIn('local-script-only', json.dumps(row))
+            # Same real entrypoint, but incomplete coverage must use investigation.
+            fallback_input = json.loads(json.dumps(input))
+            fallback_input['cases'][0]['logs_summary'] = '{}'
+            fallback_file = folder / 'fallback-input.json'
+            fallback_file.write_text(json.dumps(seal_suite(fallback_input)))
+            fallback_out = folder / 'hybrid-investigation'
+            subprocess.run([str(self.binary), '-input', str(fallback_file), '-out', str(fallback_out),
+                            '-mode', 'hybrid', '-trials', '1', '-parallel', '1', '-model', 'scripted-test-v1',
+                            '-base-url', f'http://127.0.0.1:{server.server_port}/'], env=env, check=True, capture_output=True, timeout=20)
+            fallback_row = json.loads((fallback_out / 'scenario-1001' / '0' / 'outputs' / 'argus_run.json').read_text())
+            self.assertEqual(fallback_row['status'], 'success', fallback_row)
+            self.assertEqual(fallback_row['actual_route'], 'agent')
+            self.assertFalse(fallback_row['fixed_eligible'])
+            self.assertEqual(fallback_row['actual_http_calls'], 2)
+            self.assertTrue(fallback_row['result']['tool_trace'])
             behavior['invalid'] = True
             for mode in ('baseline', 'hybrid'):
                 out = folder / ('invalid-' + mode)

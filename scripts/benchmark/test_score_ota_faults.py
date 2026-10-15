@@ -115,6 +115,24 @@ class ScoreOTATests(unittest.TestCase):
         with self.assertRaises(ValueError):
             score_runs(suite, {'cases': [self.label]}, {('baseline', '1001', 0): run, ('agent', '1001', 0): changed}, 1)
 
+    def test_hybrid_route_strata_pair_all_modes_and_keep_missing(self):
+        suite = {'cases': [self.case, dict(self.case, id='1002')], 'revision': 'revision'}
+        labels = {'cases': [self.label, dict(self.label, id='1002')]}
+        base = dict(self.run, model='m', provider_endpoint='local', benchmark_revision='revision',
+                    max_steps=12, reservation_budget=1000000, max_context_chars=24000)
+        runs = {('hybrid', '1001', 0): dict(base, actual_route='fixed'),
+                ('hybrid', '1002', 0): dict(base, actual_route='agent'),
+                ('agent', '1001', 0): dict(base, actual_route='agent')}
+        report = score_runs(suite, labels, runs, 2)
+        strata = report['summary_by_hybrid_route']
+        self.assertEqual(set(strata), {'fixed', 'agent', 'unknown'})
+        for mode in ('baseline', 'hybrid', 'agent'):
+            self.assertEqual(sum(x[mode]['scheduled_attempts'] for x in strata.values()), 4)
+        self.assertEqual(strata['fixed']['agent']['recorded_http_calls'], 2)
+        self.assertEqual(strata['fixed']['baseline']['missing_attempts'], 1)
+        self.assertIsNone(strata['fixed']['baseline']['mean_cost_usd'])
+        self.assertEqual(strata['unknown']['hybrid']['scheduled_attempts'], 2)
+
     def test_mentions_correct_cause_in_reasoning_not_credit(self):
         self.run['result']['RawLLMOutput'] = '{"cause_code":"network_delay","root_cause":"client_timeout is a competing hypothesis"}'
         self.assertFalse(score_attempt(self.case, self.label, self.run)['root_cause_correct'])

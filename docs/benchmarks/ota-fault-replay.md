@@ -93,3 +93,7 @@ python scripts/benchmark/score_ota_faults.py \
 参考公开工程实践：Datadog [故障真值与现场分离、保留噪声的评测平台](https://www.datadoghq.com/blog/engineering/bits-ai-eval-platform/)（2026-04-07）。这里只借鉴信息隔离与重复现场方法，未声称复现其生产规模。
 
 重试服务的不可用窗口从收到首个真实请求开始计算；生成器检查实际请求放大和全部注入/对照/恢复条件，不满足就报错，不发布可评分输入。
+
+### 2026-10-15 契约核查补充
+
+见[评测分离与独立 SRE 契约](evaluation-contract-audit-2026-10-15.md)。OTA 评分现增加按同一 case/trial 的 hybrid 路径配对的 `summary_by_hybrid_route`，保留 fixed/agent/unknown 三层和全部预定任务；总体结果继续保留。本轮重新生成并实际预检的[回执](evaluation-contract-audit-2026-10-15-receipt.json)确认两条路径覆盖，仍无真实模型质量/费用收益结论。
