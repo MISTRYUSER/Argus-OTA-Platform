@@ -1,0 +1,66 @@
+{
+  "fixed_eligible": 2,
+  "agent_required": 10,
+  "cases": [
+    {
+      "id": "1001",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "1002",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "1003",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "1004",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "1005",
+      "fixed_eligible": true,
+      "reason": "OTA_CHECKSUM_MISMATCH"
+    },
+    {
+      "id": "1006",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "2001",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "2002",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "2003",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "2004",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    },
+    {
+      "id": "2005",
+      "fixed_eligible": true,
+      "reason": "OTA_CHECKSUM_MISMATCH"
+    },
+    {
+      "id": "2006",
+      "fixed_eligible": false,
+      "reason": "coverage contract absent"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "source": "actual local HTTP execution",
+  "cases": 12,
+  "injections_observed": 12,
+  "healthy_controls": 12,
+  "recovery_checks_passed": 12,
+  "live_model_status": "pending: provider credentials required",
+  "generator_sha256": "4a339d10264906accdb33232f5ce6b6ab7242546deeb0549968c717e80739f62",
+  "lab_sha256": "5b8ceefc2d34dcdde1937b19b109cf6f4c12be3aa9d82e9ea0d3c9a5ee6b7eb9"
+}

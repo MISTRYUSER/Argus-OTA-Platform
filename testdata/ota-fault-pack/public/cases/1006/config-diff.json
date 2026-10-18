@@ -1,0 +1,6 @@
+{
+  "ui_banner": {
+    "before": "old",
+    "after": "new"
+  }
+}

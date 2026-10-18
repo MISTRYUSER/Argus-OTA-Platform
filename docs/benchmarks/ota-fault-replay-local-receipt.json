@@ -1,0 +1,32 @@
+{
+  "scope": "local regression; infrastructure/live tests skipped when configuration absent",
+  "base_sha": "847c4a4033863ef0dcbeb9f96aee01f237c23899",
+  "go": {
+    "pass": 141,
+    "top_pass": 129,
+    "skip": 41,
+    "top_skip": 41
+  },
+  "go_vet": "passed",
+  "go_build": "passed",
+  "go_race": "passed: agent-bench and hybrid",
+  "python_benchmark_tests": 63,
+  "python_processing_tests": 22,
+  "controlled_fault_execution": {
+    "source": "actual local HTTP execution",
+    "cases": 12,
+    "injections_observed": 12,
+    "healthy_controls": 12,
+    "recovery_checks_passed": 12,
+    "live_model_status": "pending: provider credentials required",
+    "generator_sha256": "4a339d10264906accdb33232f5ce6b6ab7242546deeb0549968c717e80739f62",
+    "lab_sha256": "5b8ceefc2d34dcdde1937b19b109cf6f4c12be3aa9d82e9ea0d3c9a5ee6b7eb9"
+  },
+  "routing": {
+    "fixed_eligible": 2,
+    "agent_required": 10
+  },
+  "real_model_comparison": "not_run: existing provider credentials absent",
+  "independent_review": "4 important findings corrected with reproducer tests; no critical",
+  "semantic_quality_and_fee_gain": "not established"
+}

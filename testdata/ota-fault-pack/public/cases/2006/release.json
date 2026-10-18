@@ -1,0 +1,12 @@
+{
+  "experiment_source": "local controlled HTTP execution; not production",
+  "baseline_git_commit": "4428958a09f19d73737d585fe6ea316b932b0815",
+  "git_commit": "001ffab65eca39545e7bfabd36106d26e3338608",
+  "config_blob": "c0af51d5a8132bce9f9359b186608f551ffd0c92",
+  "config_sha256": "f9d79908ec4754d00c862ad8bc6d2f4ef50d6080a531628b0589411b8a4fc7fd",
+  "published_artifact_sha256": "abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599",
+  "actual_artifact_sha256": "0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4",
+  "received_artifact_sha256": "0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4",
+  "artifact_observation": "downloaded bytes",
+  "declared_manifest_sha256": "abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599"
+}

@@ -1,0 +1,13 @@
+{
+  "success": false,
+  "successful_requests": 0,
+  "failed_requests": 3,
+  "logical_requests": 3,
+  "client_attempts": 3,
+  "actual_server_requests": 3,
+  "client_latencies_ms": [
+    27.31,
+    27.5,
+    28.061
+  ]
+}

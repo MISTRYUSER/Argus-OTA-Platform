@@ -1,0 +1,10 @@
+{
+  "service_delay_ms": {
+    "before": 20,
+    "after": 290
+  },
+  "ui_banner": {
+    "before": "old",
+    "after": "new"
+  }
+}

@@ -170,3 +170,6 @@ mem.prof
 /orchestrator
 /query-service
 /mock-cpp-worker
+
+# Evaluation truth is generated locally and is never a public model input.
+testdata/ota-fault-pack/private/

@@ -126,39 +126,46 @@ func NewAgent(repo domain.DiagnosisRepository, retriever domain.VectorRetriever,
 		return nil, err
 	}
 	a := &Agent{repo: repo, retriever: retriever, model: chat, options: options}
+	if err := a.compileGraph(); err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+func (a *Agent) compileGraph() error {
+	var err error
 	g := compose.NewGraph[*agentState, *agentState]()
 	if err = g.AddLambdaNode("plan", compose.InvokableLambda(a.plan)); err != nil {
-		return nil, err
+		return err
 	}
 	if err = g.AddLambdaNode("tools", compose.InvokableLambda(a.executeTools)); err != nil {
-		return nil, err
+		return err
 	}
 	if err = g.AddLambdaNode("finish", compose.InvokableLambda(a.finish)); err != nil {
-		return nil, err
+		return err
 	}
 	if err = g.AddLambdaNode("feedback", compose.InvokableLambda(func(ctx context.Context, s *agentState) (*agentState, error) {
 		s.messages = append(s.messages, schema.UserMessage("证据不足。先调用 read_logs 和 error_statistics 并读取结果，并调用 update_investigation_plan，再生成有证据ID和hypothesis_id的JSON报告。"))
 		s.phase = "plan"
 		return s, a.saveCheckpoint(ctx, s)
 	})); err != nil {
-		return nil, err
+		return err
 	}
 	if err = g.AddBranch(compose.START, compose.NewGraphBranch(func(ctx context.Context, s *agentState) (string, error) { return s.phase, nil }, map[string]bool{"plan": true, "tools": true, "finish": true, "feedback": true})); err != nil {
-		return nil, err
+		return err
 	}
 	if err = g.AddBranch("plan", compose.NewGraphBranch(func(ctx context.Context, s *agentState) (string, error) { return s.route, nil }, map[string]bool{"tools": true, "feedback": true, "finish": true})); err != nil {
-		return nil, err
+		return err
 	}
 	for _, edge := range [][2]string{{"tools", "plan"}, {"feedback", "plan"}, {"finish", compose.END}} {
 		if err = g.AddEdge(edge[0], edge[1]); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	a.graph, err = g.Compile(context.Background(), compose.WithMaxRunSteps(options.MaxSteps*3+4))
+	a.graph, err = g.Compile(context.Background(), compose.WithMaxRunSteps(a.options.MaxSteps*3+4))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return a, nil
+	return nil
 }
 func (a *Agent) plan(ctx context.Context, s *agentState) (*agentState, error) {
 	if s.step >= a.options.MaxSteps {
@@ -408,4 +415,20 @@ func (a *Agent) Run(ctx context.Context, id string) (result *domain.DiagnosisRes
 		return nil, fmt.Errorf("investigation ended without report")
 	}
 	return out.result, nil
+}
+
+// RunWithBudget keeps a failed routing summary inside the same task budget.
+func (a *Agent) RunWithBudget(ctx context.Context, id string, remaining int) (*domain.DiagnosisResult, error) {
+	if remaining < 1 {
+		return nil, domain.ErrInvestigationBudget
+	}
+	options := a.options
+	if remaining < options.MaxReservedTokens {
+		options.MaxReservedTokens = remaining
+	}
+	runner := &Agent{repo: a.repo, retriever: a.retriever, model: a.model, options: options}
+	if err := runner.compileGraph(); err != nil {
+		return nil, err
+	}
+	return runner.Run(ctx, id)
 }

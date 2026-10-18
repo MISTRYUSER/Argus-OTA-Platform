@@ -141,6 +141,7 @@ func (r *PostgresReportRepository) FindByBatchID(ctx context.Context, id uuid.UU
 		return nil, err
 	}
 	var structured struct {
+		Routing          json.RawMessage `json:"routing"`
 		ResolutionStatus string          `json:"resolution_status"`
 		Hypotheses       json.RawMessage `json:"hypotheses"`
 		Trace            json.RawMessage `json:"tool_trace"`
@@ -150,6 +151,7 @@ func (r *PostgresReportRepository) FindByBatchID(ctx context.Context, id uuid.UU
 	if err = json.Unmarshal(investigation, &structured); err != nil {
 		return nil, err
 	}
+	report.Routing = structured.Routing
 	report.ResolutionStatus = structured.ResolutionStatus
 	report.Hypotheses = structured.Hypotheses
 	report.InvestigationTrace = structured.Trace

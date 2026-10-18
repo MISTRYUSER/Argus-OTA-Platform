@@ -1,0 +1,10 @@
+{
+  "manifest_checksum": {
+    "before": "abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599",
+    "after": "db2c04bd7f41aeddff26365f32f50e5a7195fceacf1e3ade34a99f5e66e42f28"
+  },
+  "ui_banner": {
+    "before": "old",
+    "after": "new"
+  }
+}

@@ -22,7 +22,8 @@ def records(folder):
     x=json.loads(row['Body']);x=x.get('object',x)
     if x.get('type')!='Warning':continue
     obj=x.get('involvedObject',{});key=(obj.get('namespace'),obj.get('name'),x.get('reason'),x.get('message'))
-    event_latest[key]={'source':'k8s_events','time':row['TimestampTime'],'entity':obj,'reason':x.get('reason'),'message':x.get('message')}
+    if key not in event_latest or row['TimestampTime'] >= event_latest[key]['time']:
+     event_latest[key]={'source':'k8s_events','time':row['TimestampTime'],'entity':obj,'reason':x.get('reason'),'message':x.get('message')}
    except (ValueError,KeyError):continue
  for _,r in sorted(event_latest.items(),key=lambda kv:str(kv[0])):add(r)
  latest={}

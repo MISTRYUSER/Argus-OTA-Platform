@@ -1,0 +1,14 @@
+{
+  "max_attempts": {
+    "before": 2,
+    "after": 4
+  },
+  "retry_backoff_ms": {
+    "before": 143,
+    "after": 0
+  },
+  "ui_banner": {
+    "before": "old",
+    "after": "new"
+  }
+}

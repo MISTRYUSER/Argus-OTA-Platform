@@ -1,7 +1,7 @@
 name: Regression and reproducible fault injection
 on:
   push:
-    branches: [main, 'codex/version-regression-hybrid-quota']
+    branches: [main, 'codex/version-regression-hybrid-quota', 'codex/ota-fault-replay', 'codex/confidence-routing']
 permissions:
   contents: read
 jobs:
@@ -79,8 +79,13 @@ jobs:
         run: |
           go run ./workers/ai-agent/cmd/agent-bench -fixture -out .regression-results/measurements/hybrid-fixture.json
           python scripts/benchmark/version_regression.py --out .regression-results/measurements/version-regression.json
+      - name: Execute public OTA fault pack and verify production routing
+        run: |
+          python scripts/benchmark/ota_fault_pack.py --out .regression-results/ota-fault-pack
+          go run ./workers/ai-agent/cmd/agent-bench -input .regression-results/ota-fault-pack/public/all.json -preflight-only > .regression-results/measurements/ota-routing.json
+          cp .regression-results/ota-fault-pack/receipt.json .regression-results/measurements/ota-fault-execution.json
       - name: Race checks for new execution paths
-        run: go test -race -count=1 ./internal/infrastructure/processing ./workers/ai-agent/internal/application/hybrid ./workers/ai-agent/internal/infrastructure/llm
+        run: go test -race -count=1 ./internal/infrastructure/processing ./workers/ai-agent/cmd/agent-bench ./workers/ai-agent/internal/application/hybrid ./workers/ai-agent/internal/infrastructure/llm
       - name: Show machine-readable measurements
         if: always()
         run: |
@@ -91,5 +96,8 @@ jobs:
         if: always()
         with:
           name: regression-measurements
-          path: .regression-results/
+          path: |
+            .regression-results/
+            !.regression-results/**/private/**
+            !.regression-results/**/release-source/**
           include-hidden-files: true

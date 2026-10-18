@@ -1,0 +1,169 @@
+{
+  "kind": "fresh local HTTP execution and production CLI routing; no model calls",
+  "model_calls_made": 0,
+  "execution": {
+    "source": "actual local HTTP execution",
+    "cases": 12,
+    "injections_observed": 12,
+    "healthy_controls": 12,
+    "recovery_checks_passed": 12,
+    "live_model_status": "pending: provider credentials required",
+    "generator_sha256": "4a339d10264906accdb33232f5ce6b6ab7242546deeb0549968c717e80739f62",
+    "lab_sha256": "5b8ceefc2d34dcdde1937b19b109cf6f4c12be3aa9d82e9ea0d3c9a5ee6b7eb9"
+  },
+  "routing": {
+    "all": {
+      "fixed_eligible": 2,
+      "agent_required": 10,
+      "cases": [
+        {
+          "id": "1001",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1002",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1003",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1004",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1005",
+          "fixed_eligible": true,
+          "reason": "OTA_CHECKSUM_MISMATCH"
+        },
+        {
+          "id": "1006",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2001",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2002",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2003",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2004",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2005",
+          "fixed_eligible": true,
+          "reason": "OTA_CHECKSUM_MISMATCH"
+        },
+        {
+          "id": "2006",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        }
+      ]
+    },
+    "dev": {
+      "fixed_eligible": 1,
+      "agent_required": 5,
+      "cases": [
+        {
+          "id": "1001",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1002",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1003",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1004",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "1005",
+          "fixed_eligible": true,
+          "reason": "OTA_CHECKSUM_MISMATCH"
+        },
+        {
+          "id": "1006",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        }
+      ]
+    },
+    "heldout": {
+      "fixed_eligible": 1,
+      "agent_required": 5,
+      "cases": [
+        {
+          "id": "2001",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2002",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2003",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2004",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        },
+        {
+          "id": "2005",
+          "fixed_eligible": true,
+          "reason": "OTA_CHECKSUM_MISMATCH"
+        },
+        {
+          "id": "2006",
+          "fixed_eligible": false,
+          "reason": "coverage contract absent"
+        }
+      ]
+    }
+  },
+  "code_base_sha": "5b382110273881bbe761974b54e757335866eafd",
+  "inputs": {
+    "all": {
+      "file_sha256": "137fc0fa2da7c93bb272f9a9c333878ab852d00ac38418051a79bfa1bda5f6f7",
+      "suite_revision": "53cf8e505f2be45bc94927ab48d651e7fd58cee4b2d6ca7af6503854860d3d70"
+    },
+    "dev": {
+      "file_sha256": "e4b9dc84b980fda90d1f2056b7bd5c0bfc6a8b5f45eae9f8e86158d440a1892c",
+      "suite_revision": "2db8443f4a4741be47c3b5ab9605d472cfddd116e42694bc56e4abcc9adac024"
+    },
+    "heldout": {
+      "file_sha256": "c47cf7850a16a4f495b2bfb6379522fdadd95a55f52bbae57c9a4aae08cfb68e",
+      "suite_revision": "4776154a1f489ff77a1d03678c3e8e283af42fc507da1cd4726aed9e10085e3e"
+    }
+  }
+}

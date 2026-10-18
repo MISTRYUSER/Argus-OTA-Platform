@@ -1,0 +1,11 @@
+{
+  "timeout_ms": 234,
+  "service_delay_ms": 1,
+  "proxy_delay_ms": 0,
+  "max_attempts": 4,
+  "retry_backoff_ms": 0,
+  "manifest_checksum": "abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599",
+  "ui_banner": "new",
+  "logical_requests": 3,
+  "ready_after_ms": 104
+}

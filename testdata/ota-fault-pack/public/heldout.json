@@ -1,0 +1,1266 @@
+{
+  "benchmark": "argus-ota-controlled-http-v1",
+  "revision": "b50f4505aaa06fd6c7889e02b00e17c880084965b55d27dbf19be2c6a5b376dc",
+  "partition": "heldout",
+  "adapter": "ota-fault-pack-v1",
+  "task": "ota",
+  "cases": [
+    {
+      "id": "2001",
+      "lines": [
+        "{\"timestamp_ms\":33.066,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":0,\"attempt\":1,\"elapsed_ms\":32.659,\"timeout_ms\":32}",
+        "{\"timestamp_ms\":65.716,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":1,\"attempt\":1,\"elapsed_ms\":32.625,\"timeout_ms\":32}",
+        "{\"timestamp_ms\":85.417,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":1,\"status\":200,\"service_elapsed_ms\":84.232}",
+        "{\"timestamp_ms\":98.308,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":2,\"attempt\":1,\"elapsed_ms\":32.569,\"timeout_ms\":32}",
+        "{\"timestamp_ms\":117.936,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":2,\"status\":200,\"service_elapsed_ms\":84.214}",
+        "{\"timestamp_ms\":150.756,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":3,\"status\":200,\"service_elapsed_ms\":84.262}",
+        "{\"module\":\"display\",\"event\":\"heartbeat\",\"status\":\"healthy\"}",
+        "{\"module\":\"display\",\"event\":\"config_applied\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"timeout_ms\",\"value\":32}",
+        "{\"source\":\"config.json\",\"key\":\"service_delay_ms\",\"value\":84}",
+        "{\"source\":\"config.json\",\"key\":\"proxy_delay_ms\",\"value\":0}",
+        "{\"source\":\"config.json\",\"key\":\"max_attempts\",\"value\":1}",
+        "{\"source\":\"config.json\",\"key\":\"retry_backoff_ms\",\"value\":143}",
+        "{\"source\":\"config.json\",\"key\":\"manifest_checksum\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"config.json\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"config-diff.json\",\"key\":\"timeout_ms\",\"value\":{\"before\":234,\"after\":32}}",
+        "{\"source\":\"config-diff.json\",\"key\":\"ui_banner\",\"value\":{\"before\":\"old\",\"after\":\"new\"}}",
+        "{\"source\":\"release.json\",\"key\":\"experiment_source\",\"value\":\"local controlled HTTP execution; not production\"}",
+        "{\"source\":\"release.json\",\"key\":\"baseline_git_commit\",\"value\":\"8dea25f08b620ca797030faeb4a1e01283784227\"}",
+        "{\"source\":\"release.json\",\"key\":\"git_commit\",\"value\":\"65856ae5e966cbb5493b40375f703b0ceb026e2a\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_blob\",\"value\":\"9301659dc0e61b5e6fc6ca3a87ca2edb1e591b33\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_sha256\",\"value\":\"bd34101ac50fc12c6b28315d2b2c62fa4b309a89c839145eec8a7b4d7c268061\"}",
+        "{\"source\":\"release.json\",\"key\":\"published_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"actual_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"received_artifact_sha256\",\"value\":null}",
+        "{\"source\":\"release.json\",\"key\":\"artifact_observation\",\"value\":\"build reference; no successful download\"}",
+        "{\"source\":\"release.json\",\"key\":\"declared_manifest_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"dependencies.json\",\"key\":\"0\",\"value\":{\"upstream\":\"download\",\"downstream\":\"artifact_service\",\"source\":\"executed HTTP\"}}",
+        "{\"source\":\"metrics.json\",\"key\":\"success\",\"value\":false}",
+        "{\"source\":\"metrics.json\",\"key\":\"successful_requests\",\"value\":0}",
+        "{\"source\":\"metrics.json\",\"key\":\"failed_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_attempts\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"actual_server_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_latencies_ms\",\"value\":[32.681,32.647,32.592]}"
+      ],
+      "sha256": "9605fa89f0680eb49d7c5827e9b215488fdd327ed8179ae8f9dca395cecf9430",
+      "error_code_stats": {
+        "OTA_DOWNLOAD_TIMEOUT": 3
+      },
+      "sources": [
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 1
+        },
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 2
+        },
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 3
+        },
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 4
+        },
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 5
+        },
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 6
+        },
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 7
+        },
+        {
+          "file": "cases/2001/logs.jsonl",
+          "line": 8
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 2,
+          "json_pointer": "/timeout_ms"
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 3,
+          "json_pointer": "/service_delay_ms"
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 4,
+          "json_pointer": "/proxy_delay_ms"
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 5,
+          "json_pointer": "/max_attempts"
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 6,
+          "json_pointer": "/retry_backoff_ms"
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 7,
+          "json_pointer": "/manifest_checksum"
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 8,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2001/config.json",
+          "line": 9,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2001/config-diff.json",
+          "line": 2,
+          "json_pointer": "/timeout_ms"
+        },
+        {
+          "file": "cases/2001/config-diff.json",
+          "line": 6,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 2,
+          "json_pointer": "/experiment_source"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 3,
+          "json_pointer": "/baseline_git_commit"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 4,
+          "json_pointer": "/git_commit"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 5,
+          "json_pointer": "/config_blob"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 6,
+          "json_pointer": "/config_sha256"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 7,
+          "json_pointer": "/published_artifact_sha256"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 8,
+          "json_pointer": "/actual_artifact_sha256"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 9,
+          "json_pointer": "/received_artifact_sha256"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 10,
+          "json_pointer": "/artifact_observation"
+        },
+        {
+          "file": "cases/2001/release.json",
+          "line": 11,
+          "json_pointer": "/declared_manifest_sha256"
+        },
+        {
+          "file": "cases/2001/dependencies.json",
+          "line": 1,
+          "json_pointer": "/0"
+        },
+        {
+          "file": "cases/2001/metrics.json",
+          "line": 2,
+          "json_pointer": "/success"
+        },
+        {
+          "file": "cases/2001/metrics.json",
+          "line": 3,
+          "json_pointer": "/successful_requests"
+        },
+        {
+          "file": "cases/2001/metrics.json",
+          "line": 4,
+          "json_pointer": "/failed_requests"
+        },
+        {
+          "file": "cases/2001/metrics.json",
+          "line": 5,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2001/metrics.json",
+          "line": 6,
+          "json_pointer": "/client_attempts"
+        },
+        {
+          "file": "cases/2001/metrics.json",
+          "line": 7,
+          "json_pointer": "/actual_server_requests"
+        },
+        {
+          "file": "cases/2001/metrics.json",
+          "line": 8,
+          "json_pointer": "/client_latencies_ms"
+        }
+      ],
+      "snapshot_scope": "full",
+      "logs_summary": "{\"hybrid_evidence_schema\":\"v1\",\"stats_grain\":\"log_occurrence\",\"complete\":false}",
+      "full_input_sha256": "9372d3658901386ed65045915ca0319f3f8dd3baec89dc5576ffcadcff953d7d"
+    },
+    {
+      "id": "2002",
+      "lines": [
+        "{\"timestamp_ms\":235.333,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":0,\"attempt\":1,\"elapsed_ms\":234.855,\"timeout_ms\":234}",
+        "{\"timestamp_ms\":378.454,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":1,\"status\":200,\"service_elapsed_ms\":377.279}",
+        "{\"timestamp_ms\":470.495,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":1,\"attempt\":1,\"elapsed_ms\":235.125,\"timeout_ms\":234}",
+        "{\"timestamp_ms\":613.566,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":2,\"status\":200,\"service_elapsed_ms\":377.271}",
+        "{\"timestamp_ms\":705.551,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":2,\"attempt\":1,\"elapsed_ms\":235.019,\"timeout_ms\":234}",
+        "{\"timestamp_ms\":848.967,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":3,\"status\":200,\"service_elapsed_ms\":377.362}",
+        "{\"module\":\"display\",\"event\":\"heartbeat\",\"status\":\"healthy\"}",
+        "{\"module\":\"display\",\"event\":\"config_applied\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"timeout_ms\",\"value\":234}",
+        "{\"source\":\"config.json\",\"key\":\"service_delay_ms\",\"value\":377}",
+        "{\"source\":\"config.json\",\"key\":\"proxy_delay_ms\",\"value\":0}",
+        "{\"source\":\"config.json\",\"key\":\"max_attempts\",\"value\":1}",
+        "{\"source\":\"config.json\",\"key\":\"retry_backoff_ms\",\"value\":143}",
+        "{\"source\":\"config.json\",\"key\":\"manifest_checksum\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"config.json\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"config-diff.json\",\"key\":\"service_delay_ms\",\"value\":{\"before\":26,\"after\":377}}",
+        "{\"source\":\"config-diff.json\",\"key\":\"ui_banner\",\"value\":{\"before\":\"old\",\"after\":\"new\"}}",
+        "{\"source\":\"release.json\",\"key\":\"experiment_source\",\"value\":\"local controlled HTTP execution; not production\"}",
+        "{\"source\":\"release.json\",\"key\":\"baseline_git_commit\",\"value\":\"19859a894f5407a482716a050a83cd0941390e11\"}",
+        "{\"source\":\"release.json\",\"key\":\"git_commit\",\"value\":\"7ec5b7510bb170f2e21d4dd3c39f5e6454e9490a\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_blob\",\"value\":\"50c325360a8b60c6b3f8fadbcf31f834dec5ea4e\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_sha256\",\"value\":\"cba984ea7bb278ee3d07241a125d496c0acf7030f3c3ef7ecd940c13894d4155\"}",
+        "{\"source\":\"release.json\",\"key\":\"published_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"actual_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"received_artifact_sha256\",\"value\":null}",
+        "{\"source\":\"release.json\",\"key\":\"artifact_observation\",\"value\":\"build reference; no successful download\"}",
+        "{\"source\":\"release.json\",\"key\":\"declared_manifest_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"dependencies.json\",\"key\":\"0\",\"value\":{\"upstream\":\"download\",\"downstream\":\"artifact_service\",\"source\":\"executed HTTP\"}}",
+        "{\"source\":\"metrics.json\",\"key\":\"success\",\"value\":false}",
+        "{\"source\":\"metrics.json\",\"key\":\"successful_requests\",\"value\":0}",
+        "{\"source\":\"metrics.json\",\"key\":\"failed_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_attempts\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"actual_server_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_latencies_ms\",\"value\":[234.89,235.158,235.053]}"
+      ],
+      "sha256": "d5463ce2e72b89fedba59023ad6d15b82aafd1629d90d1016f39251eee1bb835",
+      "error_code_stats": {
+        "OTA_DOWNLOAD_TIMEOUT": 3
+      },
+      "sources": [
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 1
+        },
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 2
+        },
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 3
+        },
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 4
+        },
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 5
+        },
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 6
+        },
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 7
+        },
+        {
+          "file": "cases/2002/logs.jsonl",
+          "line": 8
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 2,
+          "json_pointer": "/timeout_ms"
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 3,
+          "json_pointer": "/service_delay_ms"
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 4,
+          "json_pointer": "/proxy_delay_ms"
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 5,
+          "json_pointer": "/max_attempts"
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 6,
+          "json_pointer": "/retry_backoff_ms"
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 7,
+          "json_pointer": "/manifest_checksum"
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 8,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2002/config.json",
+          "line": 9,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2002/config-diff.json",
+          "line": 2,
+          "json_pointer": "/service_delay_ms"
+        },
+        {
+          "file": "cases/2002/config-diff.json",
+          "line": 6,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 2,
+          "json_pointer": "/experiment_source"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 3,
+          "json_pointer": "/baseline_git_commit"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 4,
+          "json_pointer": "/git_commit"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 5,
+          "json_pointer": "/config_blob"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 6,
+          "json_pointer": "/config_sha256"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 7,
+          "json_pointer": "/published_artifact_sha256"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 8,
+          "json_pointer": "/actual_artifact_sha256"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 9,
+          "json_pointer": "/received_artifact_sha256"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 10,
+          "json_pointer": "/artifact_observation"
+        },
+        {
+          "file": "cases/2002/release.json",
+          "line": 11,
+          "json_pointer": "/declared_manifest_sha256"
+        },
+        {
+          "file": "cases/2002/dependencies.json",
+          "line": 1,
+          "json_pointer": "/0"
+        },
+        {
+          "file": "cases/2002/metrics.json",
+          "line": 2,
+          "json_pointer": "/success"
+        },
+        {
+          "file": "cases/2002/metrics.json",
+          "line": 3,
+          "json_pointer": "/successful_requests"
+        },
+        {
+          "file": "cases/2002/metrics.json",
+          "line": 4,
+          "json_pointer": "/failed_requests"
+        },
+        {
+          "file": "cases/2002/metrics.json",
+          "line": 5,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2002/metrics.json",
+          "line": 6,
+          "json_pointer": "/client_attempts"
+        },
+        {
+          "file": "cases/2002/metrics.json",
+          "line": 7,
+          "json_pointer": "/actual_server_requests"
+        },
+        {
+          "file": "cases/2002/metrics.json",
+          "line": 8,
+          "json_pointer": "/client_latencies_ms"
+        }
+      ],
+      "snapshot_scope": "full",
+      "logs_summary": "{\"hybrid_evidence_schema\":\"v1\",\"stats_grain\":\"log_occurrence\",\"complete\":false}",
+      "full_input_sha256": "26e41da7ec54a1739a8408921dd2a6c03bdb43d4c8f2df6b212edc9c7c490e2e"
+    },
+    {
+      "id": "2003",
+      "lines": [
+        "{\"timestamp_ms\":235.496,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":0,\"attempt\":1,\"elapsed_ms\":234.824,\"timeout_ms\":234}",
+        "{\"timestamp_ms\":406.218,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":1,\"status\":200,\"service_elapsed_ms\":26.221}",
+        "{\"timestamp_ms\":406.551,\"module\":\"transit_proxy\",\"event\":\"response\",\"transit_elapsed_ms\":405.172}",
+        "{\"timestamp_ms\":470.442,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":1,\"attempt\":1,\"elapsed_ms\":234.891,\"timeout_ms\":234}",
+        "{\"timestamp_ms\":640.83,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":2,\"status\":200,\"service_elapsed_ms\":26.292}",
+        "{\"timestamp_ms\":641.154,\"module\":\"transit_proxy\",\"event\":\"response\",\"transit_elapsed_ms\":404.822}",
+        "{\"timestamp_ms\":705.264,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"logical\":2,\"attempt\":1,\"elapsed_ms\":234.788,\"timeout_ms\":234}",
+        "{\"timestamp_ms\":876.225,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":3,\"status\":200,\"service_elapsed_ms\":26.35}",
+        "{\"timestamp_ms\":876.575,\"module\":\"transit_proxy\",\"event\":\"response\",\"transit_elapsed_ms\":405.241}",
+        "{\"module\":\"display\",\"event\":\"heartbeat\",\"status\":\"healthy\"}",
+        "{\"module\":\"display\",\"event\":\"config_applied\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"timeout_ms\",\"value\":234}",
+        "{\"source\":\"config.json\",\"key\":\"service_delay_ms\",\"value\":26}",
+        "{\"source\":\"config.json\",\"key\":\"proxy_delay_ms\",\"value\":377}",
+        "{\"source\":\"config.json\",\"key\":\"max_attempts\",\"value\":1}",
+        "{\"source\":\"config.json\",\"key\":\"retry_backoff_ms\",\"value\":143}",
+        "{\"source\":\"config.json\",\"key\":\"manifest_checksum\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"config.json\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"config-diff.json\",\"key\":\"proxy_delay_ms\",\"value\":{\"before\":0,\"after\":377}}",
+        "{\"source\":\"config-diff.json\",\"key\":\"ui_banner\",\"value\":{\"before\":\"old\",\"after\":\"new\"}}",
+        "{\"source\":\"release.json\",\"key\":\"experiment_source\",\"value\":\"local controlled HTTP execution; not production\"}",
+        "{\"source\":\"release.json\",\"key\":\"baseline_git_commit\",\"value\":\"9cfea35c64ccc79891b53ac44fcc28ce71c52e1c\"}",
+        "{\"source\":\"release.json\",\"key\":\"git_commit\",\"value\":\"4873a53b8182aaad452d7b4b88ece7ee4f227beb\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_blob\",\"value\":\"a35db159f8e1e78cb0e891733ff7caf03b6f621f\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_sha256\",\"value\":\"139cd93c30f44325c92313fe313d79b090712ce27968a73d6c791dcf099bb11f\"}",
+        "{\"source\":\"release.json\",\"key\":\"published_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"actual_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"received_artifact_sha256\",\"value\":null}",
+        "{\"source\":\"release.json\",\"key\":\"artifact_observation\",\"value\":\"build reference; no successful download\"}",
+        "{\"source\":\"release.json\",\"key\":\"declared_manifest_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"dependencies.json\",\"key\":\"0\",\"value\":{\"upstream\":\"download\",\"downstream\":\"artifact_service\",\"source\":\"executed HTTP\"}}",
+        "{\"source\":\"dependencies.json\",\"key\":\"1\",\"value\":{\"upstream\":\"download\",\"downstream\":\"transit_proxy\",\"source\":\"configured hop\"}}",
+        "{\"source\":\"metrics.json\",\"key\":\"success\",\"value\":false}",
+        "{\"source\":\"metrics.json\",\"key\":\"successful_requests\",\"value\":0}",
+        "{\"source\":\"metrics.json\",\"key\":\"failed_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_attempts\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"actual_server_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_latencies_ms\",\"value\":[234.858,234.943,234.818]}"
+      ],
+      "sha256": "1dab5712345af74e8a0b60670e51294efc767f3dcb58f9fb938ea789a2fdb9d7",
+      "error_code_stats": {
+        "OTA_DOWNLOAD_TIMEOUT": 3
+      },
+      "sources": [
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 1
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 2
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 3
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 4
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 5
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 6
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 7
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 8
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 9
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 10
+        },
+        {
+          "file": "cases/2003/logs.jsonl",
+          "line": 11
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 2,
+          "json_pointer": "/timeout_ms"
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 3,
+          "json_pointer": "/service_delay_ms"
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 4,
+          "json_pointer": "/proxy_delay_ms"
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 5,
+          "json_pointer": "/max_attempts"
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 6,
+          "json_pointer": "/retry_backoff_ms"
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 7,
+          "json_pointer": "/manifest_checksum"
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 8,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2003/config.json",
+          "line": 9,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2003/config-diff.json",
+          "line": 2,
+          "json_pointer": "/proxy_delay_ms"
+        },
+        {
+          "file": "cases/2003/config-diff.json",
+          "line": 6,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 2,
+          "json_pointer": "/experiment_source"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 3,
+          "json_pointer": "/baseline_git_commit"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 4,
+          "json_pointer": "/git_commit"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 5,
+          "json_pointer": "/config_blob"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 6,
+          "json_pointer": "/config_sha256"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 7,
+          "json_pointer": "/published_artifact_sha256"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 8,
+          "json_pointer": "/actual_artifact_sha256"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 9,
+          "json_pointer": "/received_artifact_sha256"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 10,
+          "json_pointer": "/artifact_observation"
+        },
+        {
+          "file": "cases/2003/release.json",
+          "line": 11,
+          "json_pointer": "/declared_manifest_sha256"
+        },
+        {
+          "file": "cases/2003/dependencies.json",
+          "line": 1,
+          "json_pointer": "/0"
+        },
+        {
+          "file": "cases/2003/dependencies.json",
+          "line": 1,
+          "json_pointer": "/1"
+        },
+        {
+          "file": "cases/2003/metrics.json",
+          "line": 2,
+          "json_pointer": "/success"
+        },
+        {
+          "file": "cases/2003/metrics.json",
+          "line": 3,
+          "json_pointer": "/successful_requests"
+        },
+        {
+          "file": "cases/2003/metrics.json",
+          "line": 4,
+          "json_pointer": "/failed_requests"
+        },
+        {
+          "file": "cases/2003/metrics.json",
+          "line": 5,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2003/metrics.json",
+          "line": 6,
+          "json_pointer": "/client_attempts"
+        },
+        {
+          "file": "cases/2003/metrics.json",
+          "line": 7,
+          "json_pointer": "/actual_server_requests"
+        },
+        {
+          "file": "cases/2003/metrics.json",
+          "line": 8,
+          "json_pointer": "/client_latencies_ms"
+        }
+      ],
+      "snapshot_scope": "full",
+      "logs_summary": "{\"hybrid_evidence_schema\":\"v1\",\"stats_grain\":\"log_occurrence\",\"complete\":false}",
+      "full_input_sha256": "f7fc09c5744604822d3fd666ef91ea9879ac99a9b6c64cb7db5e200f1ef04bcb"
+    },
+    {
+      "id": "2004",
+      "lines": [
+        "{\"timestamp_ms\":2.317,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":1,\"status\":503,\"service_elapsed_ms\":1.143}",
+        "{\"timestamp_ms\":2.453,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":0,\"attempt\":1}",
+        "{\"timestamp_ms\":4.306,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":2,\"status\":503,\"service_elapsed_ms\":1.136}",
+        "{\"timestamp_ms\":4.432,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":0,\"attempt\":2}",
+        "{\"timestamp_ms\":6.092,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":3,\"status\":503,\"service_elapsed_ms\":1.128}",
+        "{\"timestamp_ms\":6.187,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":0,\"attempt\":3}",
+        "{\"timestamp_ms\":7.92,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":4,\"status\":503,\"service_elapsed_ms\":1.139}",
+        "{\"timestamp_ms\":8.039,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":0,\"attempt\":4}",
+        "{\"timestamp_ms\":9.581,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":5,\"status\":503,\"service_elapsed_ms\":1.13}",
+        "{\"timestamp_ms\":9.728,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":1,\"attempt\":1}",
+        "{\"timestamp_ms\":11.49,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":6,\"status\":503,\"service_elapsed_ms\":1.136}",
+        "{\"timestamp_ms\":11.579,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":1,\"attempt\":2}",
+        "{\"timestamp_ms\":13.449,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":7,\"status\":503,\"service_elapsed_ms\":1.148}",
+        "{\"timestamp_ms\":13.569,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":1,\"attempt\":3}",
+        "{\"timestamp_ms\":17.062,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":8,\"status\":503,\"service_elapsed_ms\":1.151}",
+        "{\"timestamp_ms\":17.182,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":1,\"attempt\":4}",
+        "{\"timestamp_ms\":18.941,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":9,\"status\":503,\"service_elapsed_ms\":1.133}",
+        "{\"timestamp_ms\":19.084,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":2,\"attempt\":1}",
+        "{\"timestamp_ms\":20.754,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":10,\"status\":503,\"service_elapsed_ms\":1.132}",
+        "{\"timestamp_ms\":20.898,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":2,\"attempt\":2}",
+        "{\"timestamp_ms\":22.75,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":11,\"status\":503,\"service_elapsed_ms\":1.128}",
+        "{\"timestamp_ms\":22.851,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":2,\"attempt\":3}",
+        "{\"timestamp_ms\":24.407,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":12,\"status\":503,\"service_elapsed_ms\":1.124}",
+        "{\"timestamp_ms\":24.505,\"module\":\"download\",\"error_type\":\"OTA_DOWNLOAD_HTTP_ERROR\",\"status\":503,\"logical\":2,\"attempt\":4}",
+        "{\"module\":\"display\",\"event\":\"heartbeat\",\"status\":\"healthy\"}",
+        "{\"module\":\"display\",\"event\":\"config_applied\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"timeout_ms\",\"value\":234}",
+        "{\"source\":\"config.json\",\"key\":\"service_delay_ms\",\"value\":1}",
+        "{\"source\":\"config.json\",\"key\":\"proxy_delay_ms\",\"value\":0}",
+        "{\"source\":\"config.json\",\"key\":\"max_attempts\",\"value\":4}",
+        "{\"source\":\"config.json\",\"key\":\"retry_backoff_ms\",\"value\":0}",
+        "{\"source\":\"config.json\",\"key\":\"manifest_checksum\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"config.json\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"config.json\",\"key\":\"ready_after_ms\",\"value\":104}",
+        "{\"source\":\"config-diff.json\",\"key\":\"max_attempts\",\"value\":{\"before\":2,\"after\":4}}",
+        "{\"source\":\"config-diff.json\",\"key\":\"retry_backoff_ms\",\"value\":{\"before\":143,\"after\":0}}",
+        "{\"source\":\"config-diff.json\",\"key\":\"ui_banner\",\"value\":{\"before\":\"old\",\"after\":\"new\"}}",
+        "{\"source\":\"release.json\",\"key\":\"experiment_source\",\"value\":\"local controlled HTTP execution; not production\"}",
+        "{\"source\":\"release.json\",\"key\":\"baseline_git_commit\",\"value\":\"e8bf8ffe4f2738123913aea011c631153f6244bd\"}",
+        "{\"source\":\"release.json\",\"key\":\"git_commit\",\"value\":\"e04329aff3d8ee8a3f6ac91a3e6b06277eb12ac2\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_blob\",\"value\":\"5822b726dcb90392074e178c06d49d5d1e6530e9\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_sha256\",\"value\":\"10384dff84698ac6a496ad16e1d05c71e795b6b9f44578bd2ac7bf89ccaa9d35\"}",
+        "{\"source\":\"release.json\",\"key\":\"published_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"actual_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"received_artifact_sha256\",\"value\":null}",
+        "{\"source\":\"release.json\",\"key\":\"artifact_observation\",\"value\":\"build reference; no successful download\"}",
+        "{\"source\":\"release.json\",\"key\":\"declared_manifest_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"dependencies.json\",\"key\":\"0\",\"value\":{\"upstream\":\"download\",\"downstream\":\"artifact_service\",\"source\":\"executed HTTP\"}}",
+        "{\"source\":\"metrics.json\",\"key\":\"success\",\"value\":false}",
+        "{\"source\":\"metrics.json\",\"key\":\"successful_requests\",\"value\":0}",
+        "{\"source\":\"metrics.json\",\"key\":\"failed_requests\",\"value\":12}",
+        "{\"source\":\"metrics.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_attempts\",\"value\":12}",
+        "{\"source\":\"metrics.json\",\"key\":\"actual_server_requests\",\"value\":12}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_latencies_ms\",\"value\":[2.158,1.959,1.678,1.748,1.687,1.815,1.893,3.511,1.928,1.788,1.793,1.568]}"
+      ],
+      "sha256": "cbf105e4a558b2e8672ad7e7fb17805c3a4e33bdbd9cec4750cb5c2f0eb29110",
+      "error_code_stats": {
+        "OTA_DOWNLOAD_HTTP_ERROR": 12
+      },
+      "sources": [
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 1
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 2
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 3
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 4
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 5
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 6
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 7
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 8
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 9
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 10
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 11
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 12
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 13
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 14
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 15
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 16
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 17
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 18
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 19
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 20
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 21
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 22
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 23
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 24
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 25
+        },
+        {
+          "file": "cases/2004/logs.jsonl",
+          "line": 26
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 2,
+          "json_pointer": "/timeout_ms"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 3,
+          "json_pointer": "/service_delay_ms"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 4,
+          "json_pointer": "/proxy_delay_ms"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 5,
+          "json_pointer": "/max_attempts"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 6,
+          "json_pointer": "/retry_backoff_ms"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 7,
+          "json_pointer": "/manifest_checksum"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 8,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 9,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2004/config.json",
+          "line": 10,
+          "json_pointer": "/ready_after_ms"
+        },
+        {
+          "file": "cases/2004/config-diff.json",
+          "line": 2,
+          "json_pointer": "/max_attempts"
+        },
+        {
+          "file": "cases/2004/config-diff.json",
+          "line": 6,
+          "json_pointer": "/retry_backoff_ms"
+        },
+        {
+          "file": "cases/2004/config-diff.json",
+          "line": 10,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 2,
+          "json_pointer": "/experiment_source"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 3,
+          "json_pointer": "/baseline_git_commit"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 4,
+          "json_pointer": "/git_commit"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 5,
+          "json_pointer": "/config_blob"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 6,
+          "json_pointer": "/config_sha256"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 7,
+          "json_pointer": "/published_artifact_sha256"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 8,
+          "json_pointer": "/actual_artifact_sha256"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 9,
+          "json_pointer": "/received_artifact_sha256"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 10,
+          "json_pointer": "/artifact_observation"
+        },
+        {
+          "file": "cases/2004/release.json",
+          "line": 11,
+          "json_pointer": "/declared_manifest_sha256"
+        },
+        {
+          "file": "cases/2004/dependencies.json",
+          "line": 1,
+          "json_pointer": "/0"
+        },
+        {
+          "file": "cases/2004/metrics.json",
+          "line": 2,
+          "json_pointer": "/success"
+        },
+        {
+          "file": "cases/2004/metrics.json",
+          "line": 3,
+          "json_pointer": "/successful_requests"
+        },
+        {
+          "file": "cases/2004/metrics.json",
+          "line": 4,
+          "json_pointer": "/failed_requests"
+        },
+        {
+          "file": "cases/2004/metrics.json",
+          "line": 5,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2004/metrics.json",
+          "line": 6,
+          "json_pointer": "/client_attempts"
+        },
+        {
+          "file": "cases/2004/metrics.json",
+          "line": 7,
+          "json_pointer": "/actual_server_requests"
+        },
+        {
+          "file": "cases/2004/metrics.json",
+          "line": 8,
+          "json_pointer": "/client_latencies_ms"
+        }
+      ],
+      "snapshot_scope": "full",
+      "logs_summary": "{\"hybrid_evidence_schema\":\"v1\",\"stats_grain\":\"log_occurrence\",\"complete\":false}",
+      "full_input_sha256": "05938897bb359b64802e6ea9e8257feadab05849d78673f2bb30847b72210d09"
+    },
+    {
+      "id": "2005",
+      "lines": [
+        "{\"timestamp_ms\":27.752,\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"db2c04bd7f41aeddff26365f32f50e5a7195fceacf1e3ade34a99f5e66e42f28\",\"actual_checksum\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\",\"published_sha256\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"timestamp_ms\":55.255,\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"db2c04bd7f41aeddff26365f32f50e5a7195fceacf1e3ade34a99f5e66e42f28\",\"actual_checksum\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\",\"published_sha256\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"timestamp_ms\":83.316,\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"db2c04bd7f41aeddff26365f32f50e5a7195fceacf1e3ade34a99f5e66e42f28\",\"actual_checksum\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\",\"published_sha256\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}"
+      ],
+      "sha256": "14827605ec2bb2e4e49e0cc9df62f4cee5c7315945196827f0d041451124efcd",
+      "error_code_stats": {
+        "OTA_CHECKSUM_MISMATCH": 3
+      },
+      "sources": [
+        {
+          "file": "cases/2005/logs.jsonl",
+          "line": 1
+        },
+        {
+          "file": "cases/2005/logs.jsonl",
+          "line": 2
+        },
+        {
+          "file": "cases/2005/logs.jsonl",
+          "line": 3
+        }
+      ],
+      "snapshot_scope": "compact",
+      "logs_summary": "{\"hybrid_evidence_schema\":\"v1\",\"stats_grain\":\"log_occurrence\",\"complete\":true}",
+      "full_input_sha256": "f4ba2af19b045d5cdf9009358154297d0c4259eec852425bb05c382333e576ef"
+    },
+    {
+      "id": "2006",
+      "lines": [
+        "{\"timestamp_ms\":27.338,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":1,\"status\":200,\"service_elapsed_ms\":26.249}",
+        "{\"timestamp_ms\":27.61,\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\",\"actual_checksum\":\"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4\",\"published_sha256\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"timestamp_ms\":54.874,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":2,\"status\":200,\"service_elapsed_ms\":26.34}",
+        "{\"timestamp_ms\":55.186,\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\",\"actual_checksum\":\"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4\",\"published_sha256\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"timestamp_ms\":82.095,\"module\":\"artifact_service\",\"event\":\"response\",\"request\":3,\"status\":200,\"service_elapsed_ms\":26.221}",
+        "{\"timestamp_ms\":82.384,\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\",\"actual_checksum\":\"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4\",\"published_sha256\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"module\":\"display\",\"event\":\"heartbeat\",\"status\":\"healthy\"}",
+        "{\"module\":\"display\",\"event\":\"config_applied\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"timeout_ms\",\"value\":234}",
+        "{\"source\":\"config.json\",\"key\":\"service_delay_ms\",\"value\":26}",
+        "{\"source\":\"config.json\",\"key\":\"proxy_delay_ms\",\"value\":0}",
+        "{\"source\":\"config.json\",\"key\":\"max_attempts\",\"value\":1}",
+        "{\"source\":\"config.json\",\"key\":\"retry_backoff_ms\",\"value\":143}",
+        "{\"source\":\"config.json\",\"key\":\"manifest_checksum\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"config.json\",\"key\":\"ui_banner\",\"value\":\"new\"}",
+        "{\"source\":\"config.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"config-diff.json\",\"key\":\"ui_banner\",\"value\":{\"before\":\"old\",\"after\":\"new\"}}",
+        "{\"source\":\"release.json\",\"key\":\"experiment_source\",\"value\":\"local controlled HTTP execution; not production\"}",
+        "{\"source\":\"release.json\",\"key\":\"baseline_git_commit\",\"value\":\"4428958a09f19d73737d585fe6ea316b932b0815\"}",
+        "{\"source\":\"release.json\",\"key\":\"git_commit\",\"value\":\"001ffab65eca39545e7bfabd36106d26e3338608\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_blob\",\"value\":\"c0af51d5a8132bce9f9359b186608f551ffd0c92\"}",
+        "{\"source\":\"release.json\",\"key\":\"config_sha256\",\"value\":\"f9d79908ec4754d00c862ad8bc6d2f4ef50d6080a531628b0589411b8a4fc7fd\"}",
+        "{\"source\":\"release.json\",\"key\":\"published_artifact_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"release.json\",\"key\":\"actual_artifact_sha256\",\"value\":\"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4\"}",
+        "{\"source\":\"release.json\",\"key\":\"received_artifact_sha256\",\"value\":\"0844e412aea3d5caf078efec0b6cf14a26c7fb7c8a602331c5772eaae619ded4\"}",
+        "{\"source\":\"release.json\",\"key\":\"artifact_observation\",\"value\":\"downloaded bytes\"}",
+        "{\"source\":\"release.json\",\"key\":\"declared_manifest_sha256\",\"value\":\"abb2055fe1a1f60c0e70c8751085da6d3d9614cd60a9743ed099684bd40de599\"}",
+        "{\"source\":\"dependencies.json\",\"key\":\"0\",\"value\":{\"upstream\":\"download\",\"downstream\":\"artifact_service\",\"source\":\"executed HTTP\"}}",
+        "{\"source\":\"metrics.json\",\"key\":\"success\",\"value\":false}",
+        "{\"source\":\"metrics.json\",\"key\":\"successful_requests\",\"value\":0}",
+        "{\"source\":\"metrics.json\",\"key\":\"failed_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"logical_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_attempts\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"actual_server_requests\",\"value\":3}",
+        "{\"source\":\"metrics.json\",\"key\":\"client_latencies_ms\",\"value\":[27.172,27.574,27.194]}"
+      ],
+      "sha256": "f5c9e13bb45ab2a1690ad06a0c2ac643c76184cb476c1854b91a98f5626f9cba",
+      "error_code_stats": {
+        "OTA_CHECKSUM_MISMATCH": 3
+      },
+      "sources": [
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 1
+        },
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 2
+        },
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 3
+        },
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 4
+        },
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 5
+        },
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 6
+        },
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 7
+        },
+        {
+          "file": "cases/2006/logs.jsonl",
+          "line": 8
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 2,
+          "json_pointer": "/timeout_ms"
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 3,
+          "json_pointer": "/service_delay_ms"
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 4,
+          "json_pointer": "/proxy_delay_ms"
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 5,
+          "json_pointer": "/max_attempts"
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 6,
+          "json_pointer": "/retry_backoff_ms"
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 7,
+          "json_pointer": "/manifest_checksum"
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 8,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2006/config.json",
+          "line": 9,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2006/config-diff.json",
+          "line": 2,
+          "json_pointer": "/ui_banner"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 2,
+          "json_pointer": "/experiment_source"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 3,
+          "json_pointer": "/baseline_git_commit"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 4,
+          "json_pointer": "/git_commit"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 5,
+          "json_pointer": "/config_blob"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 6,
+          "json_pointer": "/config_sha256"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 7,
+          "json_pointer": "/published_artifact_sha256"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 8,
+          "json_pointer": "/actual_artifact_sha256"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 9,
+          "json_pointer": "/received_artifact_sha256"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 10,
+          "json_pointer": "/artifact_observation"
+        },
+        {
+          "file": "cases/2006/release.json",
+          "line": 11,
+          "json_pointer": "/declared_manifest_sha256"
+        },
+        {
+          "file": "cases/2006/dependencies.json",
+          "line": 1,
+          "json_pointer": "/0"
+        },
+        {
+          "file": "cases/2006/metrics.json",
+          "line": 2,
+          "json_pointer": "/success"
+        },
+        {
+          "file": "cases/2006/metrics.json",
+          "line": 3,
+          "json_pointer": "/successful_requests"
+        },
+        {
+          "file": "cases/2006/metrics.json",
+          "line": 4,
+          "json_pointer": "/failed_requests"
+        },
+        {
+          "file": "cases/2006/metrics.json",
+          "line": 5,
+          "json_pointer": "/logical_requests"
+        },
+        {
+          "file": "cases/2006/metrics.json",
+          "line": 6,
+          "json_pointer": "/client_attempts"
+        },
+        {
+          "file": "cases/2006/metrics.json",
+          "line": 7,
+          "json_pointer": "/actual_server_requests"
+        },
+        {
+          "file": "cases/2006/metrics.json",
+          "line": 8,
+          "json_pointer": "/client_latencies_ms"
+        }
+      ],
+      "snapshot_scope": "full",
+      "logs_summary": "{\"hybrid_evidence_schema\":\"v1\",\"stats_grain\":\"log_occurrence\",\"complete\":false}",
+      "full_input_sha256": "cf8409f457d9c14a89d61c0ecae57fcd046435371019f2fd9de92d5b10130a49"
+    }
+  ],
+  "input_schema": "ota-input-v2"
+}
