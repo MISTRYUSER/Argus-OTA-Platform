@@ -65,10 +65,17 @@ func (r *PgvectorRetriever) Search(ctx context.Context, params domain.SearchPara
 			batch_id,
 			diagnosis_summary,
 			confidence,
-			1 - (embedding <=> $1::vector) AS similarity
+			1 - (embedding <=> $1::vector) AS similarity,
+ COALESCE(aggregated_data->>'root_cause_id',''),
+ COALESCE(aggregated_data->>'case_verified','false') = 'true',
+ COALESCE(aggregated_data->>'case_module',''),
+ COALESCE(aggregated_data->>'case_exception','')
+
 		FROM ai_diagnoses
 		WHERE embedding IS NOT NULL
 			AND ($2::text[] IS NULL OR top_error_codes ?| $2::text[])
+ AND status='completed'
+ AND ($4='' OR batch_id::text<>$4)
 		ORDER BY embedding <=> $1::vector
 		LIMIT $3;
 	`
@@ -79,7 +86,7 @@ func (r *PgvectorRetriever) Search(ctx context.Context, params domain.SearchPara
 		topK = 5
 	}
 
-	rows, err := r.db.QueryContext(ctx, sql, vectorLiteral, buildErrorCodesParam(params.ErrorCodes), topK)
+	rows, err := r.db.QueryContext(ctx, sql, vectorLiteral, buildErrorCodesParam(params.ErrorCodes), topK, params.ExcludeBatchID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query similar cases: %w", err)
 	}
@@ -97,12 +104,17 @@ func (r *PgvectorRetriever) Search(ctx context.Context, params domain.SearchPara
 			&c.Summary,
 			&c.Confidence,
 			&similarity,
+			&c.RootCauseID,
+			&c.Verified,
+			&c.ModuleName,
+			&c.ExceptionType,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
 		c.Similarity = similarity
+		c.ScoreKind = "cosine"
 		c.MatchedReason = fmt.Sprintf("相似度: %.2f", similarity)
 
 		cases = append(cases, c)

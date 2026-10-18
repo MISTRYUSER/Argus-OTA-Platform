@@ -21,7 +21,7 @@ import (
 	aipg "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres"
 )
 
-func TestHybridUsesActuallyParsedOTAObservationsOnce(t *testing.T) {
+func TestHybridUsesActuallyParsedOTAObservationsWithoutModel(t *testing.T) {
 	db := testutil.OpenDB(t)
 	ctx := context.Background()
 	id, fid := uuid.New(), uuid.New()
@@ -74,7 +74,7 @@ func TestHybridUsesActuallyParsedOTAObservationsOnce(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	if calls.Load() != 1 {
+	if calls.Load() != 0 {
 		t.Fatalf("actual parsed route used %d model calls", calls.Load())
 	}
 	report, e := corepg.NewPostgresReportRepository(db).FindByBatchID(ctx, id)

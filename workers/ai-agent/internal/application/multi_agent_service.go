@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/cloudwego/eino/components/model"
@@ -51,7 +52,18 @@ func NewMultiAgentService(repo domain.DiagnosisRepository, retriever domain.Vect
 			runner, err = investigation.NewAgent(repo, retriever, chat, investigation.Options{Telemetry: settings.telemetry, TelemetryPolicy: settings.policy, MaxSteps: 8, ModelName: cfg.Model, MaxReservedTokens: reservationBudget})
 		}
 		if err == nil && (os.Getenv("AI_RUNNER") == "hybrid" || os.Getenv("AI_RUNNER") == "") {
-			runner, err = hybrid.NewRunner(repo, chat, runner, hybrid.Options{MaxReservedTokens: reservationBudget, ModelName: cfg.Model})
+			opts := hybrid.Options{MaxReservedTokens: reservationBudget, ModelName: cfg.Model, Retriever: retriever}
+			if raw := os.Getenv("AI_HYBRID_THRESHOLDS"); raw != "" {
+				if err = json.Unmarshal([]byte(raw), &opts.Thresholds); err != nil {
+					return nil, fmt.Errorf("invalid AI_HYBRID_THRESHOLDS: %w", err)
+				}
+			}
+			if raw := os.Getenv("AI_HYBRID_RULES"); raw != "" {
+				if err = json.Unmarshal([]byte(raw), &opts.Rules); err != nil {
+					return nil, fmt.Errorf("invalid AI_HYBRID_RULES: %w", err)
+				}
+			}
+			runner, err = hybrid.NewRunner(repo, chat, runner, opts)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported AI_RUNNER")
@@ -110,7 +122,7 @@ func (s *MultiAgentService) DiagnoseBatch(ctx context.Context, id string) error 
 		if result.Model == "" {
 			result.Model = "configured-model"
 		}
-		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"resolution_status": result.ResolutionStatus, "execution_trace_id": result.ExecutionTraceID, "model_steps": result.ModelSteps, "reserved_token_units": result.ReservedTokens, "context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
+		return &domain.Diagnosis{ID: uuid.NewSHA1(uuid.NameSpaceURL, []byte("argus-diagnosis:"+id)), BatchID: batchID, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: result.RootCause, AggregatedData: map[string]interface{}{"routing": result.Routing, "resolution_status": result.ResolutionStatus, "execution_trace_id": result.ExecutionTraceID, "model_steps": result.ModelSteps, "reserved_token_units": result.ReservedTokens, "context_compactions": result.ContextCompactions, "hypotheses": result.Hypotheses, "hypothesis_id": result.HypothesisID, "tool_trace": result.ToolTrace, "evidence": result.Evidence, "limitations": result.Limitations}, TokensUsed: result.TokensUsed, TopErrorCodes: codes, Recommendations: result.Suggestions, Confidence: result.Confidence, Model: result.Model, CreatedAt: now, UpdatedAt: now, DiagnosedAt: &now}, nil
 	}
 	if leased, ok := s.diagnosisRepo.(domain.LeasedDiagnosisRepository); ok {
 		_, err = leased.ExecuteOnce(ctx, id, generate)

@@ -1,7 +1,7 @@
 name: Regression and reproducible fault injection
 on:
   push:
-    branches: [main, 'codex/version-regression-hybrid-quota', 'codex/ota-fault-replay']
+    branches: [main, 'codex/version-regression-hybrid-quota', 'codex/ota-fault-replay', 'codex/confidence-routing']
 permissions:
   contents: read
 jobs:

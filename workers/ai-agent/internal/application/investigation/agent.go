@@ -409,3 +409,19 @@ func (a *Agent) Run(ctx context.Context, id string) (result *domain.DiagnosisRes
 	}
 	return out.result, nil
 }
+
+// RunWithBudget keeps a failed routing summary inside the same task budget.
+func (a *Agent) RunWithBudget(ctx context.Context, id string, remaining int) (*domain.DiagnosisResult, error) {
+	if remaining < 1 {
+		return nil, domain.ErrInvestigationBudget
+	}
+	options := a.options
+	if remaining < options.MaxReservedTokens {
+		options.MaxReservedTokens = remaining
+	}
+	runner, err := NewAgent(a.repo, a.retriever, a.model, options)
+	if err != nil {
+		return nil, err
+	}
+	return runner.Run(ctx, id)
+}

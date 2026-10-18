@@ -82,3 +82,24 @@ func TestUnresolvedKeepsSpentBudgetAndExplicitStatus(t *testing.T) {
 		t.Fatalf("spent usage or status lost %+v", out)
 	}
 }
+
+func TestDeterministicObservationNeedsNoModel(t *testing.T) {
+	r, err := NewRunner(repository{data: &domain.AggregatedData{
+		LogsSummary:    `{"hybrid_evidence_schema":"v1","stats_grain":"log_occurrence","complete":true}`,
+		RawLogs:        `{"error_type":"OTA_CHECKSUM_MISMATCH","expected_checksum":"a","actual_checksum":"b"}`,
+		ErrorCodeStats: map[string]int{"OTA_CHECKSUM_MISMATCH": 1},
+	}}, nil, budgetRunner{}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := r.Run(context.Background(), "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.ResolutionStatus != "provisional" || out.ModelSteps != 0 || out.Model != "deterministic-rules-v1" || out.TokensUsed != 0 {
+		t.Fatalf("deterministic observation must skip model and investigation: %+v", out)
+	}
+	if err := ValidateReferences(out.EvidenceIDs, out.Evidence); err != nil {
+		t.Fatal(err)
+	}
+}

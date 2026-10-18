@@ -4,9 +4,10 @@ import "context"
 
 // SearchParams 检索参数（用于混合检索）
 type SearchParams struct {
-	ErrorCodes    []string // 错误码列表（用于精确过滤）
-	EmbeddingText string   // 向量检索的查询文本
-	TopK          int      // 返回结果数量
+	ExcludeBatchID string   // exclude current diagnosis from historical recall
+	ErrorCodes     []string // 错误码列表（用于精确过滤）
+	EmbeddingText  string   // 向量检索的查询文本
+	TopK           int      // 返回结果数量
 }
 
 // VectorRetriever - 向量检索器接口（依赖倒置）

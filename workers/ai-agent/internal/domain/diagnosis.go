@@ -25,14 +25,26 @@ type ErrorCodeSummary struct {
 }
 
 // DiagnosisResult 诊断结果（由 LLM 生成）
+type RouteDecision struct {
+	Path          string   `json:"path"`
+	Reason        string   `json:"reason"`
+	RuleID        string   `json:"rule_id,omitempty"`
+	Score         float64  `json:"score"`
+	TopSimilarity float64  `json:"top_similarity,omitempty"`
+	Margin        float64  `json:"margin,omitempty"`
+	CaseIDs       []string `json:"case_ids,omitempty"`
+	PolicyVersion string   `json:"policy_version"`
+}
+
 type DiagnosisResult struct {
-	ResolutionStatus   string       `json:"resolution_status,omitempty"`
-	ExecutionTraceID   string       `json:"execution_trace_id,omitempty"`
-	ModelSteps         int          `json:"model_steps"`
-	ReservedTokens     int          `json:"reserved_token_units"`
-	ContextCompactions int          `json:"context_compactions,omitempty"`
-	Hypotheses         []Hypothesis `json:"hypotheses,omitempty"`
-	HypothesisID       string       `json:"hypothesis_id,omitempty"`
+	Routing            *RouteDecision `json:"routing,omitempty"`
+	ResolutionStatus   string         `json:"resolution_status,omitempty"`
+	ExecutionTraceID   string         `json:"execution_trace_id,omitempty"`
+	ModelSteps         int            `json:"model_steps"`
+	ReservedTokens     int            `json:"reserved_token_units"`
+	ContextCompactions int            `json:"context_compactions,omitempty"`
+	Hypotheses         []Hypothesis   `json:"hypotheses,omitempty"`
+	HypothesisID       string         `json:"hypothesis_id,omitempty"`
 	RootCause          string
 	Suggestions        []string
 	Severity           string
@@ -76,6 +88,11 @@ type Diagnosis struct {
 
 // SimilarCase 相似案例（用于 RAG）
 type SimilarCase struct {
+	ModuleName    string
+	ExceptionType string
+	RootCauseID   string
+	Verified      bool
+	ScoreKind     string
 	DiagnosisID   uuid.UUID
 	BatchID       uuid.UUID
 	Summary       string
