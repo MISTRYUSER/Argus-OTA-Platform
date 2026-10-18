@@ -1,0 +1,207 @@
+{
+  "date": "2026-10-18",
+  "source_commit": "78e059931cb3ea06fca40c8854f96d83f64c8b7d",
+  "source_tree": "18c1c27f5c87208135b69b3c43aafd758f5addc3",
+  "branch": "codex/confidence-routing",
+  "ci": {
+    "run_id": 39094751425,
+    "job_id": 117578744972,
+    "url": "https://github.com/MISTRYUSER/Argus-OTA-Platform/actions/runs/39094751425",
+    "conclusion": "success"
+  },
+  "verification": {
+    "real_infrastructure": [
+      "PostgreSQL 16 + pgvector",
+      "Redis",
+      "Kafka-compatible Redpanda",
+      "MinIO"
+    ],
+    "full_go_regression": "passed",
+    "vet": "passed",
+    "build": "passed",
+    "race": "passed",
+    "python_processing": {
+      "run": 23,
+      "failed": 0
+    },
+    "python_benchmarks": {
+      "run": 65,
+      "failed": 0
+    },
+    "public_record": "passed",
+    "executed_ota_fault_pack": "passed"
+  },
+  "scope": "Actual CSV parsing, real PostgreSQL/pgvector recall, explicit case promotion, production routing, idempotent persistence and report reads. Embeddings and model replies are controlled fixtures; this verifies execution and call counts, not real-model diagnosis quality or production latency.",
+  "receipts": [
+    {
+      "file": "confidence-routing-conflict.json",
+      "actual_http_calls": 2,
+      "case": "conflict",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 1,
+      "path": "investigation",
+      "routing": {
+        "path": "investigation",
+        "policy_version": "confidence-routing-v1",
+        "reason": "top three causes disagree or supporting similarity too low",
+        "score": 0.9599999785423279,
+        "top_similarity": 0.9599999785423279
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-deterministic.json",
+      "actual_http_calls": 0,
+      "case": "deterministic",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 0,
+      "path": "deterministic",
+      "routing": {
+        "path": "deterministic",
+        "policy_version": "confidence-routing-v1",
+        "reason": "checksum",
+        "rule_id": "ota-checksum-v1",
+        "score": 1
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-deterministic_oom.json",
+      "actual_http_calls": 0,
+      "case": "deterministic_oom",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 0,
+      "path": "deterministic",
+      "routing": {
+        "path": "deterministic",
+        "policy_version": "confidence-routing-v1",
+        "reason": "oom",
+        "rule_id": "kernel-oom-v1",
+        "score": 1
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-gray_zone.json",
+      "actual_http_calls": 2,
+      "case": "gray_zone",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 1,
+      "path": "investigation",
+      "routing": {
+        "path": "investigation",
+        "policy_version": "confidence-routing-v1",
+        "reason": "similarity in gray zone",
+        "score": 0.800000011920929,
+        "top_similarity": 0.800000011920929
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-novel.json",
+      "actual_http_calls": 2,
+      "case": "novel",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 1,
+      "path": "investigation",
+      "routing": {
+        "path": "investigation",
+        "policy_version": "confidence-routing-v1",
+        "reason": "similarity below low threshold",
+        "score": 0.6000000238418579,
+        "top_similarity": 0.6000000238418579
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-retrieval_outage.json",
+      "actual_http_calls": 2,
+      "case": "retrieval_outage",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 1,
+      "path": "investigation",
+      "routing": {
+        "path": "investigation",
+        "policy_version": "confidence-routing-v1",
+        "reason": "historical retrieval failed",
+        "score": 0
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-semantic_agreement.json",
+      "actual_http_calls": 1,
+      "case": "semantic_agreement",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 1,
+      "path": "semantic",
+      "routing": {
+        "case_ids": [
+          "2b0a61d3-0288-4965-8a53-e5bb8e08a997",
+          "02b790fd-14d3-45e4-a610-1b51a797678d",
+          "2e4160fe-67de-47b1-b239-30c8c4d1b0e6"
+        ],
+        "margin": 0.15999996662139893,
+        "path": "semantic",
+        "policy_version": "confidence-routing-v1",
+        "reason": "verified top-three agreement and separated competing causes",
+        "score": 0.9679999828338623,
+        "top_similarity": 0.9599999785423279
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-summary_invalid.json",
+      "actual_http_calls": 3,
+      "case": "summary_invalid",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 1,
+      "path": "investigation",
+      "routing": {
+        "case_ids": [
+          "65ffa875-b06f-4e1f-855f-82c2f0898ba2",
+          "3fc44633-9d7b-4b78-b35b-933100b57e23",
+          "408b2f2e-e4ec-4e51-978e-06d58cb852ea"
+        ],
+        "margin": 1,
+        "path": "investigation",
+        "policy_version": "confidence-routing-v1",
+        "reason": "semantic summary failed validation or generation",
+        "score": 0.9679999828338623,
+        "top_similarity": 0.9599999785423279
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    },
+    {
+      "file": "confidence-routing-unverified.json",
+      "actual_http_calls": 2,
+      "case": "unverified",
+      "deliveries": 2,
+      "diagnoses": 1,
+      "embedding_calls": 1,
+      "path": "investigation",
+      "routing": {
+        "path": "investigation",
+        "policy_version": "confidence-routing-v1",
+        "reason": "untrusted, duplicate, self, or invalid retrieval evidence",
+        "score": 0
+      },
+      "scope": "actual CSV/PostgreSQL/pgvector/execution/persistence; controlled embeddings and scripted model, no diagnosis quality claim"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 12124041969,
+      "name": "regression-measurements",
+      "digest": "sha256:a75f1f84eb8798a6cf4b5441b11c93e60c4168e2dfd545476e9ee5f94c6101a0"
+    }
+  ]
+}
