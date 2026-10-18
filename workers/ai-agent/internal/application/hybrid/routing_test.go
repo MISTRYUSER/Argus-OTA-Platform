@@ -2,6 +2,9 @@ package hybrid
 
 import (
 	"context"
+	"fmt"
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
 	"github.com/google/uuid"
 	"github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/domain"
 	"math"
@@ -124,5 +127,69 @@ func TestRejectInvalidRoutingConfiguration(t *testing.T) {
 	}
 	if _, err := NewRunner(repository{}, nil, budgetRunner{}, Options{Rules: []Rule{{ID: "unsafe", ErrorCode: "UNKNOWN", Predicate: "model_confidence"}}}); err == nil {
 		t.Fatal("unaudited predicate accepted")
+	}
+}
+
+type summaryChat struct {
+	model.ChatModel
+	reply *schema.Message
+	err   error
+}
+
+func (c summaryChat) Generate(context.Context, []*schema.Message, ...model.Option) (*schema.Message, error) {
+	return c.reply, c.err
+}
+
+type budgetFallback struct{ remaining int }
+
+func (b *budgetFallback) Run(context.Context, string) (*domain.DiagnosisResult, error) {
+	return nil, fmt.Errorf("unbudgeted fallback called")
+}
+func (b *budgetFallback) RunWithBudget(_ context.Context, _ string, n int) (*domain.DiagnosisResult, error) {
+	b.remaining = n
+	return &domain.DiagnosisResult{ModelSteps: 2, TokensUsed: 60, ReservedTokens: 100}, nil
+}
+func TestInvalidSemanticSummaryFallsBackWithinRemainingBudget(t *testing.T) {
+	data := &domain.AggregatedData{LogsSummary: `{"hybrid_evidence_schema":"v1","stats_grain":"log_occurrence","complete":true}`, RawLogs: `{"error_type":"UNKNOWN","module":"planner"}`, ErrorCodeStats: map[string]int{"UNKNOWN": 1}}
+	cases := history(.96, .95, .94)
+	for i := range cases {
+		cases[i].ModuleName = "planner"
+	}
+	for _, reply := range []*schema.Message{nil, {Content: "invalid json", ResponseMeta: &schema.ResponseMeta{Usage: &schema.TokenUsage{TotalTokens: 7}}}, {Content: `{"hypothesis_id":"H1","root_cause":"candidate","suggestions":[],"severity":"high","confidence":0.1,"evidence_ids":["invented"]}`}} {
+		fallback := &budgetFallback{}
+		runner, err := NewRunner(repository{data: data}, summaryChat{reply: reply}, fallback, Options{Retriever: gateRetriever{cases: cases}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := runner.Run(context.Background(), "current")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.Routing.Path != "investigation" || out.ModelSteps != 3 || fallback.remaining <= 0 || out.ReservedTokens != 100+1000000-fallback.remaining {
+			t.Fatalf("fallback budget/counters lost: %+v remaining=%d", out, fallback.remaining)
+		}
+		if reply != nil && reply.ResponseMeta != nil && out.TokensUsed != 67 {
+			t.Fatalf("failed summary usage lost: %+v", out)
+		}
+	}
+}
+
+func TestSemanticSummaryUsesCurrentAndHistoricalEvidenceOnce(t *testing.T) {
+	data := &domain.AggregatedData{LogsSummary: `{"hybrid_evidence_schema":"v1","stats_grain":"log_occurrence","complete":true}`, RawLogs: `{"error_type":"UNKNOWN","module":"planner"}`, ErrorCodeStats: map[string]int{"UNKNOWN": 1}}
+	cases := history(.96, .95, .94)
+	for i := range cases {
+		cases[i].ModuleName = "planner"
+	}
+	content := fmt.Sprintf(`{"hypothesis_id":"H1","root_cause":"candidate requires verification","suggestions":[],"severity":"high","confidence":0.1,"evidence_ids":["log:1","stats:1","case:%s"]}`, cases[0].DiagnosisID)
+	runner, err := NewRunner(repository{data: data}, summaryChat{reply: &schema.Message{Content: content}}, budgetRunner{}, Options{Retriever: gateRetriever{cases: cases}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := runner.Run(context.Background(), "current")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.ModelSteps != 1 || out.Routing.Path != "semantic" || out.ResolutionStatus != "provisional" || len(out.Evidence) != 5 {
+		t.Fatalf("unexpected summary: %+v", out)
 	}
 }

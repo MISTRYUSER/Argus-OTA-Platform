@@ -66,6 +66,7 @@ func TestConfidenceRoutingE2E(t *testing.T) {
 		calls                        int
 	}{
 		{name: "deterministic", path: "deterministic", calls: 0},
+		{name: "deterministic_oom", path: "deterministic", calls: 0},
 		{name: "semantic_agreement", path: "semantic", scores: []float64{.96, .95, .94, .8}, calls: 1},
 		{name: "summary_invalid", path: "investigation", scores: []float64{.96, .95, .94}, calls: 3},
 		{name: "novel", path: "investigation", scores: []float64{.6, .59, .58}, calls: 2},
@@ -91,6 +92,14 @@ func TestConfidenceRoutingE2E(t *testing.T) {
 			raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "testdata", "csv", "ota_checksum.csv"))
 			if err != nil {
 				t.Fatal(err)
+			}
+			if tc.name == "deterministic_oom" {
+				lines := strings.Split(strings.TrimSpace(strings.ReplaceAll(string(raw), "OTA_CHECKSUM_MISMATCH", "OOM_KILL")), "\n")
+				lines[0] += ",exception_type,exit_code,oom_killed"
+				for i := 1; i < len(lines); i++ {
+					lines[i] += ",OOMKilled,137,true"
+				}
+				raw = []byte(strings.Join(lines, "\n") + "\n")
 			}
 			if tc.path != "deterministic" {
 				raw = []byte(strings.ReplaceAll(string(raw), "OTA_CHECKSUM_MISMATCH", "UNKNOWN_INTERNAL_ERROR"))
@@ -124,7 +133,7 @@ func TestConfidenceRoutingE2E(t *testing.T) {
 					cause = "network"
 				}
 				now := time.Now()
-				d := &domain.Diagnosis{ID: uuid.New(), BatchID: batch, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: "Historical controlled diagnosis " + cause, AggregatedData: map[string]interface{}{"root_cause_id": cause, "case_verified": !tc.unverified, "case_module": "ota-downloader"}, TopErrorCodes: []string{"UNKNOWN_INTERNAL_ERROR"}, Model: "controlled-history", Recommendations: []string{}, CreatedAt: now, UpdatedAt: now}
+				d := &domain.Diagnosis{ID: uuid.New(), BatchID: batch, Status: domain.DiagnosisStatusCompleted, DiagnosisSummary: "Historical controlled diagnosis " + cause, AggregatedData: map[string]interface{}{"root_cause_id": cause, "case_verified": false, "case_module": "ota-downloader"}, TopErrorCodes: []string{"UNKNOWN_INTERNAL_ERROR"}, Model: "controlled-history", Recommendations: []string{}, CreatedAt: now, UpdatedAt: now}
 				if err = repo.Save(ctx, d); err != nil {
 					t.Fatal(err)
 				}
@@ -168,7 +177,19 @@ func TestConfidenceRoutingE2E(t *testing.T) {
 					if fixed {
 						stat = "stats:1"
 					}
-					content, _ := json.Marshal(map[string]interface{}{"hypothesis_id": "H1", "root_cause": "Observed failure; historical cause remains unproven", "suggestions": []string{"inspect"}, "severity": "high", "confidence": .1, "evidence_ids": []string{"log:1", stat}, "limitations": []string{"Controlled model fixture"}})
+					ids := []string{"log:1", stat}
+					if fixed && len(req.Messages) > 1 {
+						var supplied []domain.EvidenceItem
+						if json.Unmarshal([]byte(req.Messages[1].Content), &supplied) == nil {
+							for _, e := range supplied {
+								if strings.HasPrefix(e.ID, "case:") {
+									ids = append(ids, e.ID)
+									break
+								}
+							}
+						}
+					}
+					content, _ := json.Marshal(map[string]interface{}{"hypothesis_id": "H1", "root_cause": "Observed failure; historical cause remains unproven", "suggestions": []string{"inspect"}, "severity": "high", "confidence": .1, "evidence_ids": ids, "limitations": []string{"Controlled model fixture"}})
 					message["content"] = string(content)
 				}
 				if fixed && tc.name == "summary_invalid" {

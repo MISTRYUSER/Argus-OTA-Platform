@@ -376,6 +376,17 @@ func run() error {
 						row["actual_route"] = "agent"
 					}
 				}
+				if *mode == "hybrid" && result != nil && result.Routing != nil {
+					row["route_reason"] = result.Routing.Reason
+					switch result.Routing.Path {
+					case "deterministic":
+						row["actual_route"] = "fixed"
+					case "semantic":
+						row["actual_route"] = "semantic"
+					default:
+						row["actual_route"] = "agent"
+					}
+				}
 				cost, known := measuredCost(transport.rows, tariff)
 				row["cost_usd"] = cost
 				row["cost_complete"] = known

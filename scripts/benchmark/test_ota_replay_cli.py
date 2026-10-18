@@ -62,7 +62,7 @@ class ReplayCLITests(unittest.TestCase):
         price.write_text(json.dumps({'model': 'scripted-test-v1', 'as_of': '2026-10-13', 'source': 'not a real tariff', 'input_cached_usd_per_million': 1, 'input_uncached_usd_per_million': 2, 'output_usd_per_million': 3}))
         env = dict(os.environ, DEEPSEEK_API_KEY_FILE=str(key), OTEL_TRACES_SAMPLER='always_on')
         try:
-            for mode, calls in [('baseline', 1), ('hybrid', 1), ('agent', 2)]:
+            for mode, calls in [('baseline', 1), ('hybrid', 0), ('agent', 2)]:
                 out = folder / mode
                 command = [str(self.binary), '-input', str(file), '-out', str(out), '-mode', mode, '-trials', '1', '-parallel', '1', '-heldout', '-model', 'scripted-test-v1', '-base-url', f'http://127.0.0.1:{server.server_port}/', '-pricing', str(price)]
                 subprocess.run(command, env=env, check=True, capture_output=True, timeout=20)
@@ -70,8 +70,14 @@ class ReplayCLITests(unittest.TestCase):
                 self.assertEqual(row['status'], 'success', row)
                 self.assertEqual(row['actual_http_calls'], calls)
                 self.assertTrue(row['cost_complete'])
-                self.assertEqual(row['request_tool_policy'][0]['provider_model'], 'scripted-test-v1')
-                self.assertEqual(json.loads(row['result']['RawLLMOutput'])['cause_code'], 'manifest_mismatch')
+                if calls:
+                    self.assertEqual(row['request_tool_policy'][0]['provider_model'], 'scripted-test-v1')
+                    self.assertEqual(json.loads(row['result']['RawLLMOutput'])['cause_code'], 'manifest_mismatch')
+                else:
+                    self.assertEqual(row['result']['routing']['path'], 'deterministic')
+                    self.assertEqual(row['result']['model_steps'], 0)
+                    self.assertEqual(row['cost_usd'], 0)
+                    self.assertFalse(row['request_tool_policy'])
                 self.assertNotIn('local-script-only', json.dumps(row))
             # Same real entrypoint, but incomplete coverage must use investigation.
             fallback_input = json.loads(json.dumps(input))
@@ -89,7 +95,7 @@ class ReplayCLITests(unittest.TestCase):
             self.assertEqual(fallback_row['actual_http_calls'], 2)
             self.assertTrue(fallback_row['result']['tool_trace'])
             behavior['invalid'] = True
-            for mode in ('baseline', 'hybrid'):
+            for mode in ('baseline',):
                 out = folder / ('invalid-' + mode)
                 command = [str(self.binary), '-input', str(file), '-out', str(out), '-mode', mode, '-trials', '1', '-parallel', '1', '-model', 'scripted-test-v1', '-base-url', f'http://127.0.0.1:{server.server_port}/']
                 subprocess.run(command, env=env, check=True, capture_output=True, timeout=20)

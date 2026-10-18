@@ -1,0 +1,1260 @@
+{
+  "date": "2026-10-18",
+  "branch": "codex/confidence-routing",
+  "tested_tree_before_receipt": "2decd1bf9bd054f32cd4e419fcba223953600590",
+  "scope": "Local functional verification; controlled provider and embeddings, not diagnosis quality or production latency evidence.",
+  "go_test_events": {
+    "pass": 158,
+    "skip": 50
+  },
+  "go_command": "OTEL_TRACES_SAMPLER=always_on go test -count=1 -json ./...",
+  "vet": {
+    "passed": true,
+    "command": "go vet -buildvcs=false ./..."
+  },
+  "build": {
+    "passed": true,
+    "command": "go build -buildvcs=false ./..."
+  },
+  "vcs_flag_reason": "Local linked-worktree VCS stamping is unavailable inside subprocesses; source is still versioned.",
+  "race": {
+    "passed": true,
+    "packages": [
+      "hybrid",
+      "application",
+      "investigation",
+      "pgvector"
+    ]
+  },
+  "python_processing": {
+    "run": 23,
+    "passed": 17,
+    "skipped": 6,
+    "failed": 0
+  },
+  "python_benchmark": {
+    "run": 65,
+    "passed": 65,
+    "failed": 0,
+    "command": "GOFLAGS=-buildvcs=false python -m unittest discover -s scripts/benchmark -v"
+  },
+  "fixture": {
+    "synthetic": true,
+    "scope": "Functional fixed-workflow routing and measured local HTTP call savings only; scripted answers and tokens do not establish real model quality, latency, or fees. Cost unknown. Cases are independent of ITBench labels.",
+    "attempts": [
+      {
+        "case": "checksum",
+        "mode": "agent",
+        "status": "success",
+        "actual_http_calls": 2,
+        "provider_reported_synthetic_tokens": 60,
+        "latency_ms": 20.817,
+        "cost_usd": null,
+        "result": {
+          "model_steps": 2,
+          "reserved_token_units": 72807,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed failure, upstream cause unknown",
+              "status": "supported",
+              "supports": [
+                "log:1"
+              ],
+              "next_check": "Inspect upstream cause"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed failure; upstream cause unknown",
+          "Suggestions": [
+            "Inspect upstream cause"
+          ],
+          "Severity": "high",
+          "Confidence": 0.5,
+          "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_CHECKSUM_MISMATCH\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:OTA_CHECKSUM_MISMATCH"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "batch:22697fa4-40a7-4d2e-935a-a40e86e50097:logs",
+              "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+            },
+            {
+              "id": "stats:OTA_CHECKSUM_MISMATCH",
+              "source": "batch:22697fa4-40a7-4d2e-935a-a40e86e50097:error_statistics",
+              "content": "OTA_CHECKSUM_MISMATCH count=1 grain=log_occurrence"
+            }
+          ],
+          "tool_trace": [
+            {
+              "step": 1,
+              "tool": "read_logs",
+              "arguments": {},
+              "output": {
+                "next_offset": 1,
+                "total_matches": 1,
+                "evidence": [
+                  {
+                    "id": "log:1",
+                    "source": "batch:22697fa4-40a7-4d2e-935a-a40e86e50097:logs",
+                    "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+                  }
+                ]
+              },
+              "duration_ms": 2
+            },
+            {
+              "step": 1,
+              "tool": "error_statistics",
+              "arguments": {},
+              "output": {
+                "evidence": [
+                  {
+                    "id": "stats:OTA_CHECKSUM_MISMATCH",
+                    "source": "batch:22697fa4-40a7-4d2e-935a-a40e86e50097:error_statistics",
+                    "content": "OTA_CHECKSUM_MISMATCH count=1 grain=log_occurrence"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "update_investigation_plan",
+              "arguments": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "output": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "duration_ms": 7
+            }
+          ],
+          "limitations": [
+            "Synthetic scripted response"
+          ],
+          "tokens_used": 60,
+          "model": "fixture"
+        }
+      },
+      {
+        "case": "timeout",
+        "mode": "agent",
+        "status": "success",
+        "actual_http_calls": 2,
+        "provider_reported_synthetic_tokens": 60,
+        "latency_ms": 1.705,
+        "cost_usd": null,
+        "result": {
+          "model_steps": 2,
+          "reserved_token_units": 72714,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed failure, upstream cause unknown",
+              "status": "supported",
+              "supports": [
+                "log:1"
+              ],
+              "next_check": "Inspect upstream cause"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed failure; upstream cause unknown",
+          "Suggestions": [
+            "Inspect upstream cause"
+          ],
+          "Severity": "high",
+          "Confidence": 0.5,
+          "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_DOWNLOAD_TIMEOUT\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:OTA_DOWNLOAD_TIMEOUT"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "batch:fffc7cdb-d475-414a-90c4-21bdf717ca72:logs",
+              "content": "{\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"elapsed_ms\":200,\"timeout_ms\":100}"
+            },
+            {
+              "id": "stats:OTA_DOWNLOAD_TIMEOUT",
+              "source": "batch:fffc7cdb-d475-414a-90c4-21bdf717ca72:error_statistics",
+              "content": "OTA_DOWNLOAD_TIMEOUT count=1 grain=log_occurrence"
+            }
+          ],
+          "tool_trace": [
+            {
+              "step": 1,
+              "tool": "read_logs",
+              "arguments": {},
+              "output": {
+                "next_offset": 1,
+                "total_matches": 1,
+                "evidence": [
+                  {
+                    "id": "log:1",
+                    "source": "batch:fffc7cdb-d475-414a-90c4-21bdf717ca72:logs",
+                    "content": "{\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"elapsed_ms\":200,\"timeout_ms\":100}"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "error_statistics",
+              "arguments": {},
+              "output": {
+                "evidence": [
+                  {
+                    "id": "stats:OTA_DOWNLOAD_TIMEOUT",
+                    "source": "batch:fffc7cdb-d475-414a-90c4-21bdf717ca72:error_statistics",
+                    "content": "OTA_DOWNLOAD_TIMEOUT count=1 grain=log_occurrence"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "update_investigation_plan",
+              "arguments": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "output": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            }
+          ],
+          "limitations": [
+            "Synthetic scripted response"
+          ],
+          "tokens_used": 60,
+          "model": "fixture"
+        }
+      },
+      {
+        "case": "unknown",
+        "mode": "agent",
+        "status": "success",
+        "actual_http_calls": 2,
+        "provider_reported_synthetic_tokens": 60,
+        "latency_ms": 2.124,
+        "cost_usd": null,
+        "result": {
+          "model_steps": 2,
+          "reserved_token_units": 72429,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed failure, upstream cause unknown",
+              "status": "supported",
+              "supports": [
+                "log:1"
+              ],
+              "next_check": "Inspect upstream cause"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed failure; upstream cause unknown",
+          "Suggestions": [
+            "Inspect upstream cause"
+          ],
+          "Severity": "high",
+          "Confidence": 0.5,
+          "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:E_OTHER\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:E_OTHER"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "batch:e3024fd3-5ab6-4e66-862a-54f42325fb9c:logs",
+              "content": "E_OTHER: ambiguous symptom"
+            },
+            {
+              "id": "stats:E_OTHER",
+              "source": "batch:e3024fd3-5ab6-4e66-862a-54f42325fb9c:error_statistics",
+              "content": "E_OTHER count=1 grain=log_occurrence"
+            }
+          ],
+          "tool_trace": [
+            {
+              "step": 1,
+              "tool": "read_logs",
+              "arguments": {},
+              "output": {
+                "next_offset": 1,
+                "total_matches": 1,
+                "evidence": [
+                  {
+                    "id": "log:1",
+                    "source": "batch:e3024fd3-5ab6-4e66-862a-54f42325fb9c:logs",
+                    "content": "E_OTHER: ambiguous symptom"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "error_statistics",
+              "arguments": {},
+              "output": {
+                "evidence": [
+                  {
+                    "id": "stats:E_OTHER",
+                    "source": "batch:e3024fd3-5ab6-4e66-862a-54f42325fb9c:error_statistics",
+                    "content": "E_OTHER count=1 grain=log_occurrence"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "update_investigation_plan",
+              "arguments": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "output": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            }
+          ],
+          "limitations": [
+            "Synthetic scripted response"
+          ],
+          "tokens_used": 60,
+          "model": "fixture"
+        }
+      },
+      {
+        "case": "conflict",
+        "mode": "agent",
+        "status": "success",
+        "actual_http_calls": 2,
+        "provider_reported_synthetic_tokens": 60,
+        "latency_ms": 1.853,
+        "cost_usd": null,
+        "result": {
+          "model_steps": 2,
+          "reserved_token_units": 72807,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed failure, upstream cause unknown",
+              "status": "supported",
+              "supports": [
+                "log:1"
+              ],
+              "next_check": "Inspect upstream cause"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed failure; upstream cause unknown",
+          "Suggestions": [
+            "Inspect upstream cause"
+          ],
+          "Severity": "high",
+          "Confidence": 0.5,
+          "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_CHECKSUM_MISMATCH\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:OTA_CHECKSUM_MISMATCH"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "batch:5636e269-e0ad-4a53-b291-456d5c9ec236:logs",
+              "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+            },
+            {
+              "id": "stats:OTA_CHECKSUM_MISMATCH",
+              "source": "batch:5636e269-e0ad-4a53-b291-456d5c9ec236:error_statistics",
+              "content": "OTA_CHECKSUM_MISMATCH count=1 grain=log_occurrence"
+            }
+          ],
+          "tool_trace": [
+            {
+              "step": 1,
+              "tool": "read_logs",
+              "arguments": {},
+              "output": {
+                "next_offset": 1,
+                "total_matches": 1,
+                "evidence": [
+                  {
+                    "id": "log:1",
+                    "source": "batch:5636e269-e0ad-4a53-b291-456d5c9ec236:logs",
+                    "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "error_statistics",
+              "arguments": {},
+              "output": {
+                "evidence": [
+                  {
+                    "id": "stats:OTA_CHECKSUM_MISMATCH",
+                    "source": "batch:5636e269-e0ad-4a53-b291-456d5c9ec236:error_statistics",
+                    "content": "OTA_CHECKSUM_MISMATCH count=1 grain=log_occurrence"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "update_investigation_plan",
+              "arguments": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "output": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            }
+          ],
+          "limitations": [
+            "Synthetic scripted response"
+          ],
+          "tokens_used": 60,
+          "model": "fixture"
+        }
+      },
+      {
+        "case": "invented-reference",
+        "mode": "agent",
+        "status": "failure",
+        "error": "[NodeRunError] invalid diagnosis: invented evidence reference: invented\n------------------------\nnode path: [finish]",
+        "actual_http_calls": 2,
+        "provider_reported_synthetic_tokens": 60,
+        "latency_ms": 2.053,
+        "cost_usd": null
+      },
+      {
+        "case": "budget-exhausted",
+        "mode": "agent",
+        "status": "failure",
+        "error": "[NodeRunError] investigation budget exhausted: model reservation\n------------------------\nnode path: [plan]",
+        "actual_http_calls": 0,
+        "provider_reported_synthetic_tokens": 0,
+        "latency_ms": 0.139,
+        "cost_usd": null
+      },
+      {
+        "case": "checksum",
+        "mode": "hybrid",
+        "status": "success",
+        "actual_http_calls": 0,
+        "provider_reported_synthetic_tokens": 0,
+        "latency_ms": 0.081,
+        "cost_usd": null,
+        "result": {
+          "routing": {
+            "path": "deterministic",
+            "reason": "checksum",
+            "rule_id": "ota-checksum-v1",
+            "score": 1,
+            "policy_version": "confidence-routing-v1"
+          },
+          "resolution_status": "provisional",
+          "model_steps": 0,
+          "reserved_token_units": 0,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed artifact checksum mismatch; upstream cause requires independent verification",
+              "status": "open",
+              "supports": [
+                "log:1",
+                "stats:1"
+              ],
+              "next_check": "Verify upstream cause independently"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed artifact checksum mismatch; upstream cause requires independent verification",
+          "Suggestions": [
+            "Inspect the current evidence and verify the upstream cause independently"
+          ],
+          "Severity": "high",
+          "Confidence": 0,
+          "RawLLMOutput": "{\"confidence\":0,\"evidence_ids\":[\"log:1\",\"stats:1\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Exact rule match confirms the observation only; routing score 1 is not root-cause probability\"],\"root_cause\":\"Observed artifact checksum mismatch; upstream cause requires independent verification\",\"severity\":\"high\",\"suggestions\":[\"Inspect the current evidence and verify the upstream cause independently\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:1"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "aggregate:288edde0-2caf-4b13-96ae-45e70ef9b0d0:line:1",
+              "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+            },
+            {
+              "id": "stats:1",
+              "source": "aggregate:288edde0-2caf-4b13-96ae-45e70ef9b0d0:error_statistics",
+              "content": "{\"OTA_CHECKSUM_MISMATCH\":1}"
+            }
+          ],
+          "limitations": [
+            "Exact rule match confirms the observation only; routing score 1 is not root-cause probability"
+          ],
+          "model": "deterministic-rules-v1"
+        }
+      },
+      {
+        "case": "timeout",
+        "mode": "hybrid",
+        "status": "success",
+        "actual_http_calls": 0,
+        "provider_reported_synthetic_tokens": 0,
+        "latency_ms": 0.108,
+        "cost_usd": null,
+        "result": {
+          "routing": {
+            "path": "deterministic",
+            "reason": "timeout",
+            "rule_id": "ota-timeout-v1",
+            "score": 1,
+            "policy_version": "confidence-routing-v1"
+          },
+          "resolution_status": "provisional",
+          "model_steps": 0,
+          "reserved_token_units": 0,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed download duration exceeded configured timeout; upstream cause requires independent verification",
+              "status": "open",
+              "supports": [
+                "log:1",
+                "stats:1"
+              ],
+              "next_check": "Verify upstream cause independently"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed download duration exceeded configured timeout; upstream cause requires independent verification",
+          "Suggestions": [
+            "Inspect the current evidence and verify the upstream cause independently"
+          ],
+          "Severity": "high",
+          "Confidence": 0,
+          "RawLLMOutput": "{\"confidence\":0,\"evidence_ids\":[\"log:1\",\"stats:1\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Exact rule match confirms the observation only; routing score 1 is not root-cause probability\"],\"root_cause\":\"Observed download duration exceeded configured timeout; upstream cause requires independent verification\",\"severity\":\"high\",\"suggestions\":[\"Inspect the current evidence and verify the upstream cause independently\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:1"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "aggregate:4c379821-4e2f-4749-9285-8b9a40a9b1f9:line:1",
+              "content": "{\"error_type\":\"OTA_DOWNLOAD_TIMEOUT\",\"elapsed_ms\":200,\"timeout_ms\":100}"
+            },
+            {
+              "id": "stats:1",
+              "source": "aggregate:4c379821-4e2f-4749-9285-8b9a40a9b1f9:error_statistics",
+              "content": "{\"OTA_DOWNLOAD_TIMEOUT\":1}"
+            }
+          ],
+          "limitations": [
+            "Exact rule match confirms the observation only; routing score 1 is not root-cause probability"
+          ],
+          "model": "deterministic-rules-v1"
+        }
+      },
+      {
+        "case": "unknown",
+        "mode": "hybrid",
+        "status": "success",
+        "actual_http_calls": 2,
+        "provider_reported_synthetic_tokens": 60,
+        "latency_ms": 1.467,
+        "cost_usd": null,
+        "result": {
+          "routing": {
+            "path": "investigation",
+            "reason": "historical retrieval unavailable",
+            "score": 0,
+            "policy_version": "confidence-routing-v1"
+          },
+          "model_steps": 2,
+          "reserved_token_units": 72429,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed failure, upstream cause unknown",
+              "status": "supported",
+              "supports": [
+                "log:1"
+              ],
+              "next_check": "Inspect upstream cause"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed failure; upstream cause unknown",
+          "Suggestions": [
+            "Inspect upstream cause"
+          ],
+          "Severity": "high",
+          "Confidence": 0.5,
+          "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:E_OTHER\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:E_OTHER"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "batch:50ba39f5-d3c3-4efb-9d3a-33145b6ad526:logs",
+              "content": "E_OTHER: ambiguous symptom"
+            },
+            {
+              "id": "stats:E_OTHER",
+              "source": "batch:50ba39f5-d3c3-4efb-9d3a-33145b6ad526:error_statistics",
+              "content": "E_OTHER count=1 grain=log_occurrence"
+            }
+          ],
+          "tool_trace": [
+            {
+              "step": 1,
+              "tool": "read_logs",
+              "arguments": {},
+              "output": {
+                "next_offset": 1,
+                "total_matches": 1,
+                "evidence": [
+                  {
+                    "id": "log:1",
+                    "source": "batch:50ba39f5-d3c3-4efb-9d3a-33145b6ad526:logs",
+                    "content": "E_OTHER: ambiguous symptom"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "error_statistics",
+              "arguments": {},
+              "output": {
+                "evidence": [
+                  {
+                    "id": "stats:E_OTHER",
+                    "source": "batch:50ba39f5-d3c3-4efb-9d3a-33145b6ad526:error_statistics",
+                    "content": "E_OTHER count=1 grain=log_occurrence"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "update_investigation_plan",
+              "arguments": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "output": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            }
+          ],
+          "limitations": [
+            "Synthetic scripted response",
+            "Hybrid route: investigation (historical retrieval unavailable)"
+          ],
+          "tokens_used": 60,
+          "model": "fixture"
+        }
+      },
+      {
+        "case": "conflict",
+        "mode": "hybrid",
+        "status": "success",
+        "actual_http_calls": 2,
+        "provider_reported_synthetic_tokens": 60,
+        "latency_ms": 2.307,
+        "cost_usd": null,
+        "result": {
+          "routing": {
+            "path": "investigation",
+            "reason": "historical retrieval unavailable",
+            "score": 0,
+            "policy_version": "confidence-routing-v1"
+          },
+          "model_steps": 2,
+          "reserved_token_units": 72807,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed failure, upstream cause unknown",
+              "status": "supported",
+              "supports": [
+                "log:1"
+              ],
+              "next_check": "Inspect upstream cause"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed failure; upstream cause unknown",
+          "Suggestions": [
+            "Inspect upstream cause"
+          ],
+          "Severity": "high",
+          "Confidence": 0.5,
+          "RawLLMOutput": "{\"confidence\":0.5,\"evidence_ids\":[\"log:1\",\"stats:OTA_CHECKSUM_MISMATCH\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Synthetic scripted response\"],\"root_cause\":\"Observed failure; upstream cause unknown\",\"severity\":\"high\",\"suggestions\":[\"Inspect upstream cause\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:OTA_CHECKSUM_MISMATCH"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "batch:2f369933-87de-4692-94d0-79319646ee43:logs",
+              "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+            },
+            {
+              "id": "stats:OTA_CHECKSUM_MISMATCH",
+              "source": "batch:2f369933-87de-4692-94d0-79319646ee43:error_statistics",
+              "content": "OTA_CHECKSUM_MISMATCH count=1 grain=log_occurrence"
+            }
+          ],
+          "tool_trace": [
+            {
+              "step": 1,
+              "tool": "read_logs",
+              "arguments": {},
+              "output": {
+                "next_offset": 1,
+                "total_matches": 1,
+                "evidence": [
+                  {
+                    "id": "log:1",
+                    "source": "batch:2f369933-87de-4692-94d0-79319646ee43:logs",
+                    "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"abc\"}"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "error_statistics",
+              "arguments": {},
+              "output": {
+                "evidence": [
+                  {
+                    "id": "stats:OTA_CHECKSUM_MISMATCH",
+                    "source": "batch:2f369933-87de-4692-94d0-79319646ee43:error_statistics",
+                    "content": "OTA_CHECKSUM_MISMATCH count=1 grain=log_occurrence"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            },
+            {
+              "step": 1,
+              "tool": "update_investigation_plan",
+              "arguments": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "output": {
+                "hypotheses": [
+                  {
+                    "id": "H1",
+                    "description": "Observed failure, upstream cause unknown",
+                    "status": "supported",
+                    "supports": [
+                      "log:1"
+                    ],
+                    "next_check": "Inspect upstream cause"
+                  }
+                ]
+              },
+              "duration_ms": 0
+            }
+          ],
+          "limitations": [
+            "Synthetic scripted response",
+            "Hybrid route: investigation (historical retrieval unavailable)"
+          ],
+          "tokens_used": 60,
+          "model": "fixture"
+        }
+      },
+      {
+        "case": "invented-reference",
+        "mode": "hybrid",
+        "status": "success",
+        "actual_http_calls": 0,
+        "provider_reported_synthetic_tokens": 0,
+        "latency_ms": 0.105,
+        "cost_usd": null,
+        "result": {
+          "routing": {
+            "path": "deterministic",
+            "reason": "checksum",
+            "rule_id": "ota-checksum-v1",
+            "score": 1,
+            "policy_version": "confidence-routing-v1"
+          },
+          "resolution_status": "provisional",
+          "model_steps": 0,
+          "reserved_token_units": 0,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed artifact checksum mismatch; upstream cause requires independent verification",
+              "status": "open",
+              "supports": [
+                "log:1",
+                "stats:1"
+              ],
+              "next_check": "Verify upstream cause independently"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed artifact checksum mismatch; upstream cause requires independent verification",
+          "Suggestions": [
+            "Inspect the current evidence and verify the upstream cause independently"
+          ],
+          "Severity": "high",
+          "Confidence": 0,
+          "RawLLMOutput": "{\"confidence\":0,\"evidence_ids\":[\"log:1\",\"stats:1\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Exact rule match confirms the observation only; routing score 1 is not root-cause probability\"],\"root_cause\":\"Observed artifact checksum mismatch; upstream cause requires independent verification\",\"severity\":\"high\",\"suggestions\":[\"Inspect the current evidence and verify the upstream cause independently\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:1"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "aggregate:47d04cd6-935f-470e-ba84-3b0bad34614c:line:1",
+              "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+            },
+            {
+              "id": "stats:1",
+              "source": "aggregate:47d04cd6-935f-470e-ba84-3b0bad34614c:error_statistics",
+              "content": "{\"OTA_CHECKSUM_MISMATCH\":1}"
+            }
+          ],
+          "limitations": [
+            "Exact rule match confirms the observation only; routing score 1 is not root-cause probability"
+          ],
+          "model": "deterministic-rules-v1"
+        }
+      },
+      {
+        "case": "budget-exhausted",
+        "mode": "hybrid",
+        "status": "success",
+        "actual_http_calls": 0,
+        "provider_reported_synthetic_tokens": 0,
+        "latency_ms": 0.06,
+        "cost_usd": null,
+        "result": {
+          "routing": {
+            "path": "deterministic",
+            "reason": "checksum",
+            "rule_id": "ota-checksum-v1",
+            "score": 1,
+            "policy_version": "confidence-routing-v1"
+          },
+          "resolution_status": "provisional",
+          "model_steps": 0,
+          "reserved_token_units": 0,
+          "hypotheses": [
+            {
+              "id": "H1",
+              "description": "Observed artifact checksum mismatch; upstream cause requires independent verification",
+              "status": "open",
+              "supports": [
+                "log:1",
+                "stats:1"
+              ],
+              "next_check": "Verify upstream cause independently"
+            }
+          ],
+          "hypothesis_id": "H1",
+          "RootCause": "Observed artifact checksum mismatch; upstream cause requires independent verification",
+          "Suggestions": [
+            "Inspect the current evidence and verify the upstream cause independently"
+          ],
+          "Severity": "high",
+          "Confidence": 0,
+          "RawLLMOutput": "{\"confidence\":0,\"evidence_ids\":[\"log:1\",\"stats:1\"],\"hypothesis_id\":\"H1\",\"limitations\":[\"Exact rule match confirms the observation only; routing score 1 is not root-cause probability\"],\"root_cause\":\"Observed artifact checksum mismatch; upstream cause requires independent verification\",\"severity\":\"high\",\"suggestions\":[\"Inspect the current evidence and verify the upstream cause independently\"]}",
+          "evidence_ids": [
+            "log:1",
+            "stats:1"
+          ],
+          "evidence": [
+            {
+              "id": "log:1",
+              "source": "aggregate:adceab60-c782-4ac8-a6ed-05d2e9dd74ed:line:1",
+              "content": "{\"error_type\":\"OTA_CHECKSUM_MISMATCH\",\"expected_checksum\":\"abc\",\"actual_checksum\":\"def\"}"
+            },
+            {
+              "id": "stats:1",
+              "source": "aggregate:adceab60-c782-4ac8-a6ed-05d2e9dd74ed:error_statistics",
+              "content": "{\"OTA_CHECKSUM_MISMATCH\":1}"
+            }
+          ],
+          "limitations": [
+            "Exact rule match confirms the observation only; routing score 1 is not root-cause probability"
+          ],
+          "model": "deterministic-rules-v1"
+        }
+      }
+    ],
+    "summary": {
+      "agent": {
+        "attempts": 6,
+        "successes": 4,
+        "failures": 2,
+        "unresolved": 0,
+        "actual_http_calls": 10,
+        "provider_reported_synthetic_tokens": 300,
+        "latency_p95_ms": 20.817
+      },
+      "hybrid": {
+        "attempts": 6,
+        "successes": 6,
+        "failures": 0,
+        "unresolved": 0,
+        "actual_http_calls": 4,
+        "provider_reported_synthetic_tokens": 120,
+        "latency_p95_ms": 2.307
+      }
+    }
+  },
+  "real_infrastructure_e2e": {
+    "status": "not_run",
+    "cases": 9,
+    "reason": "Local user namespace maps only root, preventing unprivileged PostgreSQL startup; push to trigger existing GitHub CI rejected by automatic approval because publication was not explicitly authorized."
+  },
+  "skipped_tests": [
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres",
+      "test": "TestUploadParseAggregatePipeline"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres",
+      "test": "TestCompensationRequeuesPublishedRequest"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres",
+      "test": "TestOutboxFailureRetainsEventForRetry"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres",
+      "test": "TestConcurrentUploadsPreserveFileCount"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres",
+      "test": "TestCompletionRejectsMissingOrForeignDiagnosis"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/postgres",
+      "test": "TestDeadLetterStoreRetainsEntireBinaryPayload"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/processing",
+      "test": "TestRealCSVProcessingDurableRegressionAndReplay"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/infrastructure/processing",
+      "test": "TestPublicRecordPerFileVersionProvenance"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/internal/observability",
+      "test": "TestRealCollectorSeparatesInstanceCounters"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/cmd/retrieval-bench",
+      "test": "TestBenchmarkCallsProductionRetrieverAgainstTemporaryCorpus"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/deterministic"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/deterministic_oom"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/semantic_agreement"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/summary_invalid"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/novel"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/gray_zone"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/conflict"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/unverified"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestConfidenceRoutingE2E/retrieval_outage"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestDeepSeekInvestigationLive"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestHybridUsesActuallyParsedOTAObservationsWithoutModel"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestFullPipelineRealKafka"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application",
+      "test": "TestFullPipelineActualCSVKafka"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm",
+      "test": "TestGovernorMeasuredLoad"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/investigation",
+      "test": "TestDeepSeekHypothesisReversalLive"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm",
+      "test": "TestSharedQuotaLiveSessionCannotExpire"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/llm",
+      "test": "TestSharedQuotaDatabaseFailureDoesNotCallModel"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/application/investigation",
+      "test": "TestAgentLiveTelemetryInvestigation"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector",
+      "test": "TestTextQueryChangesRankingWithSameErrorCode"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector",
+      "test": "TestNaturalQueryRecallsDispersedLexemesWithoutWholePhrase"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector",
+      "test": "TestLiteralPhraseRanksBeforeDispersedTerms"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector",
+      "test": "TestStructuredErrorFilterRemainsExactAndIndependentOfText"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector",
+      "test": "TestLiteralPercentUnderscoreDoNotBecomePhraseWildcards"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector",
+      "test": "TestEmptyPunctuationOrUnknownQueriesDoNotReturnUnrelatedCorpus"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/pgvector",
+      "test": "TestTextTopKRemainsCappedAtTen"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/interfaces/http",
+      "test": "TestSSEForwardsRealRedisProgressAndCancels"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestGenerationDoesNotHoldOpenTransaction"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestExpiredOwnerCannotCheckpointOrCommit"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestFailureRecorderCannotClobberActiveExecution"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestSupersededErrorCannotFailNewGeneration"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestTerminalFailureCommitsBeforeOwnerRelease"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestOlderQuarantineCannotFailReleasedNewerGeneration"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestDiagnosisPersistenceAndReport"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestDiagnosisAndOutboxRollbackTogether"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestCanonicalUUIDAliasesShareDiagnosisLock"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestTerminalFailureIsDurableAndPreventsRegeneration"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestFailurePersistenceAcceptsUnicodeAndNUL"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestPostgresCheckpointAndArtifactIsolation"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/postgres",
+      "test": "TestSharedQuotaMultiprocessCrashRecovery"
+    },
+    {
+      "package": "github.com/xuewentao/argus-ota-platform/workers/ai-agent/internal/infrastructure/telemetryquery",
+      "test": "TestTrustedScopeMigrationAndImmutability"
+    }
+  ]
+}

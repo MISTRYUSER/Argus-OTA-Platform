@@ -61,10 +61,16 @@ def parse_csv(stream, source, max_rows=MAX_ROWS):
         if len(record['error_code']) > 128:
             raise ValueError('oversized error_code')
         record.update(timestamp=_time(record['timestamp']), cpu=_metric(record['cpu']), memory_mb=_metric(record['memory_mb']), source=source, line=reader.line_num)
-        for optional in ('error_type','expected_checksum','actual_checksum','change_id','change_description'):
+        for optional in ('error_type','expected_checksum','actual_checksum','change_id','change_description','module_name','exception_type'):
             if optional in row and row[optional].strip():
                 if len(row[optional])>256:raise ValueError('oversized optional evidence')
                 record[optional]=row[optional].strip()
+        if row.get('exit_code','').strip():
+            record['exit_code']=int(row['exit_code'].strip())
+        if row.get('oom_killed','').strip():
+            value=row['oom_killed'].strip().lower()
+            if value not in ('true','false'):raise ValueError('oom_killed must be true or false')
+            record['oom_killed']=value=='true'
         for optional in ('elapsed_ms','timeout_ms'):
             if optional in row and row[optional].strip():record[optional]=_metric(row[optional])
         rows.append(record)

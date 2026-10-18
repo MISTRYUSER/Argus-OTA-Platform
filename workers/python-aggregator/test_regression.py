@@ -21,6 +21,13 @@ class RegressionTests(unittest.TestCase):
         f = io.StringIO(); w = csv.DictWriter(f, fieldnames=row); w.writeheader(); w.writerow(row)
         return self.r.parse_csv(io.StringIO(f.getvalue()), 'minio:source.csv')
 
+    def test_preserves_typed_oom_evidence(self):
+        row=self.parse(error_code='OOM_KILL',error_type='OOM_KILL',exception_type='OOMKilled',exit_code='137',oom_killed='true')[0]
+        self.assertEqual(row['exception_type'],'OOMKilled')
+        self.assertEqual(row['exit_code'],137)
+        self.assertIs(row['oom_killed'],True)
+        with self.assertRaises(ValueError): self.parse(oom_killed='probably')
+
     def rows(self, workload='AD'):
         old = self.parse()[0]; new = self.parse(version='v2', cpu='40', memory_mb='200', error_code='E42', workload=workload)[0]
         return [dict(old, timestamp=old['timestamp']+i, line=i+2) for i in range(10)] + [dict(new, timestamp=new['timestamp']+i, line=i+12) for i in range(10)]
