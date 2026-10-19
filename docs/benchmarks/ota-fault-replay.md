@@ -96,4 +96,4 @@ python scripts/benchmark/score_ota_faults.py \
 
 ### 2026-10-15 契约核查补充
 
-见[评测分离与独立 SRE 契约](evaluation-contract-audit-2026-10-15.md)。OTA 评分现增加按同一 case/trial 的 hybrid 路径配对的 `summary_by_hybrid_route`，保留 fixed/agent/unknown 三层和全部预定任务；总体结果继续保留。本轮重新生成并实际预检的[回执](evaluation-contract-audit-2026-10-15-receipt.json)确认两条路径覆盖，仍无真实模型质量/费用收益结论。
+见[评测分离与独立 SRE 契约](evaluation-contract-audit-2026-10-15.md)。OTA 评分现增加按同一 case/trial 的 hybrid 路径配对的 `summary_by_hybrid_route`，分别统计 fixed/semantic/agent/unknown 四层和全部预定任务；缺少运行回执或有效路径信息的配对归入 unknown，不从分母删除。baseline、hybrid、agent 使用相同 case/trial 集合，总体结果继续保留。真实模型质量、延迟和费用收益仍待实验验证。
