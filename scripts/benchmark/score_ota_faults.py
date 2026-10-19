@@ -170,7 +170,8 @@ def score_runs(suite, labels, runs, trials=3):
                 row = score_attempt(case, truth[case['id']], runs.get((mode, case['id'], trial)))
                 hybrid_run = runs.get(('hybrid', case['id'], trial)) or {}
                 route = hybrid_run.get('actual_route', 'unknown')
-                row.update(mode=mode, trial=trial, hybrid_route=route if route in ('fixed', 'agent') else 'unknown')
+                row.update(mode=mode, trial=trial,
+                           hybrid_route=route if route in ('fixed', 'semantic', 'agent') else 'unknown')
                 attempts.append(row)
     return {'scope': 'controlled local HTTP faults; categorical top candidate and evidence rubric, not production accuracy',
             'live_model_status': 'not_run' if not runs else 'recorded_runs',
@@ -181,7 +182,7 @@ def score_runs(suite, labels, runs, trials=3):
             'protocol': dict(zip(protocol_keys + ('pricing_json',), next(iter(protocols)))) if protocols else None,
             'summary_by_hybrid_route': {
                 route: {m: summarize_mode([r for r in attempts if r['mode'] == m and r['hybrid_route'] == route]) for m in MODES}
-                for route in ('fixed', 'agent', 'unknown')},
+                for route in ('fixed', 'semantic', 'agent', 'unknown')},
             'summary': {m: summarize_mode([r for r in attempts if r['mode'] == m]) for m in MODES}, 'attempts': attempts}
 
 
